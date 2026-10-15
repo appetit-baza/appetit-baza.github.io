@@ -128,6 +128,18 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   .sumrow{grid-template-columns:1fr 1fr}
 }
 @media (max-width:420px){.crow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* оплата за заказы по зонам */
+.zones{grid-column:1/-1;display:grid;grid-template-columns:repeat(var(--zn,5),minmax(0,1fr));gap:6px;margin-top:-2px}
+@media (min-width:861px){#cour .crow:has(.zones:not([hidden])){padding-bottom:12px;border-bottom:1px dashed var(--line);margin-bottom:4px}}
+@media (max-width:860px){.zones{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
+.zones[hidden]{display:none}
+.z{display:flex;align-items:center;justify-content:space-between;gap:4px;min-width:0;border:1px solid var(--line);border-left:5px solid var(--zc,var(--muted));border-radius:8px;padding:3px 4px 3px 8px;background:var(--surface);font-size:12.5px;line-height:1.15;color:var(--ink)}
+.z small{display:block;color:var(--muted);font-size:11.5px}
+.zones.v .z{flex-direction:column;align-items:stretch;padding:5px 5px 5px 8px;gap:4px}
+.zones.v .z input{width:100%}
+.z span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.z input{width:42px;flex:none;height:34px;text-align:center;padding:0 4px;font-size:15px}
+.crow input[readonly].zsum{background:var(--accent-soft);color:var(--accent);font-weight:600}
 /* Челябинск: без почасовой оплаты */
 .c-noh-only{display:none}
 #sec-cour.noh .c-h,#sec-cour.noh .c-h-only{display:none!important}
@@ -248,6 +260,7 @@ body.boss .hist-head h2{font-size:26px}
   <section class="card" id="sec-cour">
     <div class="card-h"><span class="no">2</span><h2>Курьеры: неотображённые доставки</h2><span class="sub" id="o_cour_sub"></span></div>
     <p class="rate-fixed c-h-only">Ставка курьера: <b>140 ₽ в час</b> — задана бухгалтерией, изменить нельзя.</p>
+    <p class="rate-fixed" id="zone_note" hidden></p>
     <p class="rate-fixed c-noh-only">В Челябинске почасовую оплату выдают 2 раза в месяц по iiko — здесь вносится <b>только оплата за заказы</b>.</p>
     <div class="row-h c">
       <span class="th">ФИО</span><span class="th c-h">С</span><span class="th c-h">По</span><span class="th c-h" style="text-align:right">За часы</span><span class="th" style="text-align:right">Заказов</span><span class="th" style="text-align:right">За заказы</span><span class="th" style="text-align:right">Итого</span><span class="th" style="text-align:center">Изъятие</span><span></span>
@@ -336,7 +349,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='12';
+  const BUILD='13';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -465,7 +478,7 @@ body.boss .hist-head h2{font-size:26px}
       if(!r.ok){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Отчёт не найден.</p>';return}
       const s=r.shift;SHIFT=s;
       const kv=s.summary.filter(([k])=>!(USER&&USER.boss?/^(Повторная)/:/^(Отправлено|Администратор|Повторная)/).test(k)).map(([k,v])=>`<span>${esc(k)}</span><span>${typeof v==='number'?money(v):esc(v)}</span>`).join('');
-      const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>`).join('')}</table></div>`:'';
+      const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>${c.zones?`<tr><td colspan="7"><small>По зонам: ${esc(c.zones)}</small></td></tr>`:''}`).join('')}</table></div>`:'';
       const mt=s.money.length?`<p class="h-sec">Приход и расход</p><div class="h-table"><table><tr><th>Тип</th><th>Дата</th><th>Статья</th><th>Сумма</th></tr>${s.money.map(m=>`<tr><td>${esc(m.type)}</td><td>${esc(m.date)}</td><td>${esc(m.art)}</td><td>${esc(m.sum)}</td></tr>`).join('')}</table></div>`:'';
       one.innerHTML=`<button type="button" class="h-back">← Назад к списку</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${ct}${mt}<div id="fx_box">${fixBox(s)}</div>`;
     }catch(x){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Нет связи с сервером.</p>'}
@@ -484,7 +497,9 @@ body.boss .hist-head h2{font-size:26px}
     const tm=v=>{const m=String(v||'').match(/(\d{1,2}):(\d{2})/);return m?`${pad(m[1])}:${m[2]}`:''};
     const nn=v=>String(v??'').replace(/\s/g,'');
     const cour=s.cour.map(c=>{const from=tm(c.from),to=tm(c.to),a=minutes(from),b=minutes(to);let auto=null;if(a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;auto=Math.floor(m/60*RATE)}
-      return {name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),w:!/нет/i.test(c.w),manual:auto!==null&&auto!==num(c.hours)}});
+      let z=null;const zb=/казань/i.test(s.raw.branch)?'kzn':/челябинск|уфа/i.test(s.raw.branch)?'chu':null;
+      if(zb&&c.zones){const n=ZONESETS[zb].z.map(()=>'');String(c.zones).split(/;\s*/).forEach(p=>{const m=p.match(/^(.*) × (\d+)$/);if(m){const i=ZONESETS[zb].z.findIndex(q=>zLabel(q)===m[1].trim());if(i>=0)n[i]=m[2]}});z={id:zb,n}}
+      return {z,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),w:!/нет/i.test(c.w),manual:auto!==null&&auto!==num(c.hours)}});
     const mon=t=>s.money.filter(m=>m.type===t).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
     return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,rev:s.raw.rev,cour,exp:mon('Расход'),inc:mon('Приход')};
   }
@@ -511,6 +526,21 @@ body.boss .hist-head h2{font-size:26px}
   const RATE=140; // ставка курьера за час, менять только здесь
   // филиалы, где почасовую выдают отдельно (по iiko) — в отчёте только оплата за заказы
   const noHours=()=>/челябинск/i.test($('#branch').value);
+  // оплата курьеру за каждый заказ по зонам доставки
+  const ZONESETS={
+    kzn:{city:'Казань',z:[['Жёлтая','0–2,5 км',165,'#E8B923'],['Зелёная','2,5–5 км',205,'#3E9B4F'],['Синяя','5–8 км',245,'#2F6FD6'],['Красная','8–11 км',265,'#D64545'],['Фиолетовая','11–20 км',285,'#8A4FD0']]},
+    chu:{city:'Челябинск и Уфа',z:[['','0–2,5 км',165],['','2,5–5 км',205],['','5–7 км',235],['','7–9 км',255],['','9–10 км',265],['','10–11 км',275],['','12–30 км',295]]}
+  };
+  function zoneSet(){const b=$('#branch').value;return /казань/i.test(b)?'kzn':/челябинск|уфа/i.test(b)?'chu':null}
+  const zLabel=z=>(z[0]?z[0]+' ':'')+z[1];
+  function ensureZones(r,id){
+    const box=r.querySelector('.zones');if(r.dataset.zs===(id||''))return;
+    const prev=r.dataset.zs?null:r._zinit;r.dataset.zs=id||'';
+    if(!id){box.hidden=true;box.innerHTML='';return}
+    const init=prev&&prev.id===id?prev.n:[];
+    box.innerHTML=ZONESETS[id].z.map((z,i)=>`<label class="z" style="--zc:${z[3]||'var(--muted)'}"><span>${esc(z[0]||z[1])}<small>${z[0]?esc(z[1])+' · ':''}${z[2]} ₽</small></span><input data-zi="${i}" inputmode="numeric" value="${esc(init[i]||'')}" aria-label="${esc(zLabel(z))}, заказов"></label>`).join('');
+    box.style.setProperty('--zn',ZONESETS[id].z.length);box.classList.toggle('v',ZONESETS[id].z.length>5);box.hidden=false;
+  }
   const REV=[['r_cash','Наличка'],['r_card','Б/Н расчет (картой)'],['r_ye','Деливери/ЯЕ'],['r_mp','МП (online)'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
 
   // ---------- rows
@@ -525,8 +555,9 @@ body.boss .hist-head h2{font-size:26px}
       <div><span class="lbl-m">За заказы</span><input data-k="orders" class="num" inputmode="decimal" value="${esc(d.orders)}" aria-label="За заказы"></div>
       <div><span class="lbl-m">Итого</span><div class="calc" data-o="tot">0</div></div>
       <div><span class="lbl-m">Изъятие</span><button type="button" class="tog" data-k="w" aria-pressed="${d.w===false?'false':'true'}">${d.w===false?'Из сейфа':'Изъятие'}</button></div>
-      <button type="button" class="del" aria-label="Удалить строку">×</button>`;
-    r.dataset.manual=d.manual?'1':'';
+      <button type="button" class="del" aria-label="Удалить строку">×</button>
+      <div class="zones" hidden></div>`;
+    r.dataset.manual=d.manual?'1':'';r._zinit=d.z||null;
     $('#cour').appendChild(r);
     fillName(r);
   }
@@ -578,10 +609,12 @@ body.boss .hist-head h2{font-size:26px}
   });
 
   // ---------- state + calc
+  function zoneState(r){const id=r.dataset.zs;if(!id)return {};const n=ZONESETS[id].z.map((z,i)=>{const v=r.querySelector(`[data-zi="${i}"]`);return v?v.value.trim():''});
+    return {z:{id,n},zt:ZONESETS[id].z.map((z,i)=>num(n[i])>0?`${zLabel(z)} × ${num(n[i])}`:'').filter(Boolean).join('; ')}}
   function state(){
     const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),rev:{},cour:[],exp:[],inc:[]};
     REV.forEach(([id])=>s.rev[id]=$('#'+id).value.trim());
-    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:g('w').getAttribute('aria-pressed')==='true',manual:!!r.dataset.manual})});
+    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:g('w').getAttribute('aria-pressed')==='true',manual:!!r.dataset.manual,...zoneState(r)})});
     ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:g('date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:b==='exp'?g('w').getAttribute('aria-pressed')==='true':false})}));
     return s;
   }
@@ -592,8 +625,13 @@ body.boss .hist-head h2{font-size:26px}
     // couriers
     let ch=0,co=0,cw=0,cn=0,cq=0;
     const NOH=noHours();$('#sec-cour').classList.toggle('noh',NOH);
+    const ZS=zoneSet(),zn=$('#zone_note');zn.hidden=!ZS;
+    if(ZS)zn.innerHTML=`Оплата курьеру за заказ по зонам (${ZONESETS[ZS].city}): впишите, сколько заказов в каждой зоне — «Заказов» и «За заказы» посчитаются сами.`;
     $$('.crow').forEach(r=>{
       const g=k=>r.querySelector(`[data-k=${k}]`);
+      ensureZones(r,ZS);
+      g('qty').readOnly=g('orders').readOnly=!!ZS;g('qty').classList.toggle('zsum',!!ZS);g('orders').classList.toggle('zsum',!!ZS);
+      if(ZS){let n=0,sum=0;ZONESETS[ZS].z.forEach((z,i)=>{const c=num(r.querySelector(`[data-zi="${i}"]`).value);n+=c;sum+=c*z[2]});g('qty').value=n||'';g('orders').value=sum||''}
       const a=NOH?null:minutes(g('from').value),b=NOH?null:minutes(g('to').value);
       const hi=g('hours');
       if(a!=null&&b!=null&&!r.dataset.manual){let m=b-a;if(m<0)m+=1440;const v=Math.floor(m/60*rate);hi.value=v;hi.classList.add('auto-v');hi.title=`${Math.floor(m/60)} ч ${m%60} мин × ${rate} ₽`}
