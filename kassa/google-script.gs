@@ -39,6 +39,7 @@ var SHEET_MONEY = 'Приход-расход';
 var SHEET_LOG = 'Журнал входов';
 var SHEET_STAFF = 'Справочник курьеров';
 var SHEET_FIX = 'Исправления';
+var SHEET_DRAFTS = 'Черновики';
 
 var HEADERS = {};
 HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен', 'Роль'];
@@ -51,6 +52,7 @@ HEADERS[SHEET_COURIERS] = ['ID отчёта', 'Дата смены', 'Филиа
 HEADERS[SHEET_MONEY] = ['ID отчёта', 'Дата смены', 'Филиал', 'Тип', 'Дата', 'Статья', 'Сумма', 'Вычтено из переданной'];
 HEADERS[SHEET_LOG] = ['Время', 'Событие', 'ФИО', 'Филиал'];
 HEADERS[SHEET_STAFF] = ['Филиал', 'ФИО курьера', 'Активен'];
+HEADERS[SHEET_DRAFTS] = ['Администратор', 'Обновлён', 'Черновик'];
 HEADERS[SHEET_FIX] = ['Запрошено', 'ID отчёта', 'Дата смены', 'Филиал', 'Администратор', 'Причина',
   'Статус', 'Решение', 'Новый отчёт', 'ID запроса'];
 
@@ -102,7 +104,7 @@ function doPost(e) {
     if (body.action === 'login') {
       log_('Вход', admin.name, admin.branch);
       return json_({ ok: true, name: admin.name, branch: admin.branch, boss: admin.boss, couriers: couriers_(),
-        fixPending: admin.boss ? fixList_().length : 0 });
+        fixPending: admin.boss ? fixList_().length : 0, draft: admin.boss ? null : draftGet_(admin) });
     }
     if (body.action === 'couriers') return json_({ ok: true, couriers: couriers_() });
     if (body.action === 'revenue') {
@@ -112,6 +114,8 @@ function doPost(e) {
     }
     if (body.action === 'history') return json_({ ok: true, boss: admin.boss, shifts: history_(admin, body),
       fixPending: admin.boss ? fixList_().length : 0 });
+    if (body.action === 'draft_save') return json_(draftSave_(admin, body.draft || null));
+    if (body.action === 'draft_get') return json_({ ok: true, draft: draftGet_(admin) });
     if (body.action === 'fix_request') return json_(fixRequest_(String(body.id || ''), String(body.reason || ''), admin));
     if (body.action === 'fix_list') return json_(admin.boss ? { ok: true, list: fixList_() } : { ok: false, error: 'not_boss' });
     if (body.action === 'fix_decide') return json_(admin.boss ? fixDecide_(String(body.rid || ''), !!body.approve, admin) : { ok: false, error: 'not_boss' });
@@ -129,6 +133,7 @@ function doPost(e) {
       }
       var id = saveReport_(rep, admin);
       if (fix) fixDone_(fix, id, admin);
+      draftSave_(admin, null);
       return json_({ ok: true, id: id });
     }
     return json_({ ok: false, error: 'unknown_action' });
@@ -377,6 +382,47 @@ function fixDone_(fix, newId, admin) {
   rep.getRange(rep.getLastRow(), 21).setValue('исправление');
   log_('Исправлен отчёт ' + fix.f.id + ' → ' + newId, admin.name, '');
 }
+// ---------- Черновик администратора — копия в таблице, чтобы не потерять при сбое компьютера
+function draftSheet_() {
+  var ss = ss_();
+  var sh = ss.getSheetByName(SHEET_DRAFTS);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_DRAFTS);
+    sh.appendRow(HEADERS[SHEET_DRAFTS]);
+    sh.getRange(1, 1, 1, 3).setFontWeight('bold');
+    sh.setFrozenRows(1);
+    sh.getRange('C:C').setNumberFormat('@');
+  }
+  return sh;
+}
+function draftRow_(sh, name) {
+  var n = sh.getLastRow();
+  if (n < 2) return 0;
+  var v = sh.getRange(2, 1, n - 1, 1).getValues();
+  for (var i = 0; i < v.length; i++) if (String(v[i][0]).trim() === name) return i + 2;
+  return 0;
+}
+function draftGet_(admin) {
+  var sh = ss_().getSheetByName(SHEET_DRAFTS);
+  if (!sh) return null;
+  var r = draftRow_(sh, admin.name);
+  if (!r) return null;
+  var t = String(sh.getRange(r, 3).getValue() || '');
+  if (!t) return null;
+  try { return JSON.parse(t); } catch (e) { return null; }
+}
+function draftSave_(admin, d) {
+  // пустой черновик = отметка «очищен» со временем, чтобы другие устройства не вернули старую копию
+  var txt = JSON.stringify(d || { ts: new Date().getTime(), cleared: true });
+  if (txt.length > 45000) return { ok: false, error: 'too_big' };
+  var sh = d ? draftSheet_() : ss_().getSheetByName(SHEET_DRAFTS);
+  if (!sh) return { ok: true };
+  var r = draftRow_(sh, admin.name);
+  if (!r) { if (d) sh.appendRow([admin.name, new Date(), txt]); }
+  else sh.getRange(r, 2, 1, 2).setValues([[new Date(), txt]]);
+  return { ok: true };
+}
+
 // Уже есть действующий отчёт за эту дату по этому филиалу?
 function dupExists_(r, admin) {
   var branch = r.branch || admin.branch, k = dkey_(r.dateRu);

@@ -330,7 +330,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='10';
+  const BUILD='11';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -351,8 +351,8 @@ body.boss .hist-head h2{font-size:26px}
   let USER=null, FIX=null, FIX_PENDING=0;
   function histLabel(){const u=USER;const t=document.getElementById('hist_t');if(t&&u&&u.boss)t.textContent='Все смены'+(FIX_PENDING?` · запросов на исправление: ${FIX_PENDING}`:'');$('#b_hist').textContent=u&&u.boss?('Все отчёты'+(FIX_PENDING?` · запросов: ${FIX_PENDING}`:'')):'Мои смены'}
   const DEVICE=(()=>{let d=LS.get('device',null);if(!d){d=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));LS.set('device',d)}return d})();
-  async function api(payload){
-    const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...payload,device:DEVICE}),redirect:'follow'});
+  async function api(payload,keep){
+    const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...payload,device:DEVICE}),redirect:'follow',keepalive:!!keep});
     return r.json();
   }
   function setUser(u){
@@ -375,7 +375,7 @@ body.boss .hist-head h2{font-size:26px}
     if(pin.length<4){err.textContent='PIN — от 4 до 8 цифр.';return}
     const b=$('#b_login');b.disabled=true;b.textContent='Проверяю…';err.textContent='';
     try{const r=await api({action:'login',pin});
-      if(r.ok){FIX_PENDING=r.fixPending||0;const u={name:r.name,branch:r.branch,boss:!!r.boss,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);loadFor(u);toast('Здравствуйте, '+r.name)}
+      if(r.ok){FIX_PENDING=r.fixPending||0;const u={name:r.name,branch:r.branch,boss:!!r.boss,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);loadFor(u,r.draft||null);toast('Здравствуйте, '+r.name)}
       else err.textContent=r.error==='locked'?'5 неверных попыток на этом устройстве. Вход заблокирован на 10 минут.':r.error==='locked_all'?'Вход временно закрыт для всех из-за подбора PIN. Подождите 10 минут.':'Неверный PIN-код.';
     }catch(x){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.'}
     b.disabled=false;b.textContent='Войти';
@@ -483,7 +483,7 @@ body.boss .hist-head h2{font-size:26px}
     return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,rev:s.raw.rev,cour,exp:mon('Расход'),inc:mon('Приход')};
   }
   function setFix(f){FIX=f;if(USER){if(f)LS.set('fix:'+USER.name,f);else LS.del('fix:'+USER.name)}$('#fixbar').hidden=!f;if(f)$('#fix_date').textContent=f.date}
-  $('#fix_cancel').addEventListener('click',()=>{setFix(null);if(DKEY())LS.del(DKEY());loadFor(USER);toast('Исправление отменено')});
+  $('#fix_cancel').addEventListener('click',()=>{setFix(null);dropDraft(true);loadFor(USER,null);toast('Исправление отменено')});
   H.addEventListener('click',async e=>{
     const b=e.target.closest('[data-fx]');if(!b)return;const act=b.dataset.fx;
     if(act==='open'){openShift(b.dataset.id);return}
@@ -633,7 +633,27 @@ body.boss .hist-head h2{font-size:26px}
   let loading=false;
   // черновик хранится отдельно для каждого администратора
   const DKEY=()=>USER?'draft:'+USER.name:null;
-  function save(){if(loading)return;const k=DKEY();if(!k)return;LS.set(k,state());$('#draft').textContent='Черновик сохраняется автоматически — только для вас, другие администраторы его не видят.'}
+  // + копия черновика в Google-таблице (лист «Черновики»), чтобы открыть его с любого устройства
+  let SYNC_T=null,LAST_SYNC='',SYNC_ON=false;
+  const draftMsg=t=>{$('#draft').textContent=t};
+  function save(){if(loading)return;const k=DKEY();if(!k)return;const st=state(),j=JSON.stringify(st);LS.set(k,st);
+    if(!SYNC_ON||USER.boss||j===LAST_SYNC)return;
+    LS.set('draftts:'+USER.name,Date.now());draftMsg('Черновик сохранён на этом устройстве…');
+    clearTimeout(SYNC_T);SYNC_T=setTimeout(syncDraft,2500)}
+  async function syncDraft(keep){
+    clearTimeout(SYNC_T);if(!USER||!API_URL||USER.boss)return;
+    const st=state(),j=JSON.stringify(st);if(j===LAST_SYNC)return;
+    try{const r=await api({action:'draft_save',pin:USER.pin,draft:{ts:LS.get('draftts:'+USER.name,Date.now()),state:st,fix:FIX}},keep);
+      if(r&&r.ok){LAST_SYNC=j;const t=new Date();draftMsg(`Черновик сохранён на этом устройстве и в таблице (${pad(t.getHours())}:${pad(t.getMinutes())}).`)}
+      else{draftMsg('Черновик сохранён на этом устройстве. В таблицу сохраню чуть позже.');SYNC_T=setTimeout(syncDraft,30000)}}
+    catch(e){if(!keep){draftMsg('Нет интернета — черновик сохранён на этом устройстве. В таблицу сохраню, когда появится связь.');SYNC_T=setTimeout(syncDraft,30000)}}
+  }
+  window.addEventListener('pagehide',()=>{if(USER&&SYNC_ON&&JSON.stringify(state())!==LAST_SYNC)syncDraft(true)});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&USER&&SYNC_ON&&JSON.stringify(state())!==LAST_SYNC)syncDraft(true)});
+  window.addEventListener('online',()=>{if(USER&&SYNC_ON)syncDraft()});
+  // удалить черновик (после отправки или «Начать новый отчёт»)
+  function dropDraft(server){clearTimeout(SYNC_T);if(!USER)return;LS.del('draft:'+USER.name);LS.del('draftts:'+USER.name);
+    if(server&&API_URL)api({action:'draft_save',pin:USER.pin,draft:null}).catch(()=>{})}
   function load(s){
     loading=true;
     $('#branch').value=s.branch||'';$('#date').value=s.date||today();$('#admin').value=s.admin||'';$('#r_041').value=s.r041||'';
@@ -646,24 +666,38 @@ body.boss .hist-head h2{font-size:26px}
   }
   function resetSent(){$('#sent').textContent='';$('#send_err').hidden=true;$('#b_send').dataset.sentFor='';const rs=$('#rev_sent');if(rs)rs.textContent='';const br=$('#b_rev');if(br)br.dataset.sentFor=''}
   // открыть форму пользователя: его черновик или пустой отчёт его филиала
-  function loadFor(u){
-    resetSent();$('#draft').textContent='';
+  function loadFor(u,srv){
+    SYNC_ON=false;clearTimeout(SYNC_T);resetSent();draftMsg('');
     if(!u){setFix(null);load({date:today()});calc();return}
-    FIX=LS.get('fix:'+u.name,null);$('#fixbar').hidden=!FIX;if(FIX)$('#fix_date').textContent=FIX.date;
-    const d=LS.get('draft:'+u.name,null);
+    let d=LS.get('draft:'+u.name,null),lts=LS.get('draftts:'+u.name,0)||0,fx=LS.get('fix:'+u.name,null),fromSrv=false;
+    const sts=srv?(srv.ts||1):0;
+    if(sts&&sts>lts){fromSrv=true;
+      if(srv.state){d=srv.state;fx=srv.fix||null;LS.set('draft:'+u.name,d);LS.set('draftts:'+u.name,sts);if(fx)LS.set('fix:'+u.name,fx);else LS.del('fix:'+u.name)}
+      else{d=null;fx=null;LS.del('draft:'+u.name);LS.set('draftts:'+u.name,sts);LS.del('fix:'+u.name)}} // отчёт уже отправлен/очищен на другом устройстве
+    FIX=fx;$('#fixbar').hidden=!FIX;if(FIX)$('#fix_date').textContent=FIX.date;
     load(d||{date:today(),branch:u.branch||'',admin:u.name});$('#admin').value=u.name;refreshNames();calc();
-    if(d)$('#draft').textContent='Открыт ваш сохранённый черновик.';
+    const pushLocal=!!d&&!fromSrv&&(srv===undefined?false:lts>sts);
+    LAST_SYNC=pushLocal?'':JSON.stringify(state());SYNC_ON=true;
+    if(d)draftMsg(fromSrv?'Открыт ваш черновик, сохранённый в таблице.':'Открыт ваш сохранённый черновик.');
+    if(pushLocal)syncDraft();
+  }
+  // при открытии сайта с сохранённым входом: проверить, нет ли в таблице более свежего черновика
+  async function pullDraft(u){
+    if(!API_URL||u.boss)return;const before=LS.get('draftts:'+u.name,0)||0;
+    try{const r=await api({action:'draft_get',pin:u.pin});if(!r||!r.ok||USER!==u)return;
+      if((LS.get('draftts:'+u.name,0)||0)!==before)return; // уже начали печатать — не перебиваем
+      loadFor(u,r.draft||null)}catch(e){}
   }
   // старый общий черновик: переносим тому, кто в нём указан, и удаляем общий
   (()=>{const old=LS.get('draft',null);if(old&&old.admin&&!LS.get('draft:'+old.admin,null))LS.set('draft:'+old.admin,old);LS.del('draft');LS.del('savedAt')})();
   load({date:today()});
   calc();
-  if(API_URL){const s=LS.get('session',null);if(s&&s.exp>Date.now()&&s.pin){setUser(s);loadFor(s);api({action:'couriers',pin:s.pin}).then(r=>{if(r&&r.ok){COURIERS=r.couriers||null;LS.set('couriers',COURIERS);refreshNames();calc()}else if(r&&r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}}).catch(()=>{})}else{LS.del('session');openGate()}}
+  if(API_URL){const s=LS.get('session',null);if(s&&s.exp>Date.now()&&s.pin){setUser(s);loadFor(s);pullDraft(s);api({action:'couriers',pin:s.pin}).then(r=>{if(r&&r.ok){COURIERS=r.couriers||null;LS.set('couriers',COURIERS);refreshNames();calc()}else if(r&&r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}}).catch(()=>{})}else{LS.del('session');openGate()}}
   $('#b_new').addEventListener('click',()=>{
     const b=$('#b_new');
     if(!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Нажмите ещё раз, чтобы очистить отчёт';setTimeout(()=>{b.dataset.confirm='';b.textContent='Начать новый отчёт'},3500);return}
     b.dataset.confirm='';b.textContent='Начать новый отчёт';
-    if(DKEY())LS.del(DKEY());setFix(null);resetSent();load({date:today(),branch:$('#branch').value,admin:$('#admin').value});calc();window.scrollTo({top:0});toast('Новый отчёт');
+    dropDraft(true);setFix(null);SYNC_ON=false;resetSent();load({date:today(),branch:$('#branch').value,admin:$('#admin').value});calc();LAST_SYNC=JSON.stringify(state());SYNC_ON=true;draftMsg('');window.scrollTo({top:0});toast('Новый отчёт');
   });
   function remember(){const b=$('#branch').value;if(b)LS.set('branch',b);const a=$('#admin').value.trim();if(a)LS.set('admin',a)}
 
@@ -710,7 +744,7 @@ body.boss .hist-head h2{font-size:26px}
     const report={branch:s.branch,dateRu:ruDate(s.date),r041:s.r041,rev:s.rev,totals:{rev:R.rev,ct:R.ct,cw:R.cw,cn:R.cn,ex:R.ex,exW:R.exW,inc:R.inc,pass:R.pass},
       cour:s.cour,exp:s.exp.map(x=>({...x,dateRu:ruDate(x.date)})),inc:s.inc.map(x=>({...x,dateRu:ruDate(x.date)}))};
     try{const r=await api({action:'report',pin:USER.pin,report,fixOf:FIX?FIX.id:undefined});
-      if(r.ok){const wasFix=!!FIX;if(DKEY())LS.del(DKEY());setFix(null);loadFor(USER);$('#draft').textContent='';window.scrollTo({top:0});const t=new Date();$('#sent').textContent=`Отчёт за ${ruDate(s.date)} ${wasFix?'исправлен':'отправлен'} в ${pad(t.getHours())}:${pad(t.getMinutes())}, номер ${r.id}. Форма очищена — его можно открыть в «Мои смены».`;toast('Отчёт отправлен, форма очищена')}
+      if(r.ok){const wasFix=!!FIX;dropDraft(false);setFix(null);loadFor(USER,null);draftMsg('');window.scrollTo({top:0});const t=new Date();$('#sent').textContent=`Отчёт за ${ruDate(s.date)} ${wasFix?'исправлен':'отправлен'} в ${pad(t.getHours())}:${pad(t.getMinutes())}, номер ${r.id}. Форма очищена — его можно открыть в «Мои смены».`;toast('Отчёт отправлен, форма очищена')}
       else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова — отчёт сохранён.')}
       else if(r.error==='duplicate'){toast('Смена уже отправлена');showErr('Смена за эту дату по этому филиалу уже отправлена. Чтобы исправить её, откройте «Мои смены», выберите смену и нажмите «Запросить исправление».')}
       else if(r.error==='fix_not_allowed'){setFix(null);showErr('Исправление не разрешено или уже использовано. Откройте смену в «Мои смены» и запросите исправление.')}
