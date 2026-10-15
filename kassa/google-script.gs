@@ -21,8 +21,10 @@
  *   Филиал пишите так же, как в списке на сайте.
  *
  * Как заводить администраторов: лист «Админы», одна строка на человека.
- *   ФИО | Филиал | PIN | Активен
+ *   ФИО | Филиал | PIN | Активен | Роль
  *   PIN — от 4 до 8 цифр, у каждого свой. Чтобы закрыть доступ, поставьте в «Активен» «нет».
+ *   Роль: пусто — обычный администратор (видит только свои смены);
+ *   «руководитель» — видит на сайте все отчёты всех филиалов.
  *   Филиал пишите так же, как в списке на сайте (например: Казань, Академика Глушко 35).
  */
 
@@ -38,7 +40,7 @@ var SHEET_LOG = 'Журнал входов';
 var SHEET_STAFF = 'Справочник курьеров';
 
 var HEADERS = {};
-HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен'];
+HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен', 'Роль'];
 HEADERS[SHEET_REPORTS] = ['Отправлено', 'Дата смены', 'Филиал', 'Администратор', 'Выручка всего', 'Наличка',
   'Б/Н расчет (картой)', 'Деливери/ЯЕ', 'МП (online)', 'Чиббис', 'Сбермаркет', 'Бонусы iiko (iikocard)',
   'Итого по 041', 'Курьерам всего', 'Делали изъятие', 'Не делали изъятие', 'Прочие расходы',
@@ -67,6 +69,15 @@ function setup() {
   admins.getRange('C:C').setNumberFormat('@'); // PIN как текст, чтобы не терялись нули впереди
   var def = ss.getSheetByName('Лист1') || ss.getSheetByName('Sheet1');
   if (def && def.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(def);
+  addRoleColumn();
+}
+
+// Добавляет столбец «Роль» на лист «Админы» (для уже работающей таблицы — запустить один раз).
+function addRoleColumn() {
+  var sh = ss_().getSheetByName(SHEET_ADMINS);
+  if (!String(sh.getRange('E1').getValue()).trim()) sh.getRange('E1').setValue('Роль').setFontWeight('bold');
+  var rule = SpreadsheetApp.newDataValidation().requireValueInList(['руководитель'], true).setAllowInvalid(true).build();
+  sh.getRange('E2:E').setDataValidation(rule);
 }
 
 function doGet() {
@@ -87,7 +98,7 @@ function doPost(e) {
     resetFails_(dev);
     if (body.action === 'login') {
       log_('Вход', admin.name, admin.branch);
-      return json_({ ok: true, name: admin.name, branch: admin.branch, couriers: couriers_() });
+      return json_({ ok: true, name: admin.name, branch: admin.branch, boss: admin.boss, couriers: couriers_() });
     }
     if (body.action === 'couriers') return json_({ ok: true, couriers: couriers_() });
     if (body.action === 'revenue') {
@@ -95,7 +106,7 @@ function doPost(e) {
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
     }
-    if (body.action === 'history') return json_({ ok: true, shifts: history_(admin) });
+    if (body.action === 'history') return json_({ ok: true, boss: admin.boss, shifts: history_(admin, body) });
     if (body.action === 'shift') {
       var sh = shift_(String(body.id || ''), admin);
       return json_(sh ? { ok: true, shift: sh } : { ok: false, error: 'not_found' });
@@ -119,7 +130,8 @@ function findAdmin_(pin) {
     var r = rows[i];
     var active = String(r[3] || '').trim().toLowerCase();
     if (String(r[2]).replace(/\D/g, '') === pin && active !== 'нет' && active !== 'no' && r[0]) {
-      return { name: String(r[0]).trim(), branch: String(r[1] || '').trim() };
+      return { name: String(r[0]).trim(), branch: String(r[1] || '').trim(),
+        boss: /руковод|владел|управля/i.test(String(r[4] || '')) };
     }
   }
   return null;
@@ -207,15 +219,34 @@ function d_(v) {
   var t = Utilities.formatDate(v, 'Europe/Moscow', 'HH:mm');
   return Utilities.formatDate(v, 'Europe/Moscow', t === '00:00' ? 'dd.MM.yyyy' : 'dd.MM.yyyy HH:mm');
 }
-function history_(admin) {
+// Дата смены → число ГГГГММДД для фильтра по периоду
+function dkey_(v) {
+  if (v instanceof Date) return Number(Utilities.formatDate(v, 'Europe/Moscow', 'yyyyMMdd'));
+  var m = String(v).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  return m ? Number(m[3]) * 10000 + Number(m[2]) * 100 + Number(m[1]) : 0;
+}
+function history_(admin, q) {
+  q = q || {};
   var rows = ss_().getSheetByName(SHEET_REPORTS).getDataRange().getValues();
+  var from = Number(String(q.from || '').replace(/\D/g, '')) || 0;
+  var to = Number(String(q.to || '').replace(/\D/g, '')) || 99999999;
+  var branch = String(q.branch || '');
+  var limit = admin.boss ? 2000 : 100;
   var out = [];
-  for (var i = rows.length - 1; i >= 1 && out.length < 100; i--) {
+  for (var i = rows.length - 1; i >= 1 && out.length < limit; i--) {
     var r = rows[i];
-    if (String(r[3]).trim() !== admin.name) continue;
-    out.push({ id: String(r[21]), sent: d_(r[0]),
-      date: d_(r[1]), branch: String(r[2]), rev: Number(r[4]) || 0, cash: Number(r[5]) || 0,
-      ct: Number(r[13]) || 0, ex: Number(r[16]) || 0, pass: Number(r[19]) || 0, repeat: String(r[20]) === 'да' });
+    if (!admin.boss && String(r[3]).trim() !== admin.name) continue;
+    if (admin.boss) {
+      var k = dkey_(r[1]);
+      if (k < from || k > to) continue;
+      if (branch && String(r[2]) !== branch) continue;
+    }
+    out.push({ id: String(r[21]), sent: d_(r[0]), dk: dkey_(r[1]),
+      date: d_(r[1]), branch: String(r[2]), admin: String(r[3]), rev: Number(r[4]) || 0, cash: Number(r[5]) || 0,
+      card: Number(r[6]) || 0, ye: Number(r[7]) || 0, mp: Number(r[8]) || 0, chib: Number(r[9]) || 0,
+      sber: Number(r[10]) || 0, bon: Number(r[11]) || 0,
+      ct: Number(r[13]) || 0, ex: Number(r[16]) || 0, inc: Number(r[18]) || 0, pass: Number(r[19]) || 0,
+      repeat: String(r[20]) === 'да' });
   }
   return out;
 }
@@ -226,7 +257,7 @@ function shift_(id, admin) {
   var rows = ss.getSheetByName(SHEET_REPORTS).getDataRange().getValues();
   var head = rows[0], row = null;
   for (var i = 1; i < rows.length; i++) if (String(rows[i][21]) === id) { row = rows[i]; break; }
-  if (!row || String(row[3]).trim() !== admin.name) return null;
+  if (!row || (!admin.boss && String(row[3]).trim() !== admin.name)) return null;
   var summary = [];
   for (var j = 1; j < head.length - 1; j++) {
     var v = row[j];

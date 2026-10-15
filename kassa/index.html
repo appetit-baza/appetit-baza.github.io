@@ -145,6 +145,22 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .h-item .rep{color:var(--amber);font-weight:600}
 .h-back{justify-self:start;border:0;background:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;padding:0}
 .h-sec{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:10px 0 4px}
+.hist-box>*,#hist_boss>*{min-width:0}
+#hb_xlsx{width:auto;padding-inline:18px}
+.hb-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:end}
+.hb-filters label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:600}
+.hb-filters select,.hb-filters input{font:inherit;font-size:15px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);min-width:0;width:100%}
+.hb-quick{display:flex;flex-wrap:wrap;gap:6px}
+.hb-quick button{font:inherit;font-size:13.5px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.hb-quick button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.hb-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.hb-tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
+.hb-tile small{display:block;color:var(--muted);font-size:12.5px}
+.hb-tile b{font-size:18px;font-variant-numeric:tabular-nums}
+.hb-tile.main b{color:var(--accent);font-size:21px}
+.h-table td.n,.h-table th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.h-item .old{color:var(--muted);text-decoration:line-through}
+@media (max-width:560px){.hb-filters{grid-template-columns:1fr 1fr}.hb-filters label:first-child{grid-column:1/-1}}
 .h-table{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
 .h-table table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
 .h-table th,.h-table td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
@@ -263,6 +279,17 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   <div class="hist-box">
     <div class="hist-head"><h2 id="hist_t">Мои смены</h2><button type="button" class="x" id="hist_close" aria-label="Закрыть">×</button></div>
     <p class="hint" id="hist_note">Отчёты, которые вы отправили в бухгалтерию. Другие администраторы ваши смены не видят.</p>
+    <div id="hist_boss" hidden>
+      <div class="hb-filters">
+        <label>Филиал<select id="hb_branch"><option value="">Все филиалы</option></select></label>
+        <label>С<input type="date" id="hb_from"></label>
+        <label>По<input type="date" id="hb_to"></label>
+      </div>
+      <div class="hb-quick" id="hb_quick" style="margin-top:8px">
+        <button type="button" data-q="today">Сегодня</button><button type="button" data-q="yest">Вчера</button><button type="button" data-q="week">7 дней</button><button type="button" data-q="month">Этот месяц</button><button type="button" data-q="prev">Прошлый месяц</button>
+      </div>
+      <div id="hb_sum" style="margin-top:12px"></div>
+    </div>
     <div id="hist_list" class="hist-list"></div>
     <div id="hist_one" hidden></div>
   </div>
@@ -306,7 +333,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   }
   function setUser(u){
     USER=u;
-    $('#user').hidden=!u; $('#u_name').textContent=u?u.name:''; $('.top a.kb').classList.toggle('with-user',!!u);
+    $('#user').hidden=!u; $('#u_name').textContent=u?u.name:''; $('#b_hist').textContent=u&&u.boss?'Все отчёты':'Мои смены'; $('.top a.kb').classList.toggle('with-user',!!u);
     $('#b_send').hidden=!u||!API_URL;
     $('#to_chat').hidden=!u||!API_URL||!MAX_ON;
     $('#b_xlsx').className='btn '+($('#b_send').hidden?'primary':'sec');
@@ -319,7 +346,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     if(pin.length<4){err.textContent='PIN — от 4 до 8 цифр.';return}
     const b=$('#b_login');b.disabled=true;b.textContent='Проверяю…';err.textContent='';
     try{const r=await api({action:'login',pin});
-      if(r.ok){const u={name:r.name,branch:r.branch,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);calc();toast('Здравствуйте, '+r.name)}
+      if(r.ok){const u={name:r.name,branch:r.branch,boss:!!r.boss,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);calc();toast('Здравствуйте, '+r.name)}
       else err.textContent=r.error==='locked'?'5 неверных попыток на этом устройстве. Вход заблокирован на 10 минут.':r.error==='locked_all'?'Вход временно закрыт для всех из-за подбора PIN. Подождите 10 минут.':'Неверный PIN-код.';
     }catch(x){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.'}
     b.disabled=false;b.textContent='Войти';
@@ -333,29 +360,71 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   H.addEventListener('click',e=>{if(e.target===H)closeHist()});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!H.hidden)closeHist()});
   const money=v=>{const n=typeof v==='number'?v:num(v);return rub(n)};
-  $('#b_hist').addEventListener('click',async()=>{
-    if(!USER){openGate();return}
-    H.hidden=false;$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false;
-    $('#hist_list').innerHTML='<p class="hint">Загружаю…</p>';
-    try{const r=await api({action:'history',pin:USER.pin});
+  const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  let BOSS_ROWS=[];
+  function quick(q){const d=new Date();let f,t=new Date(d);
+    if(q==='today')f=new Date(d);else if(q==='yest'){f=new Date(d);f.setDate(d.getDate()-1);t=new Date(f)}
+    else if(q==='week'){f=new Date(d);f.setDate(d.getDate()-6)}else if(q==='month')f=new Date(d.getFullYear(),d.getMonth(),1);
+    else{f=new Date(d.getFullYear(),d.getMonth()-1,1);t=new Date(d.getFullYear(),d.getMonth(),0)}
+    $('#hb_from').value=iso(f);$('#hb_to').value=iso(t);$$('#hb_quick button').forEach(x=>x.classList.toggle('on',x.dataset.q===q))}
+  function itemHtml(x,boss){return `<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b${x.old?' class="old"':''}>${esc(x.date)}</b>${boss?' · '+esc(x.admin):''}<br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.old?' · <span class="rep">заменён повторной отправкой, в итоги не входит</span>':x.repeat?' · <span class="rep">повторная отправка</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`}
+  async function loadHist(){
+    const boss=!!(USER&&USER.boss);
+    $('#hist_list').innerHTML='<p class="hint">Загружаю…</p>';if(boss)$('#hb_sum').innerHTML='';
+    const q={action:'history',pin:USER.pin};
+    if(boss){q.from=$('#hb_from').value.replace(/-/g,'');q.to=$('#hb_to').value.replace(/-/g,'');q.branch=$('#hb_branch').value}
+    try{const r=await api(q);
       if(!r.ok){if(r.error==='bad_pin'){closeHist();LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}else $('#hist_list').innerHTML='<p class="hint">Не удалось загрузить. Попробуйте ещё раз.</p>';return}
-      if(!r.shifts.length){$('#hist_list').innerHTML='<p class="hint">Отправленных отчётов пока нет. Они появятся здесь после кнопки «Отправить в бухгалтерию».</p>';return}
-      $('#hist_list').innerHTML=r.shifts.map(x=>`<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b>${esc(x.date)}</b><br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.repeat?' · <span class="rep">повторная отправка</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`).join('');
+      if(r.boss&&!boss){USER.boss=true;LS.set('session',USER);setUser(USER);openHist();return}
+      if(!r.shifts.length){$('#hist_list').innerHTML=boss?'<p class="hint">За этот период отчётов нет.</p>':'<p class="hint">Отправленных отчётов пока нет. Они появятся здесь после кнопки «Отправить в бухгалтерию».</p>';return}
+      if(boss){const seen=new Set();r.shifts.forEach(x=>{const k=x.dk+'|'+x.branch;x.old=seen.has(k);seen.add(k)});BOSS_ROWS=r.shifts;bossSum()}
+      $('#hist_list').innerHTML=r.shifts.map(x=>itemHtml(x,boss)).join('');
     }catch(e){$('#hist_list').innerHTML='<p class="hint">Нет связи с сервером. Попробуйте ещё раз.</p>'}
-  });
+  }
+  const SUMF=[['rev','Выручка всего'],['cash','Наличка'],['card','Картой'],['ye','Деливери/ЯЕ'],['mp','МП (online)'],['chib','Чиббис'],['sber','Сбермаркет'],['bon','Бонусы iiko'],['ct','Курьерам'],['ex','Прочие расходы'],['inc','Приход'],['pass','Передано']];
+  function bossSum(){
+    const rows=BOSS_ROWS.filter(x=>!x.old);const tot={};SUMF.forEach(([k])=>tot[k]=rows.reduce((a,x)=>a+(x[k]||0),0));
+    const by={};rows.forEach(x=>{const b=by[x.branch]=by[x.branch]||{n:0,rev:0,cash:0,ct:0,ex:0,pass:0};b.n++;['rev','cash','ct','ex','pass'].forEach(k=>b[k]+=x[k]||0)});
+    const tiles=SUMF.filter(([k])=>k==='rev'||tot[k]).map(([k,l])=>`<div class="hb-tile${k==='rev'?' main':''}"><small>${l}</small><b>${money(tot[k])}</b></div>`).join('');
+    const names=Object.keys(by).sort((a,b)=>by[b].rev-by[a].rev);
+    const tbl=names.length>1?`<p class="h-sec">По филиалам</p><div class="h-table"><table><tr><th>Филиал</th><th class="n">Смен</th><th class="n">Выручка</th><th class="n">Наличка</th><th class="n">Курьерам</th><th class="n">Расходы</th><th class="n">Передано</th></tr>${names.map(n=>{const b=by[n];return `<tr><td>${esc(n)}</td><td class="n">${b.n}</td><td class="n"><b>${money(b.rev)}</b></td><td class="n">${money(b.cash)}</td><td class="n">${money(b.ct)}</td><td class="n">${money(b.ex)}</td><td class="n">${money(b.pass)}</td></tr>`}).join('')}</table></div>`:'';
+    $('#hb_sum').innerHTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
+  }
+  function bossXlsx(){
+    if(!window.XLSX){toast('Excel не загрузился. Обновите страницу.');return}
+    const head=['Дата смены','Филиал','Администратор',...SUMF.map(x=>x[1]),'Отправлено','В итогах'];
+    const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),x.sent,x.old?'нет (повтор)':'да'])];
+    const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map((h,i)=>({wch:i<3?(i===1?26:18):13}));
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Отчёты');
+    const fn=`Отчёты ${ruDate($('#hb_from').value)}–${ruDate($('#hb_to').value)}.xlsx`;
+    try{XLSX.writeFile(wb,fn);toast('Excel скачан')}catch(e){toast('Не удалось скачать файл')}
+  }
+  function openHist(){
+    const boss=!!USER.boss;
+    H.hidden=false;$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false;
+    $('#hist_t').textContent=boss?'Все отчёты':'Мои смены';
+    $('#hist_note').textContent=boss?'Отчёты всех администраторов и филиалов. Если смену отправили повторно, в итоги входит последняя отправка.':'Отчёты, которые вы отправили в бухгалтерию. Другие администраторы ваши смены не видят.';
+    $('#hist_boss').hidden=!boss;
+    if(boss){const sel=$('#hb_branch');if(sel.options.length<2)[...$('#branch').options].filter(o=>o.value).forEach(o=>sel.add(new Option(o.textContent,o.value)));if(!$('#hb_from').value)quick('month')}
+    loadHist();
+  }
+  $('#b_hist').addEventListener('click',()=>{if(!USER){openGate();return}openHist()});
+  $('#hb_quick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;quick(b.dataset.q);loadHist()});
+  ['#hb_from','#hb_to','#hb_branch'].forEach(id=>$(id).addEventListener('change',()=>{$$('#hb_quick button').forEach(x=>x.classList.remove('on'));loadHist()}));
+  $('#hb_sum').addEventListener('click',e=>{if(e.target.id==='hb_xlsx')bossXlsx()});
   $('#hist_list').addEventListener('click',async e=>{
     const b=e.target.closest('.h-item');if(!b)return;
-    const one=$('#hist_one');one.hidden=false;$('#hist_list').hidden=true;$('#hist_note').hidden=true;one.innerHTML='<p class="hint">Загружаю…</p>';
+    const one=$('#hist_one');one.hidden=false;$('#hist_list').hidden=true;$('#hist_note').hidden=true;$('#hist_boss').hidden=true;one.innerHTML='<p class="hint">Загружаю…</p>';
     try{const r=await api({action:'shift',pin:USER.pin,id:b.dataset.id});
-      if(!r.ok){one.innerHTML='<button type="button" class="h-back">← Все смены</button><p class="hint">Отчёт не найден.</p>';return}
+      if(!r.ok){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Отчёт не найден.</p>';return}
       const s=r.shift;
-      const kv=s.summary.filter(([k])=>!/^(Отправлено|Администратор|Повторная)/.test(k)).map(([k,v])=>`<span>${esc(k)}</span><span>${typeof v==='number'?money(v):esc(v)}</span>`).join('');
+      const kv=s.summary.filter(([k])=>!(USER&&USER.boss?/^(Повторная)/:/^(Отправлено|Администратор|Повторная)/).test(k)).map(([k,v])=>`<span>${esc(k)}</span><span>${typeof v==='number'?money(v):esc(v)}</span>`).join('');
       const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>`).join('')}</table></div>`:'';
       const mt=s.money.length?`<p class="h-sec">Приход и расход</p><div class="h-table"><table><tr><th>Тип</th><th>Дата</th><th>Статья</th><th>Сумма</th></tr>${s.money.map(m=>`<tr><td>${esc(m.type)}</td><td>${esc(m.date)}</td><td>${esc(m.art)}</td><td>${esc(m.sum)}</td></tr>`).join('')}</table></div>`:'';
-      one.innerHTML=`<button type="button" class="h-back">← Все смены</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${ct}${mt}`;
-    }catch(x){one.innerHTML='<button type="button" class="h-back">← Все смены</button><p class="hint">Нет связи с сервером.</p>'}
+      one.innerHTML=`<button type="button" class="h-back">← Назад к списку</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${ct}${mt}`;
+    }catch(x){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Нет связи с сервером.</p>'}
   });
-  $('#hist_one').addEventListener('click',e=>{if(e.target.closest('.h-back')){$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false}});
+  $('#hist_one').addEventListener('click',e=>{if(e.target.closest('.h-back')){$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false;$('#hist_boss').hidden=!(USER&&USER.boss)}});
   const RATE=140; // ставка курьера за час, менять только здесь
   const REV=[['r_cash','Наличка'],['r_card','Б/Н расчет (картой)'],['r_ye','Деливери/ЯЕ'],['r_mp','МП (online)'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
 
