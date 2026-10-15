@@ -66,7 +66,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .rate-fixed{margin:0 0 14px;font-size:14px;color:var(--muted)}
 .rate-fixed b{color:var(--ink)}
 .row-h,.crow,.erow{display:grid;gap:8px;align-items:center}
-.crow,.row-h.c{grid-template-columns:minmax(150px,1fr) 78px 78px 80px 56px 82px 84px 88px 30px}
+.crow,.row-h.c{grid-template-columns:minmax(120px,1fr) 64px 64px 70px 52px 74px 74px 176px 30px}
 .c-name{display:grid;gap:6px}
 .erow,.row-h.e{grid-template-columns:minmax(0,.7fr) minmax(0,2fr) 110px 104px 30px}
 .row-h{padding:0 2px}
@@ -74,6 +74,16 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .calc.auto{background:var(--accent-soft);color:var(--accent)}
 .tm{text-align:center;font-variant-numeric:tabular-nums}
 .tog{height:40px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);user-select:none;padding:0 6px;text-align:center;line-height:1.1}
+.tog[aria-pressed=mixed]{background:#FFF3D6;border-color:var(--amber);color:#7A5200}
+.wsel{font-size:13px;font-weight:600;padding:0 4px 0 8px;color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+.wsel[data-v=n]{background:var(--bg);color:var(--muted);border-color:var(--line)}
+.wsel[data-v=p]{background:#FFF3D6;color:#7A5200;border-color:var(--amber)}
+.wsel option{background:var(--surface);color:var(--ink)}
+.wpart{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:13.5px;border:1px solid var(--amber);border-radius:10px;padding:8px 10px;background:var(--surface)}
+.wpart[hidden]{display:none}
+.wpart label{display:flex;align-items:center;gap:8px;font-weight:600}
+.wpart input{width:110px}
+.wpart .rest{color:var(--muted)}
 .tog[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .del{width:30px;height:40px;border:0;background:transparent;color:var(--muted);font-size:20px;cursor:pointer;border-radius:8px}
 .del:hover{background:var(--warn-soft);color:var(--warn)}
@@ -120,6 +130,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   .lbl-m{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:3px}
   .crow{grid-template-columns:repeat(4,minmax(0,1fr));padding:12px;border:1px solid var(--line);border-radius:12px;position:relative}
   .crow .c-name{grid-column:1/-1;padding-right:36px}
+  .crow .c-w{grid-column:span 2}
   .crow .del,.erow .del{position:absolute;top:8px;right:6px}
   .erow{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px;border:1px solid var(--line);border-radius:12px;position:relative}
   .erow .e-art{grid-column:1/-1;padding-right:36px}
@@ -148,7 +159,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .c-noh-only{display:none}
 #sec-cour.noh .c-h,#sec-cour.noh .c-h-only{display:none!important}
 #sec-cour.noh .c-noh-only{display:block}
-@media (min-width:861px){#sec-cour.noh .crow,#sec-cour.noh .row-h.c{grid-template-columns:minmax(150px,1fr) 70px 100px 100px 88px 30px}}
+@media (min-width:861px){#sec-cour.noh .crow,#sec-cour.noh .row-h.c{grid-template-columns:minmax(150px,1fr) 70px 100px 100px 176px 30px}}
 /* archive */
 .lbl-note{font-weight:400;color:var(--muted)}
 .hist{position:fixed;inset:0;z-index:55;background:rgba(10,15,13,.45);display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:calc(24px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
@@ -271,7 +282,7 @@ body.boss .hist-head h2{font-size:26px}
     </div>
     <div class="rows" id="cour"></div>
     <button type="button" class="add" id="add_cour">+ Добавить курьера</button>
-    <p class="hint c-h-only">«За часы» считается по времени × ставку, копейки отбрасываются. Если курьеру платили не по графику, впишите сумму вручную. «Изъятие сделано» — выплата из кассы с изъятием; «Изъятие не сделано» — выдали из сейфа без изъятия. Нажмите на кнопку, чтобы переключить.</p>
+    <p class="hint c-h-only">«За часы» считается по времени × ставку, копейки отбрасываются. Если курьеру платили не по графику, впишите сумму вручную. «Изъятие сделано» — выплата из кассы с изъятием; «Изъятие не сделано» — выдали из сейфа без изъятия; «Изъятие частично» — часть с изъятием, остальное из сейфа (впишите, сколько с изъятием). Выберите в списке у курьера.</p>
     <div class="sumrow">
       <div class="c-h">За часы<b id="o_c_h">0</b></div><div>За заказы<b id="o_c_o">0</b></div><div>Итого курьерам<b id="o_c_t">0</b></div>
       <div>Делали изъятие<b id="o_c_w">0</b></div><div>Не делали изъятие<b id="o_c_n">0</b></div><div>Заказов<b id="o_c_q">0</b></div>
@@ -353,7 +364,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='17';
+  const BUILD='19';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -503,7 +514,7 @@ body.boss .hist-head h2{font-size:26px}
     const cour=s.cour.map(c=>{const from=tm(c.from),to=tm(c.to),a=minutes(from),b=minutes(to);let auto=null;if(a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;auto=Math.floor(m/60*RATE)}
       let z=null;const zb=/казань/i.test(s.raw.branch)?'kzn':/уфа|челябинск/i.test(s.raw.branch)?'chu':null;
       if(zb&&c.zones){const n=ZONESETS[zb].z.map(()=>'');String(c.zones).split(/;\s*/).forEach(p=>{const m=p.match(/^(.*) × (\d+)$/);if(m){const i=ZONESETS[zb].z.findIndex(q=>zLabel(q)===m[1].trim());if(i>=0)n[i]=m[2]}});z={id:zb,n}}
-      return {z,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),w:!/нет/i.test(c.w),manual:auto!==null&&auto!==num(c.hours)}});
+      return {z,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),...(/частично/i.test(c.w)?{w:'p',ws:String((String(c.w).match(/([\d\s.,]+)\s*₽?\s*с изъятием/)||[])[1]||'').replace(/\s/g,'')}:{w:!/нет/i.test(c.w)}),manual:auto!==null&&auto!==num(c.hours)}});
     const mon=t=>s.money.filter(m=>m.type===t).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
     return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,rev:s.raw.rev,cour,exp:mon('Расход'),inc:mon('Приход')};
   }
@@ -553,6 +564,11 @@ body.boss .hist-head h2{font-size:26px}
 
   // ---------- rows
   function minutes(t){t=String(t||'').trim().replace(/[.,;\-]/g,':');if(/^\d{3,4}$/.test(t))t=t.slice(0,-2)+':'+t.slice(-2);if(!/^\d{1,2}:\d{2}$/.test(t))return null;const [h,m]=t.split(':').map(Number);if(h>24||m>59)return null;return h*60+m}
+  // изъятие у курьера: сделано / не сделано / частично (часть из кассы с изъятием, остальное из сейфа)
+  const WST={y:['true','Изъятие сделано'],n:['false','Изъятие не сделано'],p:['mixed','Изъятие частично']};
+  const wOf=w=>w==='p'?'p':w===false?'n':'y';
+  const wGet=r=>r.querySelector('[data-k=w]').value||'y';
+  document.addEventListener('change',e=>{const sel=e.target.closest('.wsel');if(!sel)return;const row=sel.closest('.crow');sel.dataset.v=sel.value;const wp=row.querySelector('.wpart');wp.hidden=sel.value!=='p';if(sel.value==='p')wp.querySelector('input').focus();calc()});
   function addCour(d={}){
     const r=document.createElement('div');r.className='crow';
     r.innerHTML=`<div class="c-name"><span class="lbl-m">ФИО</span><select data-k="pick" aria-label="Курьер" hidden></select><input data-k="name" placeholder="Фамилия" value="${esc(d.name)}" aria-label="ФИО курьера"></div>
@@ -562,8 +578,9 @@ body.boss .hist-head h2{font-size:26px}
       <div><span class="lbl-m">Заказов</span><input data-k="qty" class="num" inputmode="numeric" value="${esc(d.qty)}" aria-label="Количество заказов"></div>
       <div><span class="lbl-m">За заказы</span><input data-k="orders" class="num" inputmode="decimal" value="${esc(d.orders)}" aria-label="За заказы"></div>
       <div><span class="lbl-m">Итого</span><div class="calc" data-o="tot">0</div></div>
-      <div><span class="lbl-m">Изъятие</span><button type="button" class="tog" data-k="w" aria-pressed="${d.w===false?'false':'true'}">${d.w===false?'Изъятие не сделано':'Изъятие сделано'}</button></div>
+      <div class="c-w"><span class="lbl-m">Изъятие</span><select data-k="w" class="wsel" data-v="${wOf(d.w)}" aria-label="Изъятие">${Object.keys(WST).map(k=>`<option value="${k}"${wOf(d.w)===k?' selected':''}>${WST[k][1]}</option>`).join('')}</select></div>
       <button type="button" class="del" aria-label="Удалить строку">×</button>
+      <div class="wpart"${wOf(d.w)==='p'?'':' hidden'}><label>Из них с изъятием, ₽ <input data-k="ws" class="num" inputmode="decimal" value="${esc(d.ws)}" aria-label="Сумма с изъятием"></label><span class="rest" data-o="wrest"></span></div>
       <div class="zones" hidden></div>`;
     r.dataset.manual=d.manual?'1':'';r._zinit=d.z||null;
     $('#cour').appendChild(r);
@@ -601,8 +618,7 @@ body.boss .hist-head h2{font-size:26px}
   }
   document.addEventListener('click',e=>{
     const t=e.target.closest('.tog');
-    if(t){const on=t.getAttribute('aria-pressed')!=='true';t.setAttribute('aria-pressed',on);
-      t.textContent=t.closest('.crow')?(on?'Изъятие сделано':'Изъятие не сделано'):(on?'Вычесть':'Отдельно');calc();}
+    if(t){const on=t.getAttribute('aria-pressed')!=='true';t.setAttribute('aria-pressed',on);t.textContent=on?'Вычесть':'Отдельно';calc();}
     const d=e.target.closest('.del');if(d){d.closest('.crow,.erow').remove();calc();}
   });
   $('#add_cour').addEventListener('click',()=>{addCour();$('#cour').lastElementChild.querySelector('input').focus();calc()});
@@ -623,7 +639,7 @@ body.boss .hist-head h2{font-size:26px}
   function state(){
     const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),rev:{},cour:[],exp:[],inc:[]};
     REV.forEach(([id])=>s.rev[id]=$('#'+id).value.trim());
-    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:g('w').getAttribute('aria-pressed')==='true',manual:!!r.dataset.manual,...zoneState(r)})});
+    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:{y:true,n:false,p:'p'}[wGet(r)],ws:wGet(r)==='p'?g('ws').value.trim():'',manual:!!r.dataset.manual,...zoneState(r)})});
     ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:g('date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:b==='exp'?g('w').getAttribute('aria-pressed')==='true':false})}));
     return s;
   }
@@ -652,7 +668,13 @@ body.boss .hist-head h2{font-size:26px}
       const h=NOH?0:num(hi.value),o=num(g('orders').value),t=h+o;
       r.querySelector('[data-o=tot]').textContent=fmt(t);
       ch+=h;co+=o;cq+=num(g('qty').value);
-      if(g('w').getAttribute('aria-pressed')==='true')cw+=t;else cn+=t;
+      const wst=wGet(r);
+      if(wst==='y')cw+=t;else if(wst==='n')cn+=t;
+      else{const raw=g('ws').value.trim(),ws=Math.min(Math.max(num(raw),0),t);cw+=ws;cn+=t-ws;
+        r.querySelector('[data-o=wrest]').textContent=`без изъятия (из сейфа): ${rub(t-ws)}`;
+        const nm=g('name').value.trim()||'Курьер';
+        if(!raw&&t>0)warns.push(['warn',`${nm}: изъятие частично — впишите, сколько выдали с изъятием.`]);
+        else if(num(raw)>t)warns.push(['warn',`${nm}: с изъятием ${rub(num(raw))} — больше, чем всего курьеру (${rub(t)}).`]);}
       if(t>0&&!g('name').value.trim())warns.push(['warn','У курьера с суммой '+rub(t)+' не указана фамилия.']);
       if(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim()))warns.push(['warn',`${g('name').value.trim()} — нет в списке курьеров филиала. В отчёте строка будет отмечена.`]);
       if(num(g('qty').value)>0&&!o)warns.push(['warn',`${g('name').value.trim()||'Курьер'}: заказы указаны, а сумма за заказы пустая.`]);
@@ -826,7 +848,7 @@ body.boss .hist-head h2{font-size:26px}
     const w1=XLSX.utils.aoa_to_sheet(s1);w1['!cols']=[{wch:30},{wch:26}];XLSX.utils.book_append_sheet(wb,w1,'Сводка');
     // sheet 2
     const s2=[['НЕОТОБРАЖЕННЫЕ ДОСТАВКИ В КУРЬЕРИКЕ'],['Должность','Время','За часы','ФИО','кол-во заказов','За заказы','Итого Сумма','ДЕЛАЛИ ИЗЪЯТИЕ','НЕ ДЕЛАЛИ ИЗЪЯТИЕ']];
-    s.cour.forEach(c=>{const h=num(c.hours),o=num(c.orders),t=h+o;if(!t&&!c.name)return;s2.push(['Курьер',c.from&&c.to?`${c.from}-${c.to}`:'',h||null,c.name,n(c.qty),o||null,t,c.w?t:null,c.w?null:t])});
+    s.cour.forEach(c=>{const h=num(c.hours),o=num(c.orders),t=h+o;if(!t&&!c.name)return;s2.push(['Курьер',c.from&&c.to?`${c.from}-${c.to}`:'',h||null,c.name,n(c.qty),o||null,t,c.w==='p'?Math.min(num(c.ws),t):c.w?t:null,c.w==='p'?t-Math.min(num(c.ws),t):c.w?null:t])});
     s2.push([],['ИТОГО',null,R.ch,'-',R.cq||null,R.co,R.ct,R.cw,R.cn]);
     const w2=XLSX.utils.aoa_to_sheet(s2);w2['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];w2['!cols']=[{wch:10},{wch:13},{wch:9},{wch:24},{wch:9},{wch:10},{wch:12},{wch:15},{wch:17}];XLSX.utils.book_append_sheet(wb,w2,'Курьеры');
     // sheet 3

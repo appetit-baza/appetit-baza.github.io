@@ -435,6 +435,11 @@ function dupExists_(r, admin) {
 }
 
 // Заказы курьера по зонам доставки — текст с сайта, например «Жёлтая 0–2,5 км × 3; Синяя 5–8 км × 1»
+// Изъятие у курьера: да / нет (сейф) / частично: N ₽ с изъятием, M ₽ без
+function wText_(c, t) {
+  if (c.w === 'p') { var ws = Math.min(num_(c.ws), t); return 'частично: ' + ws + ' ₽ с изъятием, ' + (t - ws) + ' ₽ без'; }
+  return c.w ? 'да' : 'нет (сейф)';
+}
 function zonesText_(c) { return String((c && c.zt) || '').slice(0, 500); }
 function ensureZonesHeader_() {
   var cs = ss_().getSheetByName(SHEET_COURIERS);
@@ -465,7 +470,7 @@ function saveReport_(r, admin) {
   (r.cour || []).forEach(function (c) {
     var h = num_(c.hours), o = num_(c.orders);
     if (!h && !o && !c.name) return;
-    cs.appendRow([id, r.dateRu, branch, c.name, c.from, c.to, h, num_(c.qty), o, h + o, c.w ? 'да' : 'нет (сейф)', c.other ? 'да' : '', zonesText_(c)]);
+    cs.appendRow([id, r.dateRu, branch, c.name, c.from, c.to, h, num_(c.qty), o, h + o, wText_(c, h + o), c.other ? 'да' : '', zonesText_(c)]);
   });
   var ms = ss.getSheetByName(SHEET_MONEY);
   (r.exp || []).forEach(function (x) {
