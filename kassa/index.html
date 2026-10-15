@@ -282,7 +282,7 @@ body.boss .hist-head h2{font-size:26px}
     </div>
     <div class="rows" id="cour"></div>
     <button type="button" class="add" id="add_cour">+ Добавить курьера</button>
-    <p class="hint c-h-only">«За часы» считается по времени × ставку, копейки отбрасываются. Если курьеру платили не по графику, впишите сумму вручную. «Изъятие сделано» — выплата из кассы с изъятием; «Изъятие не сделано» — выдали из сейфа без изъятия; «Изъятие частично» — часть с изъятием, остальное из сейфа (впишите, сколько с изъятием). Выберите в списке у курьера.</p>
+    <p class="hint c-h-only">«За часы» считается по времени × ставку, копейки отбрасываются. Вручную её не вписать — укажите время «С» и «По». «Изъятие сделано» — выплата из кассы с изъятием; «Изъятие не сделано» — выдали из сейфа без изъятия; «Изъятие частично» — часть с изъятием, остальное из сейфа (впишите, сколько с изъятием). Выберите в списке у курьера.</p>
     <div class="sumrow">
       <div class="c-h">За часы<b id="o_c_h">0</b></div><div>За заказы<b id="o_c_o">0</b></div><div>Итого курьерам<b id="o_c_t">0</b></div>
       <div>Делали изъятие<b id="o_c_w">0</b></div><div>Не делали изъятие<b id="o_c_n">0</b></div><div>Заказов<b id="o_c_q">0</b></div>
@@ -364,7 +364,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='19';
+  const BUILD='20';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -574,7 +574,7 @@ body.boss .hist-head h2{font-size:26px}
     r.innerHTML=`<div class="c-name"><span class="lbl-m">ФИО</span><select data-k="pick" aria-label="Курьер" hidden></select><input data-k="name" placeholder="Фамилия" value="${esc(d.name)}" aria-label="ФИО курьера"></div>
       <div class="c-h"><span class="lbl-m">С</span><input data-k="from" class="tm" inputmode="numeric" placeholder="10:00" maxlength="5" value="${esc(d.from)}" aria-label="Начало"></div>
       <div class="c-h"><span class="lbl-m">По</span><input data-k="to" class="tm" inputmode="numeric" placeholder="22:00" maxlength="5" value="${esc(d.to)}" aria-label="Конец"></div>
-      <div class="c-h"><span class="lbl-m">За часы</span><input data-k="hours" class="num" inputmode="decimal" value="${esc(d.hours)}" aria-label="За часы"></div>
+      <div class="c-h"><span class="lbl-m">За часы</span><input data-k="hours" class="num zsum" readonly tabindex="-1" value="${esc(d.hours)}" aria-label="За часы — считается по времени" title="Считается автоматически по времени × ставку"></div>
       <div><span class="lbl-m">Заказов</span><input data-k="qty" class="num" inputmode="numeric" value="${esc(d.qty)}" aria-label="Количество заказов"></div>
       <div><span class="lbl-m">За заказы</span><input data-k="orders" class="num" inputmode="decimal" value="${esc(d.orders)}" aria-label="За заказы"></div>
       <div><span class="lbl-m">Итого</span><div class="calc" data-o="tot">0</div></div>
@@ -582,7 +582,7 @@ body.boss .hist-head h2{font-size:26px}
       <button type="button" class="del" aria-label="Удалить строку">×</button>
       <div class="wpart"${wOf(d.w)==='p'?'':' hidden'}><label>Из них с изъятием, ₽ <input data-k="ws" class="num" inputmode="decimal" value="${esc(d.ws)}" aria-label="Сумма с изъятием"></label><span class="rest" data-o="wrest"></span></div>
       <div class="zones" hidden></div>`;
-    r.dataset.manual=d.manual?'1':'';r._zinit=d.z||null;
+    r.dataset.manual=''; // «За часы» только автоматически — вручную не вписатьr._zinit=d.z||null;
     $('#cour').appendChild(r);
     fillName(r);
   }
@@ -664,7 +664,7 @@ body.boss .hist-head h2{font-size:26px}
       const a=NOH?null:minutes(g('from').value),b=NOH?null:minutes(g('to').value);
       const hi=g('hours');
       if(a!=null&&b!=null&&!r.dataset.manual){let m=b-a;if(m<0)m+=1440;const v=Math.floor(m/60*rate);hi.value=v;hi.classList.add('auto-v');hi.title=`${Math.floor(m/60)} ч ${m%60} мин × ${rate} ₽`}
-      else hi.title='';
+      else{hi.value='';hi.title=''}
       const h=NOH?0:num(hi.value),o=num(g('orders').value),t=h+o;
       r.querySelector('[data-o=tot]').textContent=fmt(t);
       ch+=h;co+=o;cq+=num(g('qty').value);
