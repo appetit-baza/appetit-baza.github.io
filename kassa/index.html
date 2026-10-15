@@ -128,6 +128,11 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   .sumrow{grid-template-columns:1fr 1fr}
 }
 @media (max-width:420px){.crow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Челябинск: без почасовой оплаты */
+.c-noh-only{display:none}
+#sec-cour.noh .c-h,#sec-cour.noh .c-h-only{display:none!important}
+#sec-cour.noh .c-noh-only{display:block}
+@media (min-width:861px){#sec-cour.noh .crow,#sec-cour.noh .row-h.c{grid-template-columns:minmax(150px,1fr) 70px 100px 100px 88px 30px}}
 /* archive */
 .lbl-note{font-weight:400;color:var(--muted)}
 .hist{position:fixed;inset:0;z-index:55;background:rgba(10,15,13,.45);display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:calc(24px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
@@ -242,15 +247,16 @@ body.boss .hist-head h2{font-size:26px}
   <!-- 2 -->
   <section class="card" id="sec-cour">
     <div class="card-h"><span class="no">2</span><h2>Курьеры: неотображённые доставки</h2><span class="sub" id="o_cour_sub"></span></div>
-    <p class="rate-fixed">Ставка курьера: <b>140 ₽ в час</b> — задана бухгалтерией, изменить нельзя.</p>
+    <p class="rate-fixed c-h-only">Ставка курьера: <b>140 ₽ в час</b> — задана бухгалтерией, изменить нельзя.</p>
+    <p class="rate-fixed c-noh-only">В Челябинске почасовую оплату выдают 2 раза в месяц по iiko — здесь вносится <b>только оплата за заказы</b>.</p>
     <div class="row-h c">
-      <span class="th">ФИО</span><span class="th">С</span><span class="th">По</span><span class="th" style="text-align:right">За часы</span><span class="th" style="text-align:right">Заказов</span><span class="th" style="text-align:right">За заказы</span><span class="th" style="text-align:right">Итого</span><span class="th" style="text-align:center">Изъятие</span><span></span>
+      <span class="th">ФИО</span><span class="th c-h">С</span><span class="th c-h">По</span><span class="th c-h" style="text-align:right">За часы</span><span class="th" style="text-align:right">Заказов</span><span class="th" style="text-align:right">За заказы</span><span class="th" style="text-align:right">Итого</span><span class="th" style="text-align:center">Изъятие</span><span></span>
     </div>
     <div class="rows" id="cour"></div>
     <button type="button" class="add" id="add_cour">+ Добавить курьера</button>
-    <p class="hint">«За часы» считается по времени × ставку, копейки отбрасываются. Если курьеру платили не по графику, впишите сумму вручную. «Изъятие» включено — выплата из кассы с изъятием; выключено — выдали из сейфа без изъятия.</p>
+    <p class="hint c-h-only">«За часы» считается по времени × ставку, копейки отбрасываются. Если курьеру платили не по графику, впишите сумму вручную. «Изъятие» включено — выплата из кассы с изъятием; выключено — выдали из сейфа без изъятия.</p>
     <div class="sumrow">
-      <div>За часы<b id="o_c_h">0</b></div><div>За заказы<b id="o_c_o">0</b></div><div>Итого курьерам<b id="o_c_t">0</b></div>
+      <div class="c-h">За часы<b id="o_c_h">0</b></div><div>За заказы<b id="o_c_o">0</b></div><div>Итого курьерам<b id="o_c_t">0</b></div>
       <div>Делали изъятие<b id="o_c_w">0</b></div><div>Не делали изъятие<b id="o_c_n">0</b></div><div>Заказов<b id="o_c_q">0</b></div>
     </div>
   </section>
@@ -330,7 +336,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='11';
+  const BUILD='12';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -503,6 +509,8 @@ body.boss .hist-head h2{font-size:26px}
   });
   $('#hist_one').addEventListener('click',e=>{if(e.target.closest('.h-back')){$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false;$('#hist_boss').hidden=!(USER&&USER.boss);loadHist()}});
   const RATE=140; // ставка курьера за час, менять только здесь
+  // филиалы, где почасовую выдают отдельно (по iiko) — в отчёте только оплата за заказы
+  const noHours=()=>/челябинск/i.test($('#branch').value);
   const REV=[['r_cash','Наличка'],['r_card','Б/Н расчет (картой)'],['r_ye','Деливери/ЯЕ'],['r_mp','МП (online)'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
 
   // ---------- rows
@@ -510,9 +518,9 @@ body.boss .hist-head h2{font-size:26px}
   function addCour(d={}){
     const r=document.createElement('div');r.className='crow';
     r.innerHTML=`<div class="c-name"><span class="lbl-m">ФИО</span><select data-k="pick" aria-label="Курьер" hidden></select><input data-k="name" placeholder="Фамилия" value="${esc(d.name)}" aria-label="ФИО курьера"></div>
-      <div><span class="lbl-m">С</span><input data-k="from" class="tm" inputmode="numeric" placeholder="10:00" maxlength="5" value="${esc(d.from)}" aria-label="Начало"></div>
-      <div><span class="lbl-m">По</span><input data-k="to" class="tm" inputmode="numeric" placeholder="22:00" maxlength="5" value="${esc(d.to)}" aria-label="Конец"></div>
-      <div><span class="lbl-m">За часы</span><input data-k="hours" class="num" inputmode="decimal" value="${esc(d.hours)}" aria-label="За часы"></div>
+      <div class="c-h"><span class="lbl-m">С</span><input data-k="from" class="tm" inputmode="numeric" placeholder="10:00" maxlength="5" value="${esc(d.from)}" aria-label="Начало"></div>
+      <div class="c-h"><span class="lbl-m">По</span><input data-k="to" class="tm" inputmode="numeric" placeholder="22:00" maxlength="5" value="${esc(d.to)}" aria-label="Конец"></div>
+      <div class="c-h"><span class="lbl-m">За часы</span><input data-k="hours" class="num" inputmode="decimal" value="${esc(d.hours)}" aria-label="За часы"></div>
       <div><span class="lbl-m">Заказов</span><input data-k="qty" class="num" inputmode="numeric" value="${esc(d.qty)}" aria-label="Количество заказов"></div>
       <div><span class="lbl-m">За заказы</span><input data-k="orders" class="num" inputmode="decimal" value="${esc(d.orders)}" aria-label="За заказы"></div>
       <div><span class="lbl-m">Итого</span><div class="calc" data-o="tot">0</div></div>
@@ -573,7 +581,7 @@ body.boss .hist-head h2{font-size:26px}
   function state(){
     const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),rev:{},cour:[],exp:[],inc:[]};
     REV.forEach(([id])=>s.rev[id]=$('#'+id).value.trim());
-    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:g('from').value,to:g('to').value,hours:g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:g('w').getAttribute('aria-pressed')==='true',manual:!!r.dataset.manual})});
+    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:g('w').getAttribute('aria-pressed')==='true',manual:!!r.dataset.manual})});
     ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:g('date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:b==='exp'?g('w').getAttribute('aria-pressed')==='true':false})}));
     return s;
   }
@@ -583,20 +591,21 @@ body.boss .hist-head h2{font-size:26px}
     const warns=[];
     // couriers
     let ch=0,co=0,cw=0,cn=0,cq=0;
+    const NOH=noHours();$('#sec-cour').classList.toggle('noh',NOH);
     $$('.crow').forEach(r=>{
       const g=k=>r.querySelector(`[data-k=${k}]`);
-      const a=minutes(g('from').value),b=minutes(g('to').value);
+      const a=NOH?null:minutes(g('from').value),b=NOH?null:minutes(g('to').value);
       const hi=g('hours');
       if(a!=null&&b!=null&&!r.dataset.manual){let m=b-a;if(m<0)m+=1440;const v=Math.floor(m/60*rate);hi.value=v;hi.classList.add('auto-v');hi.title=`${Math.floor(m/60)} ч ${m%60} мин × ${rate} ₽`}
       else hi.title='';
-      const h=num(hi.value),o=num(g('orders').value),t=h+o;
+      const h=NOH?0:num(hi.value),o=num(g('orders').value),t=h+o;
       r.querySelector('[data-o=tot]').textContent=fmt(t);
       ch+=h;co+=o;cq+=num(g('qty').value);
       if(g('w').getAttribute('aria-pressed')==='true')cw+=t;else cn+=t;
       if(t>0&&!g('name').value.trim())warns.push(['warn','У курьера с суммой '+rub(t)+' не указана фамилия.']);
       if(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim()))warns.push(['warn',`${g('name').value.trim()} — нет в списке курьеров филиала. В отчёте строка будет отмечена.`]);
       if(num(g('qty').value)>0&&!o)warns.push(['warn',`${g('name').value.trim()||'Курьер'}: заказы указаны, а сумма за заказы пустая.`]);
-      if(r.dataset.manual&&a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;const v=Math.floor(m/60*rate);if(Math.abs(v-h)>=1)warns.push(['warn',`${g('name').value.trim()||'Курьер'}: «За часы» ${fmt(h)} ₽, а по времени ${Math.floor(m/60)} ч ${m%60} мин × ${rate} ₽ = ${fmt(v)} ₽.`])}
+      if(!NOH&&r.dataset.manual&&a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;const v=Math.floor(m/60*rate);if(Math.abs(v-h)>=1)warns.push(['warn',`${g('name').value.trim()||'Курьер'}: «За часы» ${fmt(h)} ₽, а по времени ${Math.floor(m/60)} ч ${m%60} мин × ${rate} ₽ = ${fmt(v)} ₽.`])}
     });
     const ct=ch+co;
     // revenue
