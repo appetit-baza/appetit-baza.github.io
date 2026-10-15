@@ -26,6 +26,10 @@
  *   Филиал пишите так же, как в списке на сайте (например: Казань, Академика Глушко 35).
  */
 
+// ID таблицы (часть ссылки между /d/ и /edit). Пусто — если скрипт создан из самой таблицы.
+var SPREADSHEET_ID = '';
+function ss_() { return SPREADSHEET_ID ? SpreadsheetApp.openById(SPREADSHEET_ID) : SpreadsheetApp.getActive(); }
+
 var SHEET_ADMINS = 'Админы';
 var SHEET_REPORTS = 'Отчёты';
 var SHEET_COURIERS = 'Курьеры';
@@ -49,7 +53,7 @@ var MAX_FAILS = 15;          // неудачных попыток подряд
 var LOCK_SECONDS = 600;      // блокировка входа на 10 минут
 
 function setup() {
-  var ss = SpreadsheetApp.getActive();
+  var ss = ss_();
   Object.keys(HEADERS).forEach(function (name) {
     var sh = ss.getSheetByName(name) || ss.insertSheet(name);
     if (sh.getLastRow() === 0) {
@@ -96,7 +100,7 @@ function doPost(e) {
 function findAdmin_(pin) {
   pin = String(pin || '').replace(/\D/g, '');
   if (pin.length < 4) return null;
-  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_ADMINS);
+  var sh = ss_().getSheetByName(SHEET_ADMINS);
   var rows = sh.getDataRange().getDisplayValues();
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i];
@@ -109,7 +113,7 @@ function findAdmin_(pin) {
 }
 
 function couriers_() {
-  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_STAFF);
+  var sh = ss_().getSheetByName(SHEET_STAFF);
   var out = {};
   if (!sh) return out;
   var rows = sh.getDataRange().getDisplayValues();
@@ -129,7 +133,7 @@ function num_(v) {
 }
 
 function saveReport_(r, admin) {
-  var ss = SpreadsheetApp.getActive();
+  var ss = ss_();
   var id = Utilities.formatDate(new Date(), 'Europe/Moscow', 'yyMMdd-HHmmss') + '-' + Math.floor(Math.random() * 900 + 100);
   var t = r.totals || {};
   var rev = r.rev || {};
@@ -178,7 +182,7 @@ function registerFail_() {
 function resetFails_() { PropertiesService.getScriptProperties().setProperty('fails', '0'); }
 
 function log_(event, name, branch) {
-  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_LOG);
+  var sh = ss_().getSheetByName(SHEET_LOG);
   if (sh) sh.appendRow([new Date(), event, name, branch]);
 }
 
