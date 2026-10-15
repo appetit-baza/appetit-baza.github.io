@@ -90,6 +90,11 @@ function doPost(e) {
       return json_({ ok: true, name: admin.name, branch: admin.branch, couriers: couriers_() });
     }
     if (body.action === 'couriers') return json_({ ok: true, couriers: couriers_() });
+    if (body.action === 'revenue') {
+      var res = sendRevenue_(body.report || {}, admin);
+      log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error), admin.name, (body.report || {}).branch || admin.branch);
+      return json_(res);
+    }
     if (body.action === 'report') {
       var id = saveReport_(body.report || {}, admin);
       return json_({ ok: true, id: id });
@@ -128,6 +133,67 @@ function couriers_() {
   }
   Object.keys(out).forEach(function (b) { out[b].sort(function (x, y) { return x.localeCompare(y, 'ru'); }); });
   return out;
+}
+
+// ---------- MAX: сообщение о выручке в чат «АДМИНЫ АППЕТИТ»
+// Ключ бота хранится в свойствах скрипта (Настройки проекта → Свойства скрипта): MAX_TOKEN.
+// ID чата скрипт находит сам по названию и запоминает в MAX_CHAT_ID.
+var MAX_API = 'https://platform-api2.max.ru';
+var MAX_CHAT_TITLE = 'АДМИНЫ АППЕТИТ';
+
+function maxFetch_(method, path, payload) {
+  var token = PropertiesService.getScriptProperties().getProperty('MAX_TOKEN');
+  if (!token) return { code: 0, error: 'no_token' };
+  var opt = { method: method, headers: { Authorization: token }, muteHttpExceptions: true };
+  if (payload) { opt.contentType = 'application/json'; opt.payload = JSON.stringify(payload); }
+  var r = UrlFetchApp.fetch(MAX_API + path, opt);
+  var body = {};
+  try { body = JSON.parse(r.getContentText()); } catch (e) {}
+  return { code: r.getResponseCode(), body: body };
+}
+
+function maxChatId_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('MAX_CHAT_ID');
+  if (id) return id;
+  var r = maxFetch_('get', '/chats?count=100');
+  var chats = (r.body && r.body.chats) || [];
+  for (var i = 0; i < chats.length; i++) {
+    if (String(chats[i].title || '').toUpperCase().indexOf(MAX_CHAT_TITLE) >= 0) {
+      id = String(chats[i].chat_id);
+      props.setProperty('MAX_CHAT_ID', id);
+      return id;
+    }
+  }
+  return '';
+}
+
+function fmtRub_(n) {
+  return Utilities.formatString('%s ₽', String(Math.round(n * 100) / 100).replace(/\B(?=(\d{3})+(?!\d))/g, ' ').replace('.', ','));
+}
+
+function sendRevenue_(r, admin) {
+  var rev = r.rev || {};
+  var names = [['r_cash', 'Наличка'], ['r_card', 'Б/Н картой'], ['r_ye', 'Деливери/ЯЕ'], ['r_mp', 'МП (online)'],
+    ['r_chib', 'Чиббис'], ['r_sber', 'Сбермаркет'], ['r_bon', 'Бонусы iiko']];
+  var total = 0, lines = [];
+  names.forEach(function (x) { var v = num_(rev[x[0]]); total += v; if (v) lines.push(x[1] + ': ' + fmtRub_(v)); });
+  if (!total) return { ok: false, error: 'empty' };
+  var text = '💰 Выручка ' + (r.dateRu || '') + '\n' + (r.branch || admin.branch) + '\nАдминистратор: ' + admin.name +
+    '\n\n' + lines.join('\n') + '\n\nВСЕГО: ' + fmtRub_(total);
+  var chat = maxChatId_();
+  if (!chat) return { ok: false, error: PropertiesService.getScriptProperties().getProperty('MAX_TOKEN') ? 'no_chat' : 'no_token' };
+  var res = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: text });
+  if (res.code >= 200 && res.code < 300) return { ok: true };
+  return { ok: false, error: 'max_' + res.code };
+}
+
+// Запустите вручную после того, как добавите бота в чат: проверит ключ и найдёт чат.
+function testMax() {
+  PropertiesService.getScriptProperties().deleteProperty('MAX_CHAT_ID');
+  var me = maxFetch_('get', '/me');
+  Logger.log('Бот: ' + JSON.stringify(me));
+  Logger.log('Чат: ' + maxChatId_());
 }
 
 function num_(v) {

@@ -60,6 +60,9 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .flag.ok{color:var(--accent)} .flag.bad{color:var(--warn)}
 /* table-like rows */
 .rows{display:grid;gap:8px}
+.to-chat{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:12px}
+.to-chat .btn{width:auto;padding:10px 16px;font-size:14.5px}
+.to-chat .hint{margin:0}
 .rate-fixed{margin:0 0 14px;font-size:14px;color:var(--muted)}
 .rate-fixed b{color:var(--ink)}
 .row-h,.crow,.erow{display:grid;gap:8px;align-items:center}
@@ -175,6 +178,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
       <div class="field"><label for="r_041">Итого по отчёту 041</label><input id="r_041" class="num" inputmode="decimal" placeholder="для сверки"></div>
     </div>
     <div class="total-line"><span>Выручка всего</span><strong id="o_rev">0 ₽</strong></div>
+    <div class="to-chat" id="to_chat" hidden><button type="button" class="btn sec" id="b_rev">Отправить выручку в чат «АДМИНЫ АППЕТИТ»</button><span class="hint" id="rev_sent"></span></div>
     <p class="flag" id="f_041"></p>
   </section>
 
@@ -261,6 +265,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   // Ссылка на веб-приложение Google Apps Script. Пока пусто — вход по PIN выключен.
   const API_URL='https://script.google.com/macros/s/AKfycbxSXS6WoSei6vke43-jPTfSviFiteAWbnDiKLuB2LbbPoxnYjADNzVkhAvM4dWT9LYdaA/exec';
   const SESSION_HOURS=14;
+  const MAX_ON=false; // включить после подключения бота MAX
   let USER=null;
   const DEVICE=(()=>{let d=LS.get('device',null);if(!d){d=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));LS.set('device',d)}return d})();
   async function api(payload){
@@ -271,6 +276,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     USER=u;
     $('#user').hidden=!u; $('#u_name').textContent=u?u.name:''; $('.top a.kb').classList.toggle('with-user',!!u);
     $('#b_send').hidden=!u||!API_URL;
+    $('#to_chat').hidden=!u||!API_URL||!MAX_ON;
     $('#b_xlsx').className='btn '+($('#b_send').hidden?'primary':'sec');
     const a=$('#admin'); if(u){a.value=u.name;a.readOnly=true;if(u.branch&&[...$('#branch').options].some(o=>o.value===u.branch)&&!$('#branch').value)$('#branch').value=u.branch}else{a.readOnly=false;COURIERS=null;LS.del('couriers')}
     refreshNames();
@@ -455,6 +461,23 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   $('#b_copy').addEventListener('click',async()=>{remember();const t=chatText();let ok=false;try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
     if(!ok){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{ok=document.execCommand('copy')}catch(e){}ta.remove()}
     toast(ok?'Отчёт скопирован — вставьте в чат':'Не удалось скопировать');});
+
+  // ---------- revenue to MAX chat
+  $('#b_rev').addEventListener('click',async()=>{
+    if(!USER){openGate();return}
+    const s=state();
+    if(!s.branch){toast('Выберите филиал');$('#branch').focus();return}
+    if(!R.rev){toast('Заполните выручку');return}
+    const b=$('#b_rev'),key=JSON.stringify([s.branch,s.date,s.rev]);
+    if(b.dataset.sentFor===key&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлено. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить выручку в чат «АДМИНЫ АППЕТИТ»'},4000);return}
+    b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';
+    try{const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:s.rev}});
+      if(r.ok){b.dataset.sentFor=key;const t=new Date();$('#rev_sent').textContent=`Отправлено в ${pad(t.getHours())}:${pad(t.getMinutes())}`;toast('Выручка отправлена в чат')}
+      else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}
+      else toast({no_token:'Бот MAX ещё не подключён',no_chat:'Бот не добавлен в чат «АДМИНЫ АППЕТИТ»',empty:'Выручка пустая'}[r.error]||'Не отправилось, попробуйте ещё раз');
+    }catch(x){toast('Нет связи с сервером, попробуйте ещё раз')}
+    b.disabled=false;b.textContent='Отправить выручку в чат «АДМИНЫ АППЕТИТ»';
+  });
 
   // ---------- send to accounting (Google Sheet)
   $('#b_send').addEventListener('click',async()=>{
