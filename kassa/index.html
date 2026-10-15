@@ -139,11 +139,10 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   <section class="card" id="sec-sum">
     <div class="card-h"><span class="no">1</span><h2>Сводка и выручка</h2></div>
     <div class="grid3">
-      <div class="field"><label for="branch">Филиал, адрес</label><input id="branch" list="branches" placeholder="Глушко 35" autocomplete="off"></div>
+      <div class="field"><label for="branch">Филиал, адрес</label><select id="branch"><option value="">Выберите филиал</option><option>Челябинск, Каслинская 101Б</option><option>Казань, Академика Глушко 35</option><option>Казань, проспект Ямашева 61к3</option><option>Казань, Хади Такташа 121</option><option>Казань, Ильгама Шакирова 17</option><option>Уфа, Шафиева 50/1</option></select></div>
       <div class="field"><label for="date">Дата</label><input id="date" type="date"></div>
       <div class="field"><label for="admin">ФИО администратора</label><input id="admin" placeholder="Фамилия И.О." autocomplete="off"></div>
     </div>
-    <datalist id="branches"></datalist>
     <div class="rev">
       <div class="field"><label for="r_cash">Наличка</label><input id="r_cash" class="num" inputmode="decimal"></div>
       <div class="field"><label for="r_card">Б/Н расчёт (картой)</label><input id="r_card" class="num" inputmode="decimal"></div>
@@ -319,7 +318,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     $('#s_big').classList.toggle('neg',pass<0);
     $('#s_formula').textContent='Наличка − выплаты курьерам с изъятием'+(exW?' − расходы, отмеченные «Вычесть»':'');
     if(pass<0&&$('#r_cash').value.trim())warns.push(['err','Передана сумма отрицательная: выплат из кассы больше, чем наличных. Проверьте, кому платили из сейфа.']);
-    if(!$('#branch').value.trim())warns.push(['warn','Не указан филиал.']);
+    if(!$('#branch').value)warns.push(['warn','Не выбран филиал.']);
     if(!$('#admin').value.trim())warns.push(['warn','Не указано ФИО администратора.']);
     $('#warns').innerHTML=warns.map(([c,t])=>`<p class="${c==='err'?'err':''}">${esc(t)}</p>`).join('');
     save();
@@ -327,6 +326,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 
   // ---------- persistence (draft on this device)
   let prevDate=null;
+  $('#branch').addEventListener('change',()=>{remember();calc()});
   $('#date').addEventListener('change',()=>{const nd=$('#date').value;$$('#exp [data-k=date], #inc [data-k=date]').forEach(i=>{if(!i.value||i.value===prevDate)i.value=nd});prevDate=nd;calc()});
   $('#date').addEventListener('focus',()=>{prevDate=$('#date').value});
   let loading=false;
@@ -343,7 +343,6 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   }
   const d0=LS.get('draft',null);
   load(d0||{date:today(),branch:LS.get('branch',''),admin:LS.get('admin','')});
-  const br=LS.get('branches',[]);$('#branches').innerHTML=br.map(b=>`<option value="${esc(b)}">`).join('');
   calc();
   $('#b_new').addEventListener('click',()=>{
     const b=$('#b_new');
@@ -351,7 +350,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     b.dataset.confirm='';b.textContent='Начать новый отчёт';
     LS.del('draft');load({date:today(),branch:$('#branch').value,admin:$('#admin').value,rate:$('#rate').value});calc();window.scrollTo({top:0});toast('Новый отчёт');
   });
-  function remember(){const b=$('#branch').value.trim();if(b){LS.set('branch',b);const l=LS.get('branches',[]);if(!l.includes(b)){l.unshift(b);LS.set('branches',l.slice(0,12))}}const a=$('#admin').value.trim();if(a)LS.set('admin',a)}
+  function remember(){const b=$('#branch').value;if(b)LS.set('branch',b);const a=$('#admin').value.trim();if(a)LS.set('admin',a)}
 
   // ---------- text for chat
   function chatText(){
@@ -393,7 +392,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     s.exp.filter(e=>num(e.sum)).forEach((e,i)=>s3.push([i?'':'',ruDate(e.date),e.art+(e.w?' (вычтено из переданной суммы)':''),num(e.sum)]));
     s3.push(['ИТОГО РАСХОД','','',R.ex]);
     const w3=XLSX.utils.aoa_to_sheet(s3);w3['!cols']=[{wch:16},{wch:12},{wch:40},{wch:12}];XLSX.utils.book_append_sheet(wb,w3,'Приход-расход');
-    const fn=`Кассовый отчёт ${(s.branch||'филиал').replace(/[\\/:*?"<>|]/g,'')} ${ruDate(s.date)}.xlsx`;
+    const fn=`Кассовый отчёт ${(s.branch||'филиал').replace(/[\\/]/g,'-').replace(/[:*?"<>|]/g,'')} ${ruDate(s.date)}.xlsx`;
     try{XLSX.writeFile(wb,fn);toast('Excel скачан: '+fn)}catch(e){toast('Не удалось скачать файл')}
   });
 })();
