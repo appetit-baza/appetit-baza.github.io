@@ -349,7 +349,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='13';
+  const BUILD='14';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -529,7 +529,7 @@ body.boss .hist-head h2{font-size:26px}
   // оплата курьеру за каждый заказ по зонам доставки
   const ZONESETS={
     kzn:{city:'Казань',z:[['Жёлтая','0–2,5 км',165,'#E8B923'],['Зелёная','2,5–5 км',205,'#3E9B4F'],['Синяя','5–8 км',245,'#2F6FD6'],['Красная','8–11 км',265,'#D64545'],['Фиолетовая','11–20 км',285,'#8A4FD0']]},
-    chu:{city:'Челябинск и Уфа',z:[['','0–2,5 км',165],['','2,5–5 км',205],['','5–7 км',235],['','7–9 км',255],['','9–10 км',265],['','10–11 км',275],['','12–30 км',295]]}
+    chu:{city:'Челябинск и Уфа',z:[['','0–2,5 км',165],['','2,5–5 км',205],['','5–7 км',235],['','7–9 км',255],['','9–10 км',265],['','10–11 км',275],['','11–30 км',295]]}
   };
   function zoneSet(){const b=$('#branch').value;return /казань/i.test(b)?'kzn':/челябинск|уфа/i.test(b)?'chu':null}
   const zLabel=z=>(z[0]?z[0]+' ':'')+z[1];
