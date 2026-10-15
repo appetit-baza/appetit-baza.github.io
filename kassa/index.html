@@ -259,7 +259,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2200)}
 
   // Ссылка на веб-приложение Google Apps Script. Пока пусто — вход по PIN выключен.
-  const API_URL='';
+  const API_URL='https://script.google.com/macros/s/AKfycbxSXS6WoSei6vke43-jPTfSviFiteAWbnDiKLuB2LbbPoxnYjADNzVkhAvM4dWT9LYdaA/exec';
   const SESSION_HOURS=14;
   let USER=null;
   async function api(payload){
