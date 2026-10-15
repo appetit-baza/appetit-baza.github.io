@@ -261,7 +261,7 @@ body.boss .hist-head h2{font-size:26px}
     <div class="card-h"><span class="no">2</span><h2>Курьеры: неотображённые доставки</h2><span class="sub" id="o_cour_sub"></span></div>
     <p class="rate-fixed c-h-only">Ставка курьера: <b>140 ₽ в час</b> — задана бухгалтерией, изменить нельзя.</p>
     <p class="rate-fixed" id="zone_note" hidden></p>
-    <p class="rate-fixed c-noh-only">В Челябинске почасовую оплату выдают 2 раза в месяц по iiko — здесь вносится <b>только оплата за заказы</b>.</p>
+    <p class="rate-fixed c-noh-only">В Челябинске почасовую оплату выдают 2 раза в месяц по iiko — здесь вносится <b>только оплата за заказы</b>: впишите количество заказов и сумму из курьерской программы.</p>
     <div class="row-h c">
       <span class="th">ФИО</span><span class="th c-h">С</span><span class="th c-h">По</span><span class="th c-h" style="text-align:right">За часы</span><span class="th" style="text-align:right">Заказов</span><span class="th" style="text-align:right">За заказы</span><span class="th" style="text-align:right">Итого</span><span class="th" style="text-align:center">Изъятие</span><span></span>
     </div>
@@ -349,7 +349,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='14';
+  const BUILD='15';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -497,7 +497,7 @@ body.boss .hist-head h2{font-size:26px}
     const tm=v=>{const m=String(v||'').match(/(\d{1,2}):(\d{2})/);return m?`${pad(m[1])}:${m[2]}`:''};
     const nn=v=>String(v??'').replace(/\s/g,'');
     const cour=s.cour.map(c=>{const from=tm(c.from),to=tm(c.to),a=minutes(from),b=minutes(to);let auto=null;if(a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;auto=Math.floor(m/60*RATE)}
-      let z=null;const zb=/казань/i.test(s.raw.branch)?'kzn':/челябинск|уфа/i.test(s.raw.branch)?'chu':null;
+      let z=null;const zb=/казань/i.test(s.raw.branch)?'kzn':/уфа/i.test(s.raw.branch)?'chu':null;
       if(zb&&c.zones){const n=ZONESETS[zb].z.map(()=>'');String(c.zones).split(/;\s*/).forEach(p=>{const m=p.match(/^(.*) × (\d+)$/);if(m){const i=ZONESETS[zb].z.findIndex(q=>zLabel(q)===m[1].trim());if(i>=0)n[i]=m[2]}});z={id:zb,n}}
       return {z,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),w:!/нет/i.test(c.w),manual:auto!==null&&auto!==num(c.hours)}});
     const mon=t=>s.money.filter(m=>m.type===t).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
@@ -529,9 +529,10 @@ body.boss .hist-head h2{font-size:26px}
   // оплата курьеру за каждый заказ по зонам доставки
   const ZONESETS={
     kzn:{city:'Казань',z:[['Жёлтая','0–2,5 км',165,'#E8B923'],['Зелёная','2,5–5 км',205,'#3E9B4F'],['Синяя','5–8 км',245,'#2F6FD6'],['Красная','8–11 км',265,'#D64545'],['Фиолетовая','11–20 км',285,'#8A4FD0']]},
-    chu:{city:'Челябинск и Уфа',z:[['','0–2,5 км',165],['','2,5–5 км',205],['','5–7 км',235],['','7–9 км',255],['','9–10 км',265],['','10–11 км',275],['','11–30 км',295]]}
+    chu:{city:'Уфа',z:[['','0–2,5 км',165],['','2,5–5 км',205],['','5–7 км',235],['','7–9 км',255],['','9–10 км',265],['','10–11 км',275],['','11–30 км',295]]}
   };
-  function zoneSet(){const b=$('#branch').value;return /казань/i.test(b)?'kzn':/челябинск|уфа/i.test(b)?'chu':null}
+  // Челябинск — вручную (курьерская программа считает сама); Казань и Уфа — по зонам
+  function zoneSet(){const b=$('#branch').value;return /казань/i.test(b)?'kzn':/уфа/i.test(b)?'chu':null}
   const zLabel=z=>(z[0]?z[0]+' ':'')+z[1];
   function ensureZones(r,id){
     const box=r.querySelector('.zones');if(r.dataset.zs===(id||''))return;
