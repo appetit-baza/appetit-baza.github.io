@@ -26,6 +26,7 @@
   --accent:#5EC2A4; --accent-ink:#06231B; --accent-soft:#18302A;
   --warn:#F08C72; --warn-soft:#38211B; --amber:#F1C55E; --amber-soft:#352B10; --note:#1C2522; color-scheme:dark}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 .top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding:0 max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
@@ -121,11 +122,28 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   .sumrow{grid-template-columns:1fr 1fr}
 }
 @media (max-width:420px){.crow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* login */
+.gate{position:fixed;inset:0;z-index:60;background:var(--bg);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.gate-box{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px 24px;display:grid;gap:16px;text-align:center}
+.gate-box .mark{margin:0 auto;width:48px;height:48px;font-size:20px}
+.gate-box h2{font-family:var(--f-display);font-size:20px;margin:0}
+.gate-box p{margin:0;color:var(--muted);font-size:14px}
+.pin{height:56px;font-size:28px;letter-spacing:.4em;text-align:center;font-family:var(--f-mono);padding-left:.4em}
+.gate-err{color:var(--warn)!important;font-weight:600;min-height:1.4em}
+.user{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13.5px;min-width:0}
+.user b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user button{border:1px solid var(--line);background:transparent;color:var(--muted);font:inherit;font-size:13px;padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.top a.kb.with-user{margin-left:0}
+.sent{font-size:13.5px;padding:9px 12px;border-radius:9px;background:var(--accent-soft);color:var(--accent);font-weight:600;margin:0}
+.sent:empty{display:none}
+#admin[readonly]{background:var(--note);color:var(--ink)}
+@media (max-width:640px){.brand small{display:none}.top a.kb{display:none}.user span.u-lbl{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head><body>
 <header class="top"><div class="top-in">
   <span class="mark">А</span><span class="brand">Кассовый отчёт<small>«Аппетит» · смена филиала</small></span>
+  <div class="user" id="user" hidden><span class="u-lbl">Вошли:</span><b id="u_name"></b><button type="button" id="b_logout">Выйти</button></div>
   <a class="kb" href="../">База знаний →</a>
 </div></header>
 
@@ -201,6 +219,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     <p class="formula" id="s_formula">Наличка − выплаты курьерам с изъятием</p>
   </div>
   <div class="warns" id="warns"></div>
+  <button type="button" class="btn primary" id="b_send" hidden>Отправить в бухгалтерию</button>
+  <p class="sent" id="sent"></p>
   <button type="button" class="btn primary" id="b_xlsx">Скачать Excel</button>
   <button type="button" class="btn sec" id="b_copy">Скопировать для чата</button>
   <button type="button" class="btn ghost" id="b_new">Начать новый отчёт</button>
@@ -208,6 +228,17 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 </div>
 
 <div class="mob-bar"><div><small>Передана сумма</small><b id="m_pass">0 ₽</b></div><a href="#result">Итоги и Excel</a></div>
+<div class="gate" id="gate" hidden>
+  <form class="gate-box" id="gate_form" autocomplete="off">
+    <span class="mark">А</span>
+    <h2>Кассовый отчёт</h2>
+    <p>Введите свой PIN-код администратора</p>
+    <input class="pin" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" aria-label="PIN-код" autocomplete="off">
+    <button type="submit" class="btn primary" id="b_login">Войти</button>
+    <p class="gate-err" id="gate_err" aria-live="polite"></p>
+    <p>Нет PIN-кода или забыли — напишите в чат «АДМИНЫ АППЕТИТ».</p>
+  </form>
+</div>
 <div class="toast" id="toast" role="status"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -224,6 +255,33 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   const LS={get(k,d){try{const v=localStorage.getItem('kassa:'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('kassa:'+k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem('kassa:'+k)}catch(e){}}};
   function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2200)}
 
+  // Ссылка на веб-приложение Google Apps Script. Пока пусто — вход по PIN выключен.
+  const API_URL='';
+  const SESSION_HOURS=14;
+  let USER=null;
+  async function api(payload){
+    const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),redirect:'follow'});
+    return r.json();
+  }
+  function setUser(u){
+    USER=u;
+    $('#user').hidden=!u; $('#u_name').textContent=u?u.name:''; $('.top a.kb').classList.toggle('with-user',!!u);
+    $('#b_send').hidden=!u||!API_URL;
+    $('#b_xlsx').className='btn '+($('#b_send').hidden?'primary':'sec');
+    const a=$('#admin'); if(u){a.value=u.name;a.readOnly=true;if(u.branch&&[...$('#branch').options].some(o=>o.value===u.branch)&&!$('#branch').value)$('#branch').value=u.branch}else{a.readOnly=false}
+  }
+  function openGate(msg){$('#gate').hidden=false;$('#gate_err').textContent=msg||'';$('#pin').value='';setTimeout(()=>$('#pin').focus(),50)}
+  $('#gate_form').addEventListener('submit',async e=>{
+    e.preventDefault();const pin=$('#pin').value.replace(/\D/g,'');const err=$('#gate_err');
+    if(pin.length<4){err.textContent='PIN — от 4 до 8 цифр.';return}
+    const b=$('#b_login');b.disabled=true;b.textContent='Проверяю…';err.textContent='';
+    try{const r=await api({action:'login',pin});
+      if(r.ok){const u={name:r.name,branch:r.branch,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);$('#gate').hidden=true;setUser(u);calc();toast('Здравствуйте, '+r.name)}
+      else err.textContent=r.error==='locked'?'Слишком много неверных попыток. Подождите 10 минут.':'Неверный PIN-код.';
+    }catch(x){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.'}
+    b.disabled=false;b.textContent='Войти';
+  });
+  $('#b_logout').addEventListener('click',()=>{LS.del('session');setUser(null);openGate()});
   const REV=[['r_cash','Наличка'],['r_card','Б/Н расчет (картой)'],['r_ye','Деливери/ЯЕ'],['r_mp','МП (online)'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
 
   // ---------- rows
@@ -344,6 +402,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   const d0=LS.get('draft',null);
   load(d0||{date:today(),branch:LS.get('branch',''),admin:LS.get('admin','')});
   calc();
+  if(API_URL){const s=LS.get('session',null);if(s&&s.exp>Date.now()&&s.pin){setUser(s);calc()}else{LS.del('session');openGate()}}
   $('#b_new').addEventListener('click',()=>{
     const b=$('#b_new');
     if(!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Нажмите ещё раз, чтобы очистить отчёт';setTimeout(()=>{b.dataset.confirm='';b.textContent='Начать новый отчёт'},3500);return}
@@ -368,6 +427,25 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   $('#b_copy').addEventListener('click',async()=>{remember();const t=chatText();let ok=false;try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
     if(!ok){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{ok=document.execCommand('copy')}catch(e){}ta.remove()}
     toast(ok?'Отчёт скопирован — вставьте в чат':'Не удалось скопировать');});
+
+  // ---------- send to accounting (Google Sheet)
+  $('#b_send').addEventListener('click',async()=>{
+    if(!USER){openGate();return}
+    const s=state();
+    if(!s.branch){toast('Выберите филиал');$('#branch').focus();return}
+    if(!R.rev){toast('Заполните выручку');return}
+    const b=$('#b_send');
+    if(b.dataset.sentFor===JSON.stringify(s)&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлен. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить в бухгалтерию'},4000);return}
+    b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';
+    const report={branch:s.branch,dateRu:ruDate(s.date),r041:s.r041,rev:s.rev,totals:{rev:R.rev,ct:R.ct,cw:R.cw,cn:R.cn,ex:R.ex,exW:R.exW,inc:R.inc,pass:R.pass},
+      cour:s.cour,exp:s.exp.map(x=>({...x,dateRu:ruDate(x.date)})),inc:s.inc.map(x=>({...x,dateRu:ruDate(x.date)}))};
+    try{const r=await api({action:'report',pin:USER.pin,report});
+      if(r.ok){b.dataset.sentFor=JSON.stringify(s);const t=new Date();$('#sent').textContent=`Отправлено в ${pad(t.getHours())}:${pad(t.getMinutes())}. Номер отчёта ${r.id}.`;toast('Отчёт отправлен в бухгалтерию')}
+      else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова — отчёт сохранён.')}
+      else toast('Не отправилось: '+(r.error==='locked'?'вход временно заблокирован':'ошибка сервера'));
+    }catch(x){toast('Нет связи с сервером. Отчёт сохранён, попробуйте ещё раз.')}
+    b.disabled=false;b.textContent='Отправить в бухгалтерию';
+  });
 
   // ---------- Excel in the current format
   $('#b_xlsx').addEventListener('click',()=>{
