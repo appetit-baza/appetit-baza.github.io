@@ -166,6 +166,18 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .h-table th,.h-table td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 .h-table tr:last-child td{border-bottom:0}
 .h-table th{font-size:12px;color:var(--muted);background:var(--note)}
+.send-err{font-size:13.5px;padding:9px 12px;border-radius:9px;background:#fdecea;color:#b3261e;font-weight:600;margin:0}
+.fixbox{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg);display:grid;gap:8px;margin-top:6px}
+.fixbox p{margin:0;font-size:14px}
+.fixbox textarea{font:inherit;font-size:15px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);min-height:64px;resize:vertical;width:100%;box-sizing:border-box}
+.fixbox .row{display:flex;gap:8px;flex-wrap:wrap}
+.fixbox .btn{width:auto;padding-inline:16px}
+.fix-st{font-weight:600}.fix-st.wait{color:var(--amber)}.fix-st.ok{color:var(--accent)}.fix-st.no{color:#b3261e}
+.hb-fix{display:grid;gap:8px;margin-bottom:12px}
+.hb-fix .fixbox{border-color:var(--amber)}
+.fixbar{border:2px solid var(--amber);background:var(--surface);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:10px 0 0}
+.fixbar p{margin:0;font-size:14.5px}
+.fixbar button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
 .h-kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;font-variant-numeric:tabular-nums}
 .h-kv span:nth-child(even){text-align:right;font-weight:600}
 /* login */
@@ -198,6 +210,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   <h1>Кассовый отчёт смены</h1>
   <p class="lead">Заполните три блока. Итоги, оплата курьеров по часам и переданная сумма считаются сами. В конце отправьте отчёт в бухгалтерию или скачайте Excel.</p>
   <p class="draft" id="draft"></p>
+  <div class="fixbar" id="fixbar" hidden><p><b>Исправление отчёта за <span id="fix_date"></span>.</b> Поправьте ошибки и нажмите «Отправить в бухгалтерию» — исправленный отчёт заменит прежний.</p><button type="button" id="fix_cancel">Отменить исправление</button></div>
 
   <!-- 1 -->
   <section class="card" id="sec-sum">
@@ -269,6 +282,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   <p class="hint" style="margin:0" id="send_hint" hidden>Нужен Excel — скачайте до отправки: после отправки форма очистится.</p>
   <button type="button" class="btn primary" id="b_send" hidden>Отправить в бухгалтерию</button>
   <p class="sent" id="sent"></p>
+  <p class="send-err" id="send_err" hidden></p>
   <button type="button" class="btn primary" id="b_xlsx">Скачать Excel</button>
   <button type="button" class="btn ghost" id="b_new">Начать новый отчёт</button>
 </aside>
@@ -280,6 +294,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     <div class="hist-head"><h2 id="hist_t">Мои смены</h2><button type="button" class="x" id="hist_close" aria-label="Закрыть">×</button></div>
     <p class="hint" id="hist_note">Отчёты, которые вы отправили в бухгалтерию. Другие администраторы ваши смены не видят.</p>
     <div id="hist_boss" hidden>
+      <div class="hb-fix" id="hb_fix"></div>
       <div class="hb-filters">
         <label>Филиал<select id="hb_branch"><option value="">Все филиалы</option></select></label>
         <label>С<input type="date" id="hb_from"></label>
@@ -325,7 +340,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   const API_URL='https://script.google.com/macros/s/AKfycbxSXS6WoSei6vke43-jPTfSviFiteAWbnDiKLuB2LbbPoxnYjADNzVkhAvM4dWT9LYdaA/exec';
   const SESSION_HOURS=14;
   const MAX_ON=false; // включить после подключения бота MAX
-  let USER=null;
+  let USER=null, FIX=null, FIX_PENDING=0;
+  function histLabel(){const u=USER;$('#b_hist').textContent=u&&u.boss?('Все отчёты'+(FIX_PENDING?` · запросов: ${FIX_PENDING}`:'')):'Мои смены'}
   const DEVICE=(()=>{let d=LS.get('device',null);if(!d){d=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));LS.set('device',d)}return d})();
   async function api(payload){
     const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...payload,device:DEVICE}),redirect:'follow'});
@@ -333,7 +349,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   }
   function setUser(u){
     USER=u;
-    $('#user').hidden=!u; $('#u_name').textContent=u?u.name:''; $('#b_hist').textContent=u&&u.boss?'Все отчёты':'Мои смены'; $('.top a.kb').classList.toggle('with-user',!!u);
+    $('#user').hidden=!u; $('#u_name').textContent=u?u.name:''; histLabel(); $('.top a.kb').classList.toggle('with-user',!!u);
     $('#b_send').hidden=!u||!API_URL; $('#send_hint').hidden=$('#b_send').hidden;
     $('#to_chat').hidden=!u||!API_URL||!MAX_ON;
     $('#b_xlsx').className='btn '+($('#b_send').hidden?'primary':'sec');
@@ -346,7 +362,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     if(pin.length<4){err.textContent='PIN — от 4 до 8 цифр.';return}
     const b=$('#b_login');b.disabled=true;b.textContent='Проверяю…';err.textContent='';
     try{const r=await api({action:'login',pin});
-      if(r.ok){const u={name:r.name,branch:r.branch,boss:!!r.boss,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);loadFor(u);toast('Здравствуйте, '+r.name)}
+      if(r.ok){FIX_PENDING=r.fixPending||0;const u={name:r.name,branch:r.branch,boss:!!r.boss,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);loadFor(u);toast('Здравствуйте, '+r.name)}
       else err.textContent=r.error==='locked'?'5 неверных попыток на этом устройстве. Вход заблокирован на 10 минут.':r.error==='locked_all'?'Вход временно закрыт для всех из-за подбора PIN. Подождите 10 минут.':'Неверный PIN-код.';
     }catch(x){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.'}
     b.disabled=false;b.textContent='Войти';
@@ -367,7 +383,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     else if(q==='week'){f=new Date(d);f.setDate(d.getDate()-6)}else if(q==='month')f=new Date(d.getFullYear(),d.getMonth(),1);
     else{f=new Date(d.getFullYear(),d.getMonth()-1,1);t=new Date(d.getFullYear(),d.getMonth(),0)}
     $('#hb_from').value=iso(f);$('#hb_to').value=iso(t);$$('#hb_quick button').forEach(x=>x.classList.toggle('on',x.dataset.q===q))}
-  function itemHtml(x,boss){return `<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b${x.old?' class="old"':''}>${esc(x.date)}</b>${boss?' · '+esc(x.admin):''}<br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.old?' · <span class="rep">заменён повторной отправкой, в итоги не входит</span>':x.repeat?' · <span class="rep">повторная отправка</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`}
+  function itemHtml(x,boss){return `<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b${x.old||x.replaced?' class="old"':''}>${esc(x.date)}</b>${boss?' · '+esc(x.admin):''}<br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.replaced?' · <span class="rep">заменён исправленным отчётом</span>'+(boss?', в итоги не входит':''):x.old?' · <span class="rep">заменён повторной отправкой, в итоги не входит</span>':x.fixed?' · <span class="rep">исправленный отчёт</span>':x.repeat?' · <span class="rep">повторная отправка</span>':''}${x.fix==='ожидает'?' · <span class="rep">ждёт разрешения на исправление</span>':x.fix==='разрешено'?' · <span class="rep">исправление разрешено</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`}
   async function loadHist(){
     const boss=!!(USER&&USER.boss);
     $('#hist_list').innerHTML='<p class="hint">Загружаю…</p>';if(boss)$('#hb_sum').innerHTML='';
@@ -376,8 +392,9 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     try{const r=await api(q);
       if(!r.ok){if(r.error==='bad_pin'){closeHist();LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}else $('#hist_list').innerHTML='<p class="hint">Не удалось загрузить. Попробуйте ещё раз.</p>';return}
       if(r.boss&&!boss){USER.boss=true;LS.set('session',USER);setUser(USER);openHist();return}
+      if(boss)loadFixList();
       if(!r.shifts.length){$('#hist_list').innerHTML=boss?'<p class="hint">За этот период отчётов нет.</p>':'<p class="hint">Отправленных отчётов пока нет. Они появятся здесь после кнопки «Отправить в бухгалтерию».</p>';return}
-      if(boss){const seen=new Set();r.shifts.forEach(x=>{const k=x.dk+'|'+x.branch;x.old=seen.has(k);seen.add(k)});BOSS_ROWS=r.shifts;bossSum()}
+      if(boss){FIX_PENDING=r.fixPending||0;histLabel();const seen=new Set();r.shifts.forEach(x=>{const k=x.dk+'|'+x.branch;x.old=!!x.replaced||seen.has(k);if(!x.replaced)seen.add(k)});BOSS_ROWS=r.shifts;bossSum()}
       $('#hist_list').innerHTML=r.shifts.map(x=>itemHtml(x,boss)).join('');
     }catch(e){$('#hist_list').innerHTML='<p class="hint">Нет связи с сервером. Попробуйте ещё раз.</p>'}
   }
@@ -393,7 +410,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   function bossXlsx(){
     if(!window.XLSX){toast('Excel не загрузился. Обновите страницу.');return}
     const head=['Дата смены','Филиал','Администратор',...SUMF.map(x=>x[1]),'Отправлено','В итогах'];
-    const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),x.sent,x.old?'нет (повтор)':'да'])];
+    const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
     const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map((h,i)=>({wch:i<3?(i===1?26:18):13}));
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Отчёты');
     const fn=`Отчёты ${ruDate($('#hb_from').value)}–${ruDate($('#hb_to').value)}.xlsx`;
@@ -412,19 +429,66 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   $('#hb_quick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;quick(b.dataset.q);loadHist()});
   ['#hb_from','#hb_to','#hb_branch'].forEach(id=>$(id).addEventListener('change',()=>{$$('#hb_quick button').forEach(x=>x.classList.remove('on'));loadHist()}));
   $('#hb_sum').addEventListener('click',e=>{if(e.target.id==='hb_xlsx')bossXlsx()});
-  $('#hist_list').addEventListener('click',async e=>{
-    const b=e.target.closest('.h-item');if(!b)return;
-    const one=$('#hist_one');one.hidden=false;$('#hist_list').hidden=true;$('#hist_note').hidden=true;$('#hist_boss').hidden=true;one.innerHTML='<p class="hint">Загружаю…</p>';
-    try{const r=await api({action:'shift',pin:USER.pin,id:b.dataset.id});
+  let SHIFT=null;
+  function fixBox(s){
+    const boss=USER&&USER.boss,f=s.fix;
+    if(s.replaced)return `<div class="fixbox"><p class="fix-st ok">Отчёт исправлен — действует отчёт ${esc(s.replaced)}.</p></div>`;
+    if(boss&&f&&f.status==='ожидает')return `<div class="fixbox"><p><span class="fix-st wait">Запрос на исправление</span> от ${esc(s.admin)}${f.reason?': «'+esc(f.reason)+'»':''}</p><div class="row"><button type="button" class="btn primary" data-fx="approve" data-rid="${esc(f.rid)}">Разрешить</button><button type="button" class="btn sec" data-fx="reject" data-rid="${esc(f.rid)}">Отклонить</button></div></div>`;
+    if(!s.own)return f&&f.status==='разрешено'?`<div class="fixbox"><p class="fix-st ok">Исправление разрешено — ждём исправленный отчёт от администратора.</p></div>`:'';
+    if(f&&f.status==='ожидает')return `<div class="fixbox"><p class="fix-st wait">Запрос на исправление отправлен. Ждёт подтверждения руководителя.</p>${f.reason?`<p>Причина: ${esc(f.reason)}</p>`:''}</div>`;
+    if(f&&f.status==='разрешено')return `<div class="fixbox"><p class="fix-st ok">Руководитель разрешил исправление.</p><div class="row"><button type="button" class="btn primary" data-fx="edit">Исправить отчёт</button></div></div>`;
+    const rej=f&&f.status==='отклонено'?'<p class="fix-st no">Предыдущий запрос на исправление отклонён.</p>':'';
+    return `<div class="fixbox">${rej}<p>Нашли ошибку? Опишите, что не так. Исправить можно после подтверждения руководителя.</p><textarea id="fx_reason" maxlength="500" placeholder="Например: ошиблась в наличке, должно быть 12 500"></textarea><div class="row"><button type="button" class="btn sec" data-fx="request">Запросить исправление</button></div></div>`;
+  }
+  async function openShift(id){
+    const one=$('#hist_one');one.hidden=false;$('#hist_list').hidden=true;$('#hist_note').hidden=true;$('#hist_boss').hidden=true;one.innerHTML='<p class="hint">Загружаю…</p>';H.scrollTop=0;
+    try{const r=await api({action:'shift',pin:USER.pin,id});
       if(!r.ok){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Отчёт не найден.</p>';return}
-      const s=r.shift;
+      const s=r.shift;SHIFT=s;
       const kv=s.summary.filter(([k])=>!(USER&&USER.boss?/^(Повторная)/:/^(Отправлено|Администратор|Повторная)/).test(k)).map(([k,v])=>`<span>${esc(k)}</span><span>${typeof v==='number'?money(v):esc(v)}</span>`).join('');
       const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>`).join('')}</table></div>`:'';
       const mt=s.money.length?`<p class="h-sec">Приход и расход</p><div class="h-table"><table><tr><th>Тип</th><th>Дата</th><th>Статья</th><th>Сумма</th></tr>${s.money.map(m=>`<tr><td>${esc(m.type)}</td><td>${esc(m.date)}</td><td>${esc(m.art)}</td><td>${esc(m.sum)}</td></tr>`).join('')}</table></div>`:'';
-      one.innerHTML=`<button type="button" class="h-back">← Назад к списку</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${ct}${mt}`;
+      one.innerHTML=`<button type="button" class="h-back">← Назад к списку</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${ct}${mt}<div id="fx_box">${fixBox(s)}</div>`;
     }catch(x){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Нет связи с сервером.</p>'}
+  }
+  $('#hist_list').addEventListener('click',e=>{const b=e.target.closest('.h-item');if(b)openShift(b.dataset.id)});
+  // ---------- correction requests (only after the manager approves)
+  async function loadFixList(){
+    const box=$('#hb_fix');
+    try{const r=await api({action:'fix_list',pin:USER.pin});if(!r.ok){box.innerHTML='';return}
+      FIX_PENDING=r.list.length;histLabel();
+      box.innerHTML=r.list.length?`<p class="h-sec" style="margin:0">Запросы на исправление · ${r.list.length}</p>`+r.list.map(f=>`<div class="fixbox"><p><b>${esc(f.date)}</b> · ${esc(f.branch)} · ${esc(f.admin)}</p>${f.reason?`<p>«${esc(f.reason)}»</p>`:''}<div class="row"><button type="button" class="btn primary" data-fx="approve" data-rid="${esc(f.rid)}">Разрешить</button><button type="button" class="btn sec" data-fx="reject" data-rid="${esc(f.rid)}">Отклонить</button><button type="button" class="btn ghost" data-fx="open" data-id="${esc(f.id)}">Открыть смену</button></div></div>`).join(''):'';
+    }catch(e){box.innerHTML=''}
+  }
+  function toForm(s){
+    const iso=v=>{const m=String(v||'').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);return m?`${m[3]}-${pad(m[2])}-${pad(m[1])}`:''};
+    const tm=v=>{const m=String(v||'').match(/(\d{1,2}):(\d{2})/);return m?`${pad(m[1])}:${m[2]}`:''};
+    const nn=v=>String(v??'').replace(/\s/g,'');
+    const cour=s.cour.map(c=>{const from=tm(c.from),to=tm(c.to),a=minutes(from),b=minutes(to);let auto=null;if(a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;auto=Math.floor(m/60*RATE)}
+      return {name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),w:!/нет/i.test(c.w),manual:auto!==null&&auto!==num(c.hours)}});
+    const mon=t=>s.money.filter(m=>m.type===t).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
+    return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,rev:s.raw.rev,cour,exp:mon('Расход'),inc:mon('Приход')};
+  }
+  function setFix(f){FIX=f;if(USER){if(f)LS.set('fix:'+USER.name,f);else LS.del('fix:'+USER.name)}$('#fixbar').hidden=!f;if(f)$('#fix_date').textContent=f.date}
+  $('#fix_cancel').addEventListener('click',()=>{setFix(null);if(DKEY())LS.del(DKEY());loadFor(USER);toast('Исправление отменено')});
+  H.addEventListener('click',async e=>{
+    const b=e.target.closest('[data-fx]');if(!b)return;const act=b.dataset.fx;
+    if(act==='open'){openShift(b.dataset.id);return}
+    if(act==='edit'){const s=SHIFT;if(!s)return;resetSent();load(toForm(s));refreshNames();calc();setFix({id:s.id,date:ruDate(s.raw.date)});closeHist();window.scrollTo({top:0});toast('Отчёт загружен — исправьте и отправьте');return}
+    b.disabled=true;
+    try{
+      if(act==='request'){const ta=$('#fx_reason'),reason=ta?ta.value.trim():'';if(!reason){toast('Опишите, что нужно исправить');if(ta)ta.focus();b.disabled=false;return}
+        const r=await api({action:'fix_request',pin:USER.pin,id:SHIFT.id,reason});
+        if(r.ok){SHIFT.fix=r.fix;$('#fx_box').innerHTML=fixBox(SHIFT);toast('Запрос отправлен руководителю')}else toast(r.error==='replaced'?'Отчёт уже исправлен':'Не получилось, попробуйте ещё раз')}
+      else{const r=await api({action:'fix_decide',pin:USER.pin,rid:b.dataset.rid,approve:act==='approve'});
+        if(r.ok||r.error==='already'){toast(r.ok?(act==='approve'?'Исправление разрешено':'Запрос отклонён'):'Запрос уже решён');
+          if(!$('#hist_one').hidden&&SHIFT&&SHIFT.fix){SHIFT.fix=Object.assign({},SHIFT.fix,{status:r.status});$('#fx_box').innerHTML=fixBox(SHIFT)}
+          loadFixList()}
+        else toast('Не получилось, попробуйте ещё раз')}
+    }catch(x){toast('Нет связи с сервером')}
+    b.disabled=false;
   });
-  $('#hist_one').addEventListener('click',e=>{if(e.target.closest('.h-back')){$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false;$('#hist_boss').hidden=!(USER&&USER.boss)}});
+  $('#hist_one').addEventListener('click',e=>{if(e.target.closest('.h-back')){$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false;$('#hist_boss').hidden=!(USER&&USER.boss);loadHist()}});
   const RATE=140; // ставка курьера за час, менять только здесь
   const REV=[['r_cash','Наличка'],['r_card','Б/Н расчет (картой)'],['r_ye','Деливери/ЯЕ'],['r_mp','МП (online)'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
 
@@ -567,11 +631,12 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     (s.inc||[]).forEach(d=>addExp('inc',d));
     loading=false;
   }
-  function resetSent(){$('#sent').textContent='';$('#b_send').dataset.sentFor='';const rs=$('#rev_sent');if(rs)rs.textContent='';const br=$('#b_rev');if(br)br.dataset.sentFor=''}
+  function resetSent(){$('#sent').textContent='';$('#send_err').hidden=true;$('#b_send').dataset.sentFor='';const rs=$('#rev_sent');if(rs)rs.textContent='';const br=$('#b_rev');if(br)br.dataset.sentFor=''}
   // открыть форму пользователя: его черновик или пустой отчёт его филиала
   function loadFor(u){
     resetSent();$('#draft').textContent='';
-    if(!u){load({date:today()});calc();return}
+    if(!u){setFix(null);load({date:today()});calc();return}
+    FIX=LS.get('fix:'+u.name,null);$('#fixbar').hidden=!FIX;if(FIX)$('#fix_date').textContent=FIX.date;
     const d=LS.get('draft:'+u.name,null);
     load(d||{date:today(),branch:u.branch||'',admin:u.name});$('#admin').value=u.name;refreshNames();calc();
     if(d)$('#draft').textContent='Открыт ваш сохранённый черновик.';
@@ -585,7 +650,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     const b=$('#b_new');
     if(!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Нажмите ещё раз, чтобы очистить отчёт';setTimeout(()=>{b.dataset.confirm='';b.textContent='Начать новый отчёт'},3500);return}
     b.dataset.confirm='';b.textContent='Начать новый отчёт';
-    if(DKEY())LS.del(DKEY());resetSent();load({date:today(),branch:$('#branch').value,admin:$('#admin').value});calc();window.scrollTo({top:0});toast('Новый отчёт');
+    if(DKEY())LS.del(DKEY());setFix(null);resetSent();load({date:today(),branch:$('#branch').value,admin:$('#admin').value});calc();window.scrollTo({top:0});toast('Новый отчёт');
   });
   function remember(){const b=$('#branch').value;if(b)LS.set('branch',b);const a=$('#admin').value.trim();if(a)LS.set('admin',a)}
 
@@ -619,6 +684,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     b.disabled=false;b.textContent='Отправить выручку в чат «АДМИНЫ АППЕТИТ»';
   });
 
+  function showErr(t){const el=$('#send_err');el.textContent=t;el.hidden=false}
   // ---------- send to accounting (Google Sheet)
   $('#b_send').addEventListener('click',async()=>{
     if(!USER){openGate();return}
@@ -627,12 +693,14 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     if(!R.rev){toast('Заполните выручку');return}
     const b=$('#b_send');
     if(b.dataset.sentFor===JSON.stringify(s)&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлен. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить в бухгалтерию'},4000);return}
-    b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';
+    b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';$('#send_err').hidden=true;
     const report={branch:s.branch,dateRu:ruDate(s.date),r041:s.r041,rev:s.rev,totals:{rev:R.rev,ct:R.ct,cw:R.cw,cn:R.cn,ex:R.ex,exW:R.exW,inc:R.inc,pass:R.pass},
       cour:s.cour,exp:s.exp.map(x=>({...x,dateRu:ruDate(x.date)})),inc:s.inc.map(x=>({...x,dateRu:ruDate(x.date)}))};
-    try{const r=await api({action:'report',pin:USER.pin,report});
-      if(r.ok){if(DKEY())LS.del(DKEY());loadFor(USER);$('#draft').textContent='';window.scrollTo({top:0});const t=new Date();$('#sent').textContent=`Отчёт за ${ruDate(s.date)} отправлен в ${pad(t.getHours())}:${pad(t.getMinutes())}, номер ${r.id}. Форма очищена — его можно открыть в «Мои смены».`;toast('Отчёт отправлен, форма очищена')}
+    try{const r=await api({action:'report',pin:USER.pin,report,fixOf:FIX?FIX.id:undefined});
+      if(r.ok){const wasFix=!!FIX;if(DKEY())LS.del(DKEY());setFix(null);loadFor(USER);$('#draft').textContent='';window.scrollTo({top:0});const t=new Date();$('#sent').textContent=`Отчёт за ${ruDate(s.date)} ${wasFix?'исправлен':'отправлен'} в ${pad(t.getHours())}:${pad(t.getMinutes())}, номер ${r.id}. Форма очищена — его можно открыть в «Мои смены».`;toast('Отчёт отправлен, форма очищена')}
       else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова — отчёт сохранён.')}
+      else if(r.error==='duplicate'){toast('Смена уже отправлена');showErr('Смена за эту дату по этому филиалу уже отправлена. Чтобы исправить её, откройте «Мои смены», выберите смену и нажмите «Запросить исправление».')}
+      else if(r.error==='fix_not_allowed'){setFix(null);showErr('Исправление не разрешено или уже использовано. Откройте смену в «Мои смены» и запросите исправление.')}
       else toast('Не отправилось: '+(r.error==='locked'?'вход временно заблокирован':'ошибка сервера'));
     }catch(x){toast('Нет связи с сервером. Отчёт сохранён, попробуйте ещё раз.')}
     b.disabled=false;b.textContent='Отправить в бухгалтерию';

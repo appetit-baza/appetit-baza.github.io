@@ -38,18 +38,21 @@ var SHEET_COURIERS = 'Курьеры';
 var SHEET_MONEY = 'Приход-расход';
 var SHEET_LOG = 'Журнал входов';
 var SHEET_STAFF = 'Справочник курьеров';
+var SHEET_FIX = 'Исправления';
 
 var HEADERS = {};
 HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен', 'Роль'];
 HEADERS[SHEET_REPORTS] = ['Отправлено', 'Дата смены', 'Филиал', 'Администратор', 'Выручка всего', 'Наличка',
   'Б/Н расчет (картой)', 'Деливери/ЯЕ', 'МП (online)', 'Чиббис', 'Сбермаркет', 'Бонусы iiko (iikocard)',
   'Итого по 041', 'Курьерам всего', 'Делали изъятие', 'Не делали изъятие', 'Прочие расходы',
-  'из них вычтено', 'Приход', 'Передана сумма', 'Повторная отправка', 'ID отчёта'];
+  'из них вычтено', 'Приход', 'Передана сумма', 'Повторная отправка', 'ID отчёта', 'Заменён отчётом'];
 HEADERS[SHEET_COURIERS] = ['ID отчёта', 'Дата смены', 'Филиал', 'Курьер', 'С', 'По', 'За часы', 'Заказов',
   'За заказы', 'Итого', 'Изъятие', 'Нет в справочнике'];
 HEADERS[SHEET_MONEY] = ['ID отчёта', 'Дата смены', 'Филиал', 'Тип', 'Дата', 'Статья', 'Сумма', 'Вычтено из переданной'];
 HEADERS[SHEET_LOG] = ['Время', 'Событие', 'ФИО', 'Филиал'];
 HEADERS[SHEET_STAFF] = ['Филиал', 'ФИО курьера', 'Активен'];
+HEADERS[SHEET_FIX] = ['Запрошено', 'ID отчёта', 'Дата смены', 'Филиал', 'Администратор', 'Причина',
+  'Статус', 'Решение', 'Новый отчёт', 'ID запроса'];
 
 var MAX_FAILS = 5;           // неверных PIN подряд с одного устройства
 var LOCK_SECONDS = 600;      // блокировка этого устройства на 10 минут
@@ -98,7 +101,8 @@ function doPost(e) {
     resetFails_(dev);
     if (body.action === 'login') {
       log_('Вход', admin.name, admin.branch);
-      return json_({ ok: true, name: admin.name, branch: admin.branch, boss: admin.boss, couriers: couriers_() });
+      return json_({ ok: true, name: admin.name, branch: admin.branch, boss: admin.boss, couriers: couriers_(),
+        fixPending: admin.boss ? fixList_().length : 0 });
     }
     if (body.action === 'couriers') return json_({ ok: true, couriers: couriers_() });
     if (body.action === 'revenue') {
@@ -106,13 +110,25 @@ function doPost(e) {
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
     }
-    if (body.action === 'history') return json_({ ok: true, boss: admin.boss, shifts: history_(admin, body) });
+    if (body.action === 'history') return json_({ ok: true, boss: admin.boss, shifts: history_(admin, body),
+      fixPending: admin.boss ? fixList_().length : 0 });
+    if (body.action === 'fix_request') return json_(fixRequest_(String(body.id || ''), String(body.reason || ''), admin));
+    if (body.action === 'fix_list') return json_(admin.boss ? { ok: true, list: fixList_() } : { ok: false, error: 'not_boss' });
+    if (body.action === 'fix_decide') return json_(admin.boss ? fixDecide_(String(body.rid || ''), !!body.approve, admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'shift') {
       var sh = shift_(String(body.id || ''), admin);
       return json_(sh ? { ok: true, shift: sh } : { ok: false, error: 'not_found' });
     }
     if (body.action === 'report') {
-      var id = saveReport_(body.report || {}, admin);
+      var rep = body.report || {}, fix = null;
+      if (body.fixOf) {
+        fix = fixCheck_(String(body.fixOf), admin);
+        if (!fix) return json_({ ok: false, error: 'fix_not_allowed' });
+      } else if (!admin.boss && dupExists_(rep, admin)) {
+        return json_({ ok: false, error: 'duplicate' });
+      }
+      var id = saveReport_(rep, admin);
+      if (fix) fixDone_(fix, id, admin);
       return json_({ ok: true, id: id });
     }
     return json_({ ok: false, error: 'unknown_action' });
@@ -232,6 +248,7 @@ function history_(admin, q) {
   var to = Number(String(q.to || '').replace(/\D/g, '')) || 99999999;
   var branch = String(q.branch || '');
   var limit = admin.boss ? 2000 : 100;
+  var fx = fixMap_();
   var out = [];
   for (var i = rows.length - 1; i >= 1 && out.length < limit; i--) {
     var r = rows[i];
@@ -246,7 +263,7 @@ function history_(admin, q) {
       card: Number(r[6]) || 0, ye: Number(r[7]) || 0, mp: Number(r[8]) || 0, chib: Number(r[9]) || 0,
       sber: Number(r[10]) || 0, bon: Number(r[11]) || 0,
       ct: Number(r[13]) || 0, ex: Number(r[16]) || 0, inc: Number(r[18]) || 0, pass: Number(r[19]) || 0,
-      repeat: String(r[20]) === 'да' });
+      repeat: String(r[20]) === 'да', fixed: String(r[20]) === 'исправление', replaced: String(r[22] || ''), fix: (fx[String(r[21])] || {}).status || '' });
   }
   return out;
 }
@@ -259,7 +276,7 @@ function shift_(id, admin) {
   for (var i = 1; i < rows.length; i++) if (String(rows[i][21]) === id) { row = rows[i]; break; }
   if (!row || (!admin.boss && String(row[3]).trim() !== admin.name)) return null;
   var summary = [];
-  for (var j = 1; j < head.length - 1; j++) {
+  for (var j = 1; j <= 20; j++) {
     var v = row[j];
     if (v === '' || v === null || (v === 0 && String(head[j]) !== 'Передана сумма')) continue;
     summary.push([String(head[j]), v instanceof Date ? d_(v) : v]);
@@ -268,7 +285,107 @@ function shift_(id, admin) {
     .map(function (r) { return { name: r[3], from: r[4], to: r[5], hours: r[6], qty: r[7], orders: r[8], total: r[9], w: r[10], other: r[11] }; });
   var money = ss.getSheetByName(SHEET_MONEY).getDataRange().getDisplayValues().filter(function (r) { return r[0] === id; })
     .map(function (r) { return { type: r[3], date: r[4], art: r[5], sum: r[6], w: r[7] }; });
-  return { id: id, summary: summary, cour: cour, money: money };
+  var f = fixFind_(id);
+  var rev = {};
+  ['r_cash', 'r_card', 'r_ye', 'r_mp', 'r_chib', 'r_sber', 'r_bon'].forEach(function (k, n) { rev[k] = row[5 + n] === 0 ? '' : String(row[5 + n]); });
+  var dk = dkey_(row[1]);
+  var raw = { date: dk ? String(dk).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : '', branch: String(row[2]), r041: String(row[12] === '' ? '' : row[12]), rev: rev };
+  return { id: id, own: String(row[3]).trim() === admin.name, admin: String(row[3]), replaced: String(row[22] || ''),
+    fix: f ? { status: f.status, rid: f.rid, reason: f.reason } : null, raw: raw, summary: summary, cour: cour, money: money };
+}
+
+// ---------- Исправление отправленной смены — только с разрешения руководителя
+function fixSheet_() {
+  var ss = ss_();
+  var sh = ss.getSheetByName(SHEET_FIX);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_FIX);
+    sh.appendRow(HEADERS[SHEET_FIX]);
+    sh.getRange(1, 1, 1, HEADERS[SHEET_FIX].length).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  var rep = ss.getSheetByName(SHEET_REPORTS);
+  if (!String(rep.getRange('W1').getValue()).trim()) rep.getRange('W1').setValue('Заменён отчётом').setFontWeight('bold');
+  return sh;
+}
+function fixRows_() {
+  var sh = ss_().getSheetByName(SHEET_FIX);
+  return sh ? sh.getDataRange().getValues() : [];
+}
+function fixObj_(r, i) {
+  return { row: i + 1, sent: d_(r[0]), id: String(r[1]), date: d_(r[2]), branch: String(r[3]), admin: String(r[4]),
+    reason: String(r[5]), status: String(r[6]), decided: String(r[7]), newId: String(r[8]), rid: String(r[9]) };
+}
+function fixFind_(id) {
+  var rows = fixRows_();
+  for (var i = rows.length - 1; i >= 1; i--) if (String(rows[i][1]) === id) return fixObj_(rows[i], i);
+  return null;
+}
+function fixMap_() {
+  var rows = fixRows_(), m = {};
+  for (var i = 1; i < rows.length; i++) m[String(rows[i][1])] = fixObj_(rows[i], i);
+  return m;
+}
+function fixList_() {
+  var rows = fixRows_(), out = [];
+  for (var i = rows.length - 1; i >= 1; i--) if (String(rows[i][6]) === 'ожидает') out.push(fixObj_(rows[i], i));
+  return out;
+}
+function reportRow_(id) {
+  var rows = ss_().getSheetByName(SHEET_REPORTS).getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) if (String(rows[i][21]) === id) return { idx: i + 1, r: rows[i] };
+  return null;
+}
+function fixRequest_(id, reason, admin) {
+  var rr = reportRow_(id);
+  if (!rr || String(rr.r[3]).trim() !== admin.name) return { ok: false, error: 'not_found' };
+  if (String(rr.r[22] || '')) return { ok: false, error: 'replaced' };
+  var cur = fixFind_(id);
+  if (cur && (cur.status === 'ожидает' || cur.status === 'разрешено')) return { ok: true, fix: cur };
+  var sh = fixSheet_();
+  var rid = 'F' + Utilities.formatDate(new Date(), 'Europe/Moscow', 'yyMMddHHmmss') + Math.floor(Math.random() * 90 + 10);
+  sh.appendRow([new Date(), id, rr.r[1], rr.r[2], admin.name, reason.slice(0, 500), 'ожидает', '', '', rid]);
+  log_('Запрос на исправление ' + id, admin.name, String(rr.r[2]));
+  return { ok: true, fix: fixFind_(id) };
+}
+function fixDecide_(rid, approve, admin) {
+  var sh = fixSheet_(), rows = sh.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][9]) !== rid) continue;
+    if (String(rows[i][6]) !== 'ожидает') return { ok: false, error: 'already', status: String(rows[i][6]) };
+    var st = approve ? 'разрешено' : 'отклонено';
+    sh.getRange(i + 1, 7, 1, 2).setValues([[st, d_(new Date()) + ', ' + admin.name]]);
+    log_('Исправление ' + rows[i][1] + ': ' + st, admin.name, String(rows[i][3]));
+    return { ok: true, status: st };
+  }
+  return { ok: false, error: 'not_found' };
+}
+function fixCheck_(id, admin) {
+  var f = fixFind_(id);
+  if (!f || f.status !== 'разрешено') return null;
+  var rr = reportRow_(id);
+  if (!rr || String(rr.r[22] || '')) return null;
+  if (!admin.boss && String(rr.r[3]).trim() !== admin.name) return null;
+  return { f: f, rr: rr };
+}
+function fixDone_(fix, newId, admin) {
+  var ss = ss_();
+  fixSheet_().getRange(fix.f.row, 7).setValue('исправлено');
+  fixSheet_().getRange(fix.f.row, 9).setValue(newId);
+  var rep = ss.getSheetByName(SHEET_REPORTS);
+  rep.getRange(fix.rr.idx, 23).setValue(newId);
+  rep.getRange(rep.getLastRow(), 21).setValue('исправление');
+  log_('Исправлен отчёт ' + fix.f.id + ' → ' + newId, admin.name, '');
+}
+// Уже есть действующий отчёт за эту дату по этому филиалу?
+function dupExists_(r, admin) {
+  var branch = r.branch || admin.branch, k = dkey_(r.dateRu);
+  if (!k) return false;
+  var rows = ss_().getSheetByName(SHEET_REPORTS).getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (dkey_(rows[i][1]) === k && String(rows[i][2]) === branch && !String(rows[i][22] || '')) return true;
+  }
+  return false;
 }
 
 function num_(v) {
