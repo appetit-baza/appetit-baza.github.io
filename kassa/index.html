@@ -60,6 +60,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .flag.ok{color:var(--accent)} .flag.bad{color:var(--warn)}
 /* table-like rows */
 .rows{display:grid;gap:8px}
+.rate-fixed{margin:0 0 14px;font-size:14px;color:var(--muted)}
+.rate-fixed b{color:var(--ink)}
 .row-h,.crow,.erow{display:grid;gap:8px;align-items:center}
 .crow,.row-h.c{grid-template-columns:minmax(120px,1fr) 96px 96px 84px 60px 86px 88px 90px 30px}
 .erow,.row-h.e{grid-template-columns:minmax(0,.7fr) minmax(0,2fr) 110px 104px 30px}
@@ -178,7 +180,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   <!-- 2 -->
   <section class="card" id="sec-cour">
     <div class="card-h"><span class="no">2</span><h2>Курьеры: неотображённые доставки</h2><span class="sub" id="o_cour_sub"></span></div>
-    <div class="field" style="max-width:220px;margin-bottom:12px"><label for="rate">Ставка за час, ₽</label><input id="rate" class="num" inputmode="decimal" value="140"></div>
+    <p class="rate-fixed">Ставка курьера: <b>140 ₽ в час</b> — задана бухгалтерией, изменить нельзя.</p>
     <div class="row-h c">
       <span class="th">ФИО</span><span class="th">С</span><span class="th">По</span><span class="th" style="text-align:right">За часы</span><span class="th" style="text-align:right">Заказов</span><span class="th" style="text-align:right">За заказы</span><span class="th" style="text-align:right">Итого</span><span class="th" style="text-align:center">Изъятие</span><span></span>
     </div>
@@ -282,6 +284,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     b.disabled=false;b.textContent='Войти';
   });
   $('#b_logout').addEventListener('click',()=>{LS.del('session');setUser(null);openGate()});
+  const RATE=140; // ставка курьера за час, менять только здесь
   const REV=[['r_cash','Наличка'],['r_card','Б/Н расчет (картой)'],['r_ye','Деливери/ЯЕ'],['r_mp','МП (online)'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
 
   // ---------- rows
@@ -329,7 +332,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 
   // ---------- state + calc
   function state(){
-    const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:num($('#rate').value),r041:$('#r_041').value.trim(),rev:{},cour:[],exp:[],inc:[]};
+    const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),rev:{},cour:[],exp:[],inc:[]};
     REV.forEach(([id])=>s.rev[id]=$('#'+id).value.trim());
     $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),from:g('from').value,to:g('to').value,hours:g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:g('w').getAttribute('aria-pressed')==='true',manual:!!r.dataset.manual})});
     ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:g('date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:b==='exp'?g('w').getAttribute('aria-pressed')==='true':false})}));
@@ -337,7 +340,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   }
   let R={};
   function calc(){
-    const rate=num($('#rate').value);
+    const rate=RATE;
     const warns=[];
     // couriers
     let ch=0,co=0,cw=0,cn=0,cq=0;
@@ -391,7 +394,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   function save(){if(loading)return;const s=state();LS.set('draft',s);LS.set('savedAt',Date.now());$('#draft').textContent='Черновик сохраняется на этом устройстве автоматически.'}
   function load(s){
     loading=true;
-    $('#branch').value=s.branch||'';$('#date').value=s.date||today();$('#admin').value=s.admin||'';$('#rate').value=s.rate||140;$('#r_041').value=s.r041||'';
+    $('#branch').value=s.branch||'';$('#date').value=s.date||today();$('#admin').value=s.admin||'';$('#r_041').value=s.r041||'';
     REV.forEach(([id])=>$('#'+id).value=(s.rev&&s.rev[id])||'');
     $('#cour').innerHTML='';$('#exp').innerHTML='';$('#inc').innerHTML='';
     (s.cour&&s.cour.length?s.cour:[{},{},{}]).forEach(addCour);
@@ -407,7 +410,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     const b=$('#b_new');
     if(!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Нажмите ещё раз, чтобы очистить отчёт';setTimeout(()=>{b.dataset.confirm='';b.textContent='Начать новый отчёт'},3500);return}
     b.dataset.confirm='';b.textContent='Начать новый отчёт';
-    LS.del('draft');load({date:today(),branch:$('#branch').value,admin:$('#admin').value,rate:$('#rate').value});calc();window.scrollTo({top:0});toast('Новый отчёт');
+    LS.del('draft');load({date:today(),branch:$('#branch').value,admin:$('#admin').value});calc();window.scrollTo({top:0});toast('Новый отчёт');
   });
   function remember(){const b=$('#branch').value;if(b)LS.set('branch',b);const a=$('#admin').value.trim();if(a)LS.set('admin',a)}
 
