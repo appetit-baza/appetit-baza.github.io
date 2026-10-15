@@ -63,7 +63,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .rate-fixed{margin:0 0 14px;font-size:14px;color:var(--muted)}
 .rate-fixed b{color:var(--ink)}
 .row-h,.crow,.erow{display:grid;gap:8px;align-items:center}
-.crow,.row-h.c{grid-template-columns:minmax(120px,1fr) 96px 96px 84px 60px 86px 88px 90px 30px}
+.crow,.row-h.c{grid-template-columns:minmax(150px,1fr) 78px 78px 80px 56px 82px 84px 88px 30px}
+.c-name{display:grid;gap:6px}
 .erow,.row-h.e{grid-template-columns:minmax(0,.7fr) minmax(0,2fr) 110px 104px 30px}
 .row-h{padding:0 2px}
 .calc{height:40px;display:flex;align-items:center;justify-content:flex-end;padding:0 10px;border-radius:8px;background:var(--note);font-weight:700;font-variant-numeric:tabular-nums}
@@ -270,7 +271,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     $('#user').hidden=!u; $('#u_name').textContent=u?u.name:''; $('.top a.kb').classList.toggle('with-user',!!u);
     $('#b_send').hidden=!u||!API_URL;
     $('#b_xlsx').className='btn '+($('#b_send').hidden?'primary':'sec');
-    const a=$('#admin'); if(u){a.value=u.name;a.readOnly=true;if(u.branch&&[...$('#branch').options].some(o=>o.value===u.branch)&&!$('#branch').value)$('#branch').value=u.branch}else{a.readOnly=false}
+    const a=$('#admin'); if(u){a.value=u.name;a.readOnly=true;if(u.branch&&[...$('#branch').options].some(o=>o.value===u.branch)&&!$('#branch').value)$('#branch').value=u.branch}else{a.readOnly=false;COURIERS=null;LS.del('couriers')}
+    refreshNames();
   }
   function openGate(msg){$('#gate').hidden=false;$('#gate_err').textContent=msg||'';$('#pin').value='';setTimeout(()=>$('#pin').focus(),50)}
   $('#gate_form').addEventListener('submit',async e=>{
@@ -278,7 +280,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     if(pin.length<4){err.textContent='PIN — от 4 до 8 цифр.';return}
     const b=$('#b_login');b.disabled=true;b.textContent='Проверяю…';err.textContent='';
     try{const r=await api({action:'login',pin});
-      if(r.ok){const u={name:r.name,branch:r.branch,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);$('#gate').hidden=true;setUser(u);calc();toast('Здравствуйте, '+r.name)}
+      if(r.ok){const u={name:r.name,branch:r.branch,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);calc();toast('Здравствуйте, '+r.name)}
       else err.textContent=r.error==='locked'?'Слишком много неверных попыток. Подождите 10 минут.':'Неверный PIN-код.';
     }catch(x){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.'}
     b.disabled=false;b.textContent='Войти';
@@ -291,7 +293,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   function minutes(t){t=String(t||'').trim().replace(/[.,;\-]/g,':');if(/^\d{3,4}$/.test(t))t=t.slice(0,-2)+':'+t.slice(-2);if(!/^\d{1,2}:\d{2}$/.test(t))return null;const [h,m]=t.split(':').map(Number);if(h>24||m>59)return null;return h*60+m}
   function addCour(d={}){
     const r=document.createElement('div');r.className='crow';
-    r.innerHTML=`<div class="c-name"><span class="lbl-m">ФИО</span><input data-k="name" placeholder="Фамилия" value="${esc(d.name)}" aria-label="ФИО курьера"></div>
+    r.innerHTML=`<div class="c-name"><span class="lbl-m">ФИО</span><select data-k="pick" aria-label="Курьер" hidden></select><input data-k="name" placeholder="Фамилия" value="${esc(d.name)}" aria-label="ФИО курьера"></div>
       <div><span class="lbl-m">С</span><input data-k="from" class="tm" inputmode="numeric" placeholder="10:00" maxlength="5" value="${esc(d.from)}" aria-label="Начало"></div>
       <div><span class="lbl-m">По</span><input data-k="to" class="tm" inputmode="numeric" placeholder="22:00" maxlength="5" value="${esc(d.to)}" aria-label="Конец"></div>
       <div><span class="lbl-m">За часы</span><input data-k="hours" class="num" inputmode="decimal" value="${esc(d.hours)}" aria-label="За часы"></div>
@@ -302,7 +304,28 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
       <button type="button" class="del" aria-label="Удалить строку">×</button>`;
     r.dataset.manual=d.manual?'1':'';
     $('#cour').appendChild(r);
+    fillName(r);
   }
+  // ---------- courier list per branch (from the Google Sheet after PIN login)
+  let COURIERS=LS.get('couriers',null); // {branch:[names]}
+  function listFor(){const b=$('#branch').value;return COURIERS&&b&&COURIERS[b]&&COURIERS[b].length?COURIERS[b]:null}
+  function fillName(r){
+    const sel=r.querySelector('[data-k=pick]'),inp=r.querySelector('[data-k=name]'),L=listFor(),v=inp.value.trim();
+    if(!L){sel.hidden=true;inp.hidden=false;inp.placeholder='Фамилия';return}
+    sel.innerHTML='<option value="">Выберите курьера</option>'+L.map(n=>`<option>${esc(n)}</option>`).join('')+'<option value="__other">Другой — вписать вручную</option>';
+    sel.hidden=false;
+    if(!v){sel.value='';inp.hidden=true}
+    else if(L.includes(v)){sel.value=v;inp.hidden=true}
+    else{sel.value='__other';inp.hidden=false;inp.placeholder='Фамилия (нет в списке)'}
+  }
+  function refreshNames(){$$('.crow').forEach(fillName)}
+  document.addEventListener('change',e=>{
+    if(e.target.dataset.k!=='pick')return;
+    const r=e.target.closest('.crow'),inp=r.querySelector('[data-k=name]');
+    if(e.target.value==='__other'){inp.value='';inp.hidden=false;inp.placeholder='Фамилия (нет в списке)';inp.focus()}
+    else{inp.value=e.target.value;inp.hidden=true}
+    calc();
+  });
   function addExp(box,d={}){
     const r=document.createElement('div');r.className='erow';
     const inc=box==='inc';
@@ -334,7 +357,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   function state(){
     const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),rev:{},cour:[],exp:[],inc:[]};
     REV.forEach(([id])=>s.rev[id]=$('#'+id).value.trim());
-    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),from:g('from').value,to:g('to').value,hours:g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:g('w').getAttribute('aria-pressed')==='true',manual:!!r.dataset.manual})});
+    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:g('from').value,to:g('to').value,hours:g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:g('w').getAttribute('aria-pressed')==='true',manual:!!r.dataset.manual})});
     ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:g('date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:b==='exp'?g('w').getAttribute('aria-pressed')==='true':false})}));
     return s;
   }
@@ -355,6 +378,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
       ch+=h;co+=o;cq+=num(g('qty').value);
       if(g('w').getAttribute('aria-pressed')==='true')cw+=t;else cn+=t;
       if(t>0&&!g('name').value.trim())warns.push(['warn','У курьера с суммой '+rub(t)+' не указана фамилия.']);
+      if(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim()))warns.push(['warn',`${g('name').value.trim()} — нет в списке курьеров филиала. В отчёте строка будет отмечена.`]);
       if(num(g('qty').value)>0&&!o)warns.push(['warn',`${g('name').value.trim()||'Курьер'}: заказы указаны, а сумма за заказы пустая.`]);
       if(r.dataset.manual&&a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;const v=Math.floor(m/60*rate);if(Math.abs(v-h)>=1)warns.push(['warn',`${g('name').value.trim()||'Курьер'}: «За часы» ${fmt(h)} ₽, а по времени ${Math.floor(m/60)} ч ${m%60} мин × ${rate} ₽ = ${fmt(v)} ₽.`])}
     });
@@ -387,7 +411,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 
   // ---------- persistence (draft on this device)
   let prevDate=null;
-  $('#branch').addEventListener('change',()=>{remember();calc()});
+  $('#branch').addEventListener('change',()=>{remember();refreshNames();calc()});
   $('#date').addEventListener('change',()=>{const nd=$('#date').value;$$('#exp [data-k=date], #inc [data-k=date]').forEach(i=>{if(!i.value||i.value===prevDate)i.value=nd});prevDate=nd;calc()});
   $('#date').addEventListener('focus',()=>{prevDate=$('#date').value});
   let loading=false;
@@ -405,7 +429,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   const d0=LS.get('draft',null);
   load(d0||{date:today(),branch:LS.get('branch',''),admin:LS.get('admin','')});
   calc();
-  if(API_URL){const s=LS.get('session',null);if(s&&s.exp>Date.now()&&s.pin){setUser(s);calc()}else{LS.del('session');openGate()}}
+  if(API_URL){const s=LS.get('session',null);if(s&&s.exp>Date.now()&&s.pin){setUser(s);calc();api({action:'couriers',pin:s.pin}).then(r=>{if(r&&r.ok){COURIERS=r.couriers||null;LS.set('couriers',COURIERS);refreshNames();calc()}else if(r&&r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}}).catch(()=>{})}else{LS.del('session');openGate()}}
   $('#b_new').addEventListener('click',()=>{
     const b=$('#b_new');
     if(!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Нажмите ещё раз, чтобы очистить отчёт';setTimeout(()=>{b.dataset.confirm='';b.textContent='Начать новый отчёт'},3500);return}

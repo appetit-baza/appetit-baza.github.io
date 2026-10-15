@@ -16,6 +16,10 @@
  *     Нажмите «Начать развёртывание» и скопируйте ссылку веб-приложения.
  *  5. Пришлите ссылку разработчику сайта (её нужно вписать в сайт один раз).
  *
+ * Как заводить курьеров: лист «Справочник курьеров», одна строка на курьера.
+ *   Филиал | ФИО курьера | Активен. Уволился — поставьте «нет» в «Активен».
+ *   Филиал пишите так же, как в списке на сайте.
+ *
  * Как заводить администраторов: лист «Админы», одна строка на человека.
  *   ФИО | Филиал | PIN | Активен
  *   PIN — от 4 до 8 цифр, у каждого свой. Чтобы закрыть доступ, поставьте в «Активен» «нет».
@@ -27,6 +31,7 @@ var SHEET_REPORTS = 'Отчёты';
 var SHEET_COURIERS = 'Курьеры';
 var SHEET_MONEY = 'Приход-расход';
 var SHEET_LOG = 'Журнал входов';
+var SHEET_STAFF = 'Справочник курьеров';
 
 var HEADERS = {};
 HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен'];
@@ -35,9 +40,10 @@ HEADERS[SHEET_REPORTS] = ['Отправлено', 'Дата смены', 'Фил
   'Итого по 041', 'Курьерам всего', 'Делали изъятие', 'Не делали изъятие', 'Прочие расходы',
   'из них вычтено', 'Приход', 'Передана сумма', 'Повторная отправка', 'ID отчёта'];
 HEADERS[SHEET_COURIERS] = ['ID отчёта', 'Дата смены', 'Филиал', 'Курьер', 'С', 'По', 'За часы', 'Заказов',
-  'За заказы', 'Итого', 'Изъятие'];
+  'За заказы', 'Итого', 'Изъятие', 'Нет в справочнике'];
 HEADERS[SHEET_MONEY] = ['ID отчёта', 'Дата смены', 'Филиал', 'Тип', 'Дата', 'Статья', 'Сумма', 'Вычтено из переданной'];
 HEADERS[SHEET_LOG] = ['Время', 'Событие', 'ФИО', 'Филиал'];
+HEADERS[SHEET_STAFF] = ['Филиал', 'ФИО курьера', 'Активен'];
 
 var MAX_FAILS = 15;          // неудачных попыток подряд
 var LOCK_SECONDS = 600;      // блокировка входа на 10 минут
@@ -74,8 +80,9 @@ function doPost(e) {
     resetFails_();
     if (body.action === 'login') {
       log_('Вход', admin.name, admin.branch);
-      return json_({ ok: true, name: admin.name, branch: admin.branch });
+      return json_({ ok: true, name: admin.name, branch: admin.branch, couriers: couriers_() });
     }
+    if (body.action === 'couriers') return json_({ ok: true, couriers: couriers_() });
     if (body.action === 'report') {
       var id = saveReport_(body.report || {}, admin);
       return json_({ ok: true, id: id });
@@ -101,6 +108,21 @@ function findAdmin_(pin) {
   return null;
 }
 
+function couriers_() {
+  var sh = SpreadsheetApp.getActive().getSheetByName(SHEET_STAFF);
+  var out = {};
+  if (!sh) return out;
+  var rows = sh.getDataRange().getDisplayValues();
+  for (var i = 1; i < rows.length; i++) {
+    var b = String(rows[i][0] || '').trim(), n = String(rows[i][1] || '').trim();
+    var active = String(rows[i][2] || '').trim().toLowerCase();
+    if (!b || !n || active === 'нет' || active === 'no') continue;
+    (out[b] = out[b] || []).push(n);
+  }
+  Object.keys(out).forEach(function (b) { out[b].sort(function (x, y) { return x.localeCompare(y, 'ru'); }); });
+  return out;
+}
+
 function num_(v) {
   var n = parseFloat(String(v === undefined || v === null ? '' : v).replace(/\s/g, '').replace(',', '.'));
   return isFinite(n) ? n : 0;
@@ -124,7 +146,7 @@ function saveReport_(r, admin) {
   (r.cour || []).forEach(function (c) {
     var h = num_(c.hours), o = num_(c.orders);
     if (!h && !o && !c.name) return;
-    cs.appendRow([id, r.dateRu, branch, c.name, c.from, c.to, h, num_(c.qty), o, h + o, c.w ? 'да' : 'нет (сейф)']);
+    cs.appendRow([id, r.dateRu, branch, c.name, c.from, c.to, h, num_(c.qty), o, h + o, c.w ? 'да' : 'нет (сейф)', c.other ? 'да' : '']);
   });
   var ms = ss.getSheetByName(SHEET_MONEY);
   (r.exp || []).forEach(function (x) {
