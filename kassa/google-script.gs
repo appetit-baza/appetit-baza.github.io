@@ -49,7 +49,7 @@ HEADERS[SHEET_MONEY] = ['ID отчёта', 'Дата смены', 'Филиал'
 HEADERS[SHEET_LOG] = ['Время', 'Событие', 'ФИО', 'Филиал'];
 HEADERS[SHEET_STAFF] = ['Филиал', 'ФИО курьера', 'Активен'];
 
-var MAX_FAILS = 15;          // неудачных попыток подряд
+var MAX_FAILS = 5;           // неудачных попыток подряд
 var LOCK_SECONDS = 600;      // блокировка входа на 10 минут
 
 function setup() {
