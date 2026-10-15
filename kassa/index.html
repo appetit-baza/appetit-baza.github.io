@@ -178,6 +178,10 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .fixbar{border:2px solid var(--amber);background:var(--surface);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:10px 0 0}
 .fixbar p{margin:0;font-size:14.5px}
 .fixbar button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+body.boss .wrap,body.boss .mob-bar,body.boss #b_hist,body.boss .hist .x{display:none!important}
+body.boss .hist{position:static;inset:auto;background:none;padding:24px max(16px,env(safe-area-inset-left,0px)) 40px;overflow:visible;z-index:auto}
+body.boss .hist-box{max-width:1000px;margin:0 auto}
+body.boss .hist-head h2{font-size:26px}
 .h-kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;font-variant-numeric:tabular-nums}
 .h-kv span:nth-child(even){text-align:right;font-weight:600}
 /* login */
@@ -326,7 +330,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='9';
+  const BUILD='10';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -345,7 +349,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   const SESSION_HOURS=14;
   const MAX_ON=false; // включить после подключения бота MAX
   let USER=null, FIX=null, FIX_PENDING=0;
-  function histLabel(){const u=USER;$('#b_hist').textContent=u&&u.boss?('Все отчёты'+(FIX_PENDING?` · запросов: ${FIX_PENDING}`:'')):'Мои смены'}
+  function histLabel(){const u=USER;const t=document.getElementById('hist_t');if(t&&u&&u.boss)t.textContent='Все смены'+(FIX_PENDING?` · запросов на исправление: ${FIX_PENDING}`:'');$('#b_hist').textContent=u&&u.boss?('Все отчёты'+(FIX_PENDING?` · запросов: ${FIX_PENDING}`:'')):'Мои смены'}
   const DEVICE=(()=>{let d=LS.get('device',null);if(!d){d=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));LS.set('device',d)}return d})();
   async function api(payload){
     const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...payload,device:DEVICE}),redirect:'follow'});
@@ -359,6 +363,11 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     $('#b_xlsx').className='btn '+($('#b_send').hidden?'primary':'sec');
     const a=$('#admin'); if(u){a.value=u.name;a.readOnly=true;if(u.branch&&[...$('#branch').options].some(o=>o.value===u.branch)&&!$('#branch').value)$('#branch').value=u.branch}else{a.readOnly=false;COURIERS=null;LS.del('couriers')}
     refreshNames();
+    // руководитель: вместо формы кассира — своя страница со всеми сменами
+    const boss=!!(u&&u.boss);document.body.classList.toggle('boss',boss);
+    $('.brand small').textContent=boss?'«Аппетит» · кабинет руководителя':'«Аппетит» · смена филиала';
+    document.title=boss?'Все смены — «Аппетит»':'Кассовый отчёт «Аппетит»';
+    if(boss)openHist();else if(!u)H.hidden=true;
   }
   function openGate(msg){$('#gate').hidden=false;$('#gate_err').textContent=msg||'';$('#pin').value='';setTimeout(()=>$('#pin').focus(),50)}
   $('#gate_form').addEventListener('submit',async e=>{
@@ -375,7 +384,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 
   // ---------- archive of my shifts
   const H=$('#hist');
-  function closeHist(){H.hidden=true}
+  function closeHist(){if(USER&&USER.boss)return;H.hidden=true}
   $('#hist_close').addEventListener('click',closeHist);
   H.addEventListener('click',e=>{if(e.target===H)closeHist()});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!H.hidden)closeHist()});
@@ -423,7 +432,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   function openHist(){
     const boss=!!USER.boss;
     H.hidden=false;$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false;
-    $('#hist_t').textContent=boss?'Все отчёты':'Мои смены';
+    $('#hist_t').textContent=boss?'Все смены':'Мои смены';histLabel();
     $('#hist_note').textContent=boss?'Отчёты всех администраторов и филиалов. Если смену отправили повторно, в итоги входит последняя отправка.':'Отчёты, которые вы отправили в бухгалтерию. Другие администраторы ваши смены не видят.';
     $('#hist_boss').hidden=!boss;
     if(boss){const sel=$('#hb_branch');if(sel.options.length<2)[...$('#branch').options].filter(o=>o.value).forEach(o=>sel.add(new Option(o.textContent,o.value)));if(!$('#hb_from').value)quick('month')}
