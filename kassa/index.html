@@ -271,7 +271,7 @@ body.boss .hist-head h2{font-size:26px}
     </div>
     <div class="rows" id="cour"></div>
     <button type="button" class="add" id="add_cour">+ Добавить курьера</button>
-    <p class="hint c-h-only">«За часы» считается по времени × ставку, копейки отбрасываются. Если курьеру платили не по графику, впишите сумму вручную. «Изъятие» включено — выплата из кассы с изъятием; выключено — выдали из сейфа без изъятия.</p>
+    <p class="hint c-h-only">«За часы» считается по времени × ставку, копейки отбрасываются. Если курьеру платили не по графику, впишите сумму вручную. «Изъятие сделано» — выплата из кассы с изъятием; «Изъятие не сделано» — выдали из сейфа без изъятия. Нажмите на кнопку, чтобы переключить.</p>
     <div class="sumrow">
       <div class="c-h">За часы<b id="o_c_h">0</b></div><div>За заказы<b id="o_c_o">0</b></div><div>Итого курьерам<b id="o_c_t">0</b></div>
       <div>Делали изъятие<b id="o_c_w">0</b></div><div>Не делали изъятие<b id="o_c_n">0</b></div><div>Заказов<b id="o_c_q">0</b></div>
@@ -353,7 +353,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='16';
+  const BUILD='17';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -562,7 +562,7 @@ body.boss .hist-head h2{font-size:26px}
       <div><span class="lbl-m">Заказов</span><input data-k="qty" class="num" inputmode="numeric" value="${esc(d.qty)}" aria-label="Количество заказов"></div>
       <div><span class="lbl-m">За заказы</span><input data-k="orders" class="num" inputmode="decimal" value="${esc(d.orders)}" aria-label="За заказы"></div>
       <div><span class="lbl-m">Итого</span><div class="calc" data-o="tot">0</div></div>
-      <div><span class="lbl-m">Изъятие</span><button type="button" class="tog" data-k="w" aria-pressed="${d.w===false?'false':'true'}">${d.w===false?'Из сейфа':'Изъятие'}</button></div>
+      <div><span class="lbl-m">Изъятие</span><button type="button" class="tog" data-k="w" aria-pressed="${d.w===false?'false':'true'}">${d.w===false?'Изъятие не сделано':'Изъятие сделано'}</button></div>
       <button type="button" class="del" aria-label="Удалить строку">×</button>
       <div class="zones" hidden></div>`;
     r.dataset.manual=d.manual?'1':'';r._zinit=d.z||null;
@@ -602,7 +602,7 @@ body.boss .hist-head h2{font-size:26px}
   document.addEventListener('click',e=>{
     const t=e.target.closest('.tog');
     if(t){const on=t.getAttribute('aria-pressed')!=='true';t.setAttribute('aria-pressed',on);
-      t.textContent=t.closest('.crow')?(on?'Изъятие':'Из сейфа'):(on?'Вычесть':'Отдельно');calc();}
+      t.textContent=t.closest('.crow')?(on?'Изъятие сделано':'Изъятие не сделано'):(on?'Вычесть':'Отдельно');calc();}
     const d=e.target.closest('.del');if(d){d.closest('.crow,.erow').remove();calc();}
   });
   $('#add_cour').addEventListener('click',()=>{addCour();$('#cour').lastElementChild.querySelector('input').focus();calc()});
