@@ -266,6 +266,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     <p class="formula" id="s_formula">Наличка − выплаты курьерам с изъятием</p>
   </div>
   <div class="warns" id="warns"></div>
+  <p class="hint" style="margin:0" id="send_hint" hidden>Нужен Excel — скачайте до отправки: после отправки форма очистится.</p>
   <button type="button" class="btn primary" id="b_send" hidden>Отправить в бухгалтерию</button>
   <p class="sent" id="sent"></p>
   <button type="button" class="btn primary" id="b_xlsx">Скачать Excel</button>
@@ -333,7 +334,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   function setUser(u){
     USER=u;
     $('#user').hidden=!u; $('#u_name').textContent=u?u.name:''; $('#b_hist').textContent=u&&u.boss?'Все отчёты':'Мои смены'; $('.top a.kb').classList.toggle('with-user',!!u);
-    $('#b_send').hidden=!u||!API_URL;
+    $('#b_send').hidden=!u||!API_URL; $('#send_hint').hidden=$('#b_send').hidden;
     $('#to_chat').hidden=!u||!API_URL||!MAX_ON;
     $('#b_xlsx').className='btn '+($('#b_send').hidden?'primary':'sec');
     const a=$('#admin'); if(u){a.value=u.name;a.readOnly=true;if(u.branch&&[...$('#branch').options].some(o=>o.value===u.branch)&&!$('#branch').value)$('#branch').value=u.branch}else{a.readOnly=false;COURIERS=null;LS.del('couriers')}
@@ -630,7 +631,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     const report={branch:s.branch,dateRu:ruDate(s.date),r041:s.r041,rev:s.rev,totals:{rev:R.rev,ct:R.ct,cw:R.cw,cn:R.cn,ex:R.ex,exW:R.exW,inc:R.inc,pass:R.pass},
       cour:s.cour,exp:s.exp.map(x=>({...x,dateRu:ruDate(x.date)})),inc:s.inc.map(x=>({...x,dateRu:ruDate(x.date)}))};
     try{const r=await api({action:'report',pin:USER.pin,report});
-      if(r.ok){b.dataset.sentFor=JSON.stringify(s);if(DKEY())LS.del(DKEY());const t=new Date();$('#sent').textContent=`Отправлено в ${pad(t.getHours())}:${pad(t.getMinutes())}. Номер отчёта ${r.id}.`;toast('Отчёт отправлен в бухгалтерию')}
+      if(r.ok){if(DKEY())LS.del(DKEY());loadFor(USER);$('#draft').textContent='';window.scrollTo({top:0});const t=new Date();$('#sent').textContent=`Отчёт за ${ruDate(s.date)} отправлен в ${pad(t.getHours())}:${pad(t.getMinutes())}, номер ${r.id}. Форма очищена — его можно открыть в «Мои смены».`;toast('Отчёт отправлен, форма очищена')}
       else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова — отчёт сохранён.')}
       else toast('Не отправилось: '+(r.error==='locked'?'вход временно заблокирован':'ошибка сервера'));
     }catch(x){toast('Нет связи с сервером. Отчёт сохранён, попробуйте ещё раз.')}
