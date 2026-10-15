@@ -49,8 +49,9 @@ HEADERS[SHEET_MONEY] = ['ID отчёта', 'Дата смены', 'Филиал'
 HEADERS[SHEET_LOG] = ['Время', 'Событие', 'ФИО', 'Филиал'];
 HEADERS[SHEET_STAFF] = ['Филиал', 'ФИО курьера', 'Активен'];
 
-var MAX_FAILS = 5;           // неудачных попыток подряд
-var LOCK_SECONDS = 600;      // блокировка входа на 10 минут
+var MAX_FAILS = 5;           // неверных PIN подряд с одного устройства
+var LOCK_SECONDS = 600;      // блокировка этого устройства на 10 минут
+var GLOBAL_MAX_FAILS = 30;   // защита от перебора: столько неверных PIN за 10 минут со всех устройств — вход закрывается для всех
 
 function setup() {
   var ss = ss_();
@@ -78,10 +79,12 @@ function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    if (isLocked_()) return json_({ ok: false, error: 'locked' });
+    var dev = String(body.device || 'unknown').replace(/[^\w-]/g, '').slice(0, 64) || 'unknown';
+    var lockState = isLocked_(dev);
+    if (lockState) return json_({ ok: false, error: lockState });
     var admin = findAdmin_(body.pin);
-    if (!admin) { registerFail_(); return json_({ ok: false, error: 'bad_pin' }); }
-    resetFails_();
+    if (!admin) { var st = registerFail_(dev); return json_({ ok: false, error: st || 'bad_pin', left: st ? 0 : undefined }); }
+    resetFails_(dev);
     if (body.action === 'login') {
       log_('Вход', admin.name, admin.branch);
       return json_({ ok: true, name: admin.name, branch: admin.branch, couriers: couriers_() });
@@ -165,21 +168,33 @@ function saveReport_(r, admin) {
   return id;
 }
 
-function isLocked_() {
-  var until = Number(PropertiesService.getScriptProperties().getProperty('lockUntil') || 0);
-  return until > Date.now();
+function isLocked_(dev) {
+  var c = CacheService.getScriptCache();
+  if (c.get('lockAll')) return 'locked_all';
+  if (c.get('lock_' + dev)) return 'locked';
+  return '';
 }
-function registerFail_() {
-  var p = PropertiesService.getScriptProperties();
-  var n = Number(p.getProperty('fails') || 0) + 1;
-  p.setProperty('fails', String(n));
-  if (n >= MAX_FAILS) {
-    p.setProperty('lockUntil', String(Date.now() + LOCK_SECONDS * 1000));
-    p.setProperty('fails', '0');
-    log_('Блокировка входа: много неверных PIN', '', '');
+function registerFail_(dev) {
+  var c = CacheService.getScriptCache();
+  var n = Number(c.get('fails_' + dev) || 0) + 1;
+  c.put('fails_' + dev, String(n), LOCK_SECONDS);
+  var g = Number(c.get('failsAll') || 0) + 1;
+  c.put('failsAll', String(g), LOCK_SECONDS);
+  if (g >= GLOBAL_MAX_FAILS) {
+    c.put('lockAll', '1', LOCK_SECONDS);
+    c.remove('failsAll');
+    log_('Блокировка входа для всех: много неверных PIN', '', '');
+    return 'locked_all';
   }
+  if (n >= MAX_FAILS) {
+    c.put('lock_' + dev, '1', LOCK_SECONDS);
+    c.remove('fails_' + dev);
+    log_('Блокировка устройства ' + dev.slice(0, 8) + ': ' + MAX_FAILS + ' неверных PIN', '', '');
+    return 'locked';
+  }
+  return '';
 }
-function resetFails_() { PropertiesService.getScriptProperties().setProperty('fails', '0'); }
+function resetFails_(dev) { CacheService.getScriptCache().remove('fails_' + dev); }
 
 function log_(event, name, branch) {
   var sh = ss_().getSheetByName(SHEET_LOG);

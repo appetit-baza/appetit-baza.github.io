@@ -262,8 +262,9 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   const API_URL='https://script.google.com/macros/s/AKfycbxSXS6WoSei6vke43-jPTfSviFiteAWbnDiKLuB2LbbPoxnYjADNzVkhAvM4dWT9LYdaA/exec';
   const SESSION_HOURS=14;
   let USER=null;
+  const DEVICE=(()=>{let d=LS.get('device',null);if(!d){d=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));LS.set('device',d)}return d})();
   async function api(payload){
-    const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),redirect:'follow'});
+    const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...payload,device:DEVICE}),redirect:'follow'});
     return r.json();
   }
   function setUser(u){
@@ -281,7 +282,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     const b=$('#b_login');b.disabled=true;b.textContent='Проверяю…';err.textContent='';
     try{const r=await api({action:'login',pin});
       if(r.ok){const u={name:r.name,branch:r.branch,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);calc();toast('Здравствуйте, '+r.name)}
-      else err.textContent=r.error==='locked'?'Слишком много неверных попыток. Подождите 10 минут.':'Неверный PIN-код.';
+      else err.textContent=r.error==='locked'?'5 неверных попыток на этом устройстве. Вход заблокирован на 10 минут.':r.error==='locked_all'?'Вход временно закрыт для всех из-за подбора PIN. Подождите 10 минут.':'Неверный PIN-код.';
     }catch(x){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.'}
     b.disabled=false;b.textContent='Войти';
   });
