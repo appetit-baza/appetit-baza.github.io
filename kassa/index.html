@@ -2,10 +2,10 @@
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Кассовый отчёт «Аппетит»</title>
-<meta name="description" content="Кассовый отчёт смены для кассиров «Аппетита»: выручка, выплаты курьерам, расходы, переданная сумма. Excel-файл и сообщение для чата.">
+<meta name="description" content="Кассовый отчёт смены для кассиров «Аппетита»: выручка, выплаты курьерам, расходы, переданная сумма. Отправка в бухгалтерию и Excel-файл.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Кассовый отчёт «Аппетит»">
-<meta property="og:description" content="Выручка, выплаты курьерам, расходы и переданная сумма считаются сами. Готовый Excel и сообщение для чата.">
+<meta property="og:description" content="Выручка, выплаты курьерам, расходы и переданная сумма считаются сами. Отправка в бухгалтерию и готовый Excel.">
 <meta name="theme-color" content="#1D6A57">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -196,7 +196,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 <div class="wrap">
 <main>
   <h1>Кассовый отчёт смены</h1>
-  <p class="lead">Заполните три блока. Итоги, оплата курьеров по часам и переданная сумма считаются сами. В конце скачайте Excel или скопируйте отчёт для чата.</p>
+  <p class="lead">Заполните три блока. Итоги, оплата курьеров по часам и переданная сумма считаются сами. В конце отправьте отчёт в бухгалтерию или скачайте Excel.</p>
   <p class="draft" id="draft"></p>
 
   <!-- 1 -->
@@ -269,7 +269,6 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   <button type="button" class="btn primary" id="b_send" hidden>Отправить в бухгалтерию</button>
   <p class="sent" id="sent"></p>
   <button type="button" class="btn primary" id="b_xlsx">Скачать Excel</button>
-  <button type="button" class="btn sec" id="b_copy">Скопировать для чата</button>
   <button type="button" class="btn ghost" id="b_new">Начать новый отчёт</button>
 </aside>
 </div>
@@ -590,10 +589,6 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     L.push('',`ПЕРЕДАНА СУММА: ${rub(R.pass)}`);
     return L.join('\n');
   }
-  $('#b_copy').addEventListener('click',async()=>{remember();const t=chatText();let ok=false;try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
-    if(!ok){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{ok=document.execCommand('copy')}catch(e){}ta.remove()}
-    toast(ok?'Отчёт скопирован — вставьте в чат':'Не удалось скопировать');});
-
   // ---------- revenue to MAX chat
   $('#b_rev').addEventListener('click',async()=>{
     if(!USER){openGate();return}
