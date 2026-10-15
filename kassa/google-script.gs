@@ -95,6 +95,11 @@ function doPost(e) {
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
     }
+    if (body.action === 'history') return json_({ ok: true, shifts: history_(admin) });
+    if (body.action === 'shift') {
+      var sh = shift_(String(body.id || ''), admin);
+      return json_(sh ? { ok: true, shift: sh } : { ok: false, error: 'not_found' });
+    }
     if (body.action === 'report') {
       var id = saveReport_(body.report || {}, admin);
       return json_({ ok: true, id: id });
@@ -194,6 +199,45 @@ function testMax() {
   var me = maxFetch_('get', '/me');
   Logger.log('Бот: ' + JSON.stringify(me));
   Logger.log('Чат: ' + maxChatId_());
+}
+
+// ---------- Архив: каждый администратор видит только свои отчёты
+function d_(v) {
+  if (!(v instanceof Date)) return String(v);
+  var t = Utilities.formatDate(v, 'Europe/Moscow', 'HH:mm');
+  return Utilities.formatDate(v, 'Europe/Moscow', t === '00:00' ? 'dd.MM.yyyy' : 'dd.MM.yyyy HH:mm');
+}
+function history_(admin) {
+  var rows = ss_().getSheetByName(SHEET_REPORTS).getDataRange().getValues();
+  var out = [];
+  for (var i = rows.length - 1; i >= 1 && out.length < 100; i--) {
+    var r = rows[i];
+    if (String(r[3]).trim() !== admin.name) continue;
+    out.push({ id: String(r[21]), sent: d_(r[0]),
+      date: d_(r[1]), branch: String(r[2]), rev: Number(r[4]) || 0, cash: Number(r[5]) || 0,
+      ct: Number(r[13]) || 0, ex: Number(r[16]) || 0, pass: Number(r[19]) || 0, repeat: String(r[20]) === 'да' });
+  }
+  return out;
+}
+
+function shift_(id, admin) {
+  if (!id) return null;
+  var ss = ss_();
+  var rows = ss.getSheetByName(SHEET_REPORTS).getDataRange().getValues();
+  var head = rows[0], row = null;
+  for (var i = 1; i < rows.length; i++) if (String(rows[i][21]) === id) { row = rows[i]; break; }
+  if (!row || String(row[3]).trim() !== admin.name) return null;
+  var summary = [];
+  for (var j = 1; j < head.length - 1; j++) {
+    var v = row[j];
+    if (v === '' || v === null || (v === 0 && String(head[j]) !== 'Передана сумма')) continue;
+    summary.push([String(head[j]), v instanceof Date ? d_(v) : v]);
+  }
+  var cour = ss.getSheetByName(SHEET_COURIERS).getDataRange().getDisplayValues().filter(function (r) { return r[0] === id; })
+    .map(function (r) { return { name: r[3], from: r[4], to: r[5], hours: r[6], qty: r[7], orders: r[8], total: r[9], w: r[10], other: r[11] }; });
+  var money = ss.getSheetByName(SHEET_MONEY).getDataRange().getDisplayValues().filter(function (r) { return r[0] === id; })
+    .map(function (r) { return { type: r[3], date: r[4], art: r[5], sum: r[6], w: r[7] }; });
+  return { id: id, summary: summary, cour: cour, money: money };
 }
 
 function num_(v) {

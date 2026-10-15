@@ -128,6 +128,30 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   .sumrow{grid-template-columns:1fr 1fr}
 }
 @media (max-width:420px){.crow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* archive */
+.lbl-note{font-weight:400;color:var(--muted)}
+.hist{position:fixed;inset:0;z-index:55;background:rgba(10,15,13,.45);display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:calc(24px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.hist-box{width:100%;max-width:760px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:12px}
+.hist-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.hist-head h2{font-family:var(--f-display);font-size:20px;margin:0}
+.hist .x{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:20px;cursor:pointer}
+.hist-list{display:grid;gap:8px}
+.h-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;text-align:left;width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;border-radius:12px;padding:12px 14px;cursor:pointer}
+.h-item:hover{border-color:var(--accent)}
+.h-item b{font-size:15.5px}
+.h-item small{color:var(--muted);font-size:13px}
+.h-item .sum{text-align:right;font-variant-numeric:tabular-nums}
+.h-item .sum b{color:var(--accent)}
+.h-item .rep{color:var(--amber);font-weight:600}
+.h-back{justify-self:start;border:0;background:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;padding:0}
+.h-sec{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:10px 0 4px}
+.h-table{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.h-table table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+.h-table th,.h-table td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.h-table tr:last-child td{border-bottom:0}
+.h-table th{font-size:12px;color:var(--muted);background:var(--note)}
+.h-kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;font-variant-numeric:tabular-nums}
+.h-kv span:nth-child(even){text-align:right;font-weight:600}
 /* login */
 .gate{position:fixed;inset:0;z-index:60;background:var(--bg);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
 .gate-box{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px 24px;display:grid;gap:16px;text-align:center}
@@ -149,7 +173,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 </head><body>
 <header class="top"><div class="top-in">
   <span class="mark">А</span><span class="brand">Кассовый отчёт<small>«Аппетит» · смена филиала</small></span>
-  <div class="user" id="user" hidden><span class="u-lbl">Вошли:</span><b id="u_name"></b><button type="button" id="b_logout">Выйти</button></div>
+  <div class="user" id="user" hidden><span class="u-lbl">Вошли:</span><b id="u_name"></b><button type="button" id="b_hist">Мои смены</button><button type="button" id="b_logout">Выйти</button></div>
   <a class="kb" href="../">База знаний →</a>
 </div></header>
 
@@ -163,7 +187,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
   <section class="card" id="sec-sum">
     <div class="card-h"><span class="no">1</span><h2>Сводка и выручка</h2></div>
     <div class="grid3">
-      <div class="field"><label for="branch">Филиал, адрес</label><select id="branch"><option value="">Выберите филиал</option><option>Челябинск, Каслинская 101Б</option><option>Казань, Академика Глушко 35</option><option>Казань, проспект Ямашева 61к3</option><option>Казань, Хади Такташа 121</option><option>Казань, Ильгама Шакирова 17</option><option>Уфа, Шафиева 50/1</option></select></div>
+      <div class="field"><label for="branch">Филиал, адрес <span class="lbl-note">— можно сменить, если вы на подработке</span></label><select id="branch"><option value="">Выберите филиал</option><option>Челябинск, Каслинская 101Б</option><option>Казань, Академика Глушко 35</option><option>Казань, проспект Ямашева 61к3</option><option>Казань, Хади Такташа 121</option><option>Казань, Ильгама Шакирова 17</option><option>Уфа, Шафиева 50/1</option></select></div>
       <div class="field"><label for="date">Дата</label><input id="date" type="date"></div>
       <div class="field"><label for="admin">ФИО администратора</label><input id="admin" placeholder="Фамилия И.О." autocomplete="off"></div>
     </div>
@@ -235,6 +259,14 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 </div>
 
 <div class="mob-bar"><div><small>Передана сумма</small><b id="m_pass">0 ₽</b></div><a href="#result">Итоги и Excel</a></div>
+<div class="hist" id="hist" hidden role="dialog" aria-modal="true" aria-labelledby="hist_t">
+  <div class="hist-box">
+    <div class="hist-head"><h2 id="hist_t">Мои смены</h2><button type="button" class="x" id="hist_close" aria-label="Закрыть">×</button></div>
+    <p class="hint" id="hist_note">Отчёты, которые вы отправили в бухгалтерию. Другие администраторы ваши смены не видят.</p>
+    <div id="hist_list" class="hist-list"></div>
+    <div id="hist_one" hidden></div>
+  </div>
+</div>
 <div class="gate" id="gate" hidden>
   <form class="gate-box" id="gate_form" autocomplete="off">
     <span class="mark">А</span>
@@ -293,6 +325,37 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
     b.disabled=false;b.textContent='Войти';
   });
   $('#b_logout').addEventListener('click',()=>{LS.del('session');setUser(null);openGate()});
+
+  // ---------- archive of my shifts
+  const H=$('#hist');
+  function closeHist(){H.hidden=true}
+  $('#hist_close').addEventListener('click',closeHist);
+  H.addEventListener('click',e=>{if(e.target===H)closeHist()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!H.hidden)closeHist()});
+  const money=v=>{const n=typeof v==='number'?v:num(v);return rub(n)};
+  $('#b_hist').addEventListener('click',async()=>{
+    if(!USER){openGate();return}
+    H.hidden=false;$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false;
+    $('#hist_list').innerHTML='<p class="hint">Загружаю…</p>';
+    try{const r=await api({action:'history',pin:USER.pin});
+      if(!r.ok){if(r.error==='bad_pin'){closeHist();LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}else $('#hist_list').innerHTML='<p class="hint">Не удалось загрузить. Попробуйте ещё раз.</p>';return}
+      if(!r.shifts.length){$('#hist_list').innerHTML='<p class="hint">Отправленных отчётов пока нет. Они появятся здесь после кнопки «Отправить в бухгалтерию».</p>';return}
+      $('#hist_list').innerHTML=r.shifts.map(x=>`<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b>${esc(x.date)}</b><br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.repeat?' · <span class="rep">повторная отправка</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`).join('');
+    }catch(e){$('#hist_list').innerHTML='<p class="hint">Нет связи с сервером. Попробуйте ещё раз.</p>'}
+  });
+  $('#hist_list').addEventListener('click',async e=>{
+    const b=e.target.closest('.h-item');if(!b)return;
+    const one=$('#hist_one');one.hidden=false;$('#hist_list').hidden=true;$('#hist_note').hidden=true;one.innerHTML='<p class="hint">Загружаю…</p>';
+    try{const r=await api({action:'shift',pin:USER.pin,id:b.dataset.id});
+      if(!r.ok){one.innerHTML='<button type="button" class="h-back">← Все смены</button><p class="hint">Отчёт не найден.</p>';return}
+      const s=r.shift;
+      const kv=s.summary.filter(([k])=>!/^(Отправлено|Администратор|Повторная)/.test(k)).map(([k,v])=>`<span>${esc(k)}</span><span>${typeof v==='number'?money(v):esc(v)}</span>`).join('');
+      const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>`).join('')}</table></div>`:'';
+      const mt=s.money.length?`<p class="h-sec">Приход и расход</p><div class="h-table"><table><tr><th>Тип</th><th>Дата</th><th>Статья</th><th>Сумма</th></tr>${s.money.map(m=>`<tr><td>${esc(m.type)}</td><td>${esc(m.date)}</td><td>${esc(m.art)}</td><td>${esc(m.sum)}</td></tr>`).join('')}</table></div>`:'';
+      one.innerHTML=`<button type="button" class="h-back">← Все смены</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${ct}${mt}`;
+    }catch(x){one.innerHTML='<button type="button" class="h-back">← Все смены</button><p class="hint">Нет связи с сервером.</p>'}
+  });
+  $('#hist_one').addEventListener('click',e=>{if(e.target.closest('.h-back')){$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false}});
   const RATE=140; // ставка курьера за час, менять только здесь
   const REV=[['r_cash','Наличка'],['r_card','Б/Н расчет (картой)'],['r_ye','Деливери/ЯЕ'],['r_mp','МП (online)'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
 
