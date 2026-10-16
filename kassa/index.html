@@ -405,7 +405,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='33';
+  const BUILD='34';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -836,7 +836,7 @@ body.boss .hist-head h2{font-size:26px}
     $('#branch').value=s.branch||'';$('#date').value=s.date||today();$('#admin').value=s.admin||'';$('#r_041').value=s.r041||'';$('#r_bfact').value=s.bfact||'';
     REV.forEach(([id])=>$('#'+id).value=(s.rev&&s.rev[id])||'');
     $('#cour').innerHTML='';$('#exp').innerHTML='';$('#inc').innerHTML='';
-    (s.cour&&s.cour.length?s.cour:[{},{},{}]).forEach(addCour);
+    (s.cour&&s.cour.length?s.cour:[{}]).forEach(addCour);
     (s.exp&&s.exp.length?s.exp:[{}]).forEach(d=>addExp('exp',d));
     (s.inc||[]).forEach(d=>addExp('inc',d));
     loading=false;
