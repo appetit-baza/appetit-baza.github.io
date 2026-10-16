@@ -71,7 +71,7 @@ input.mismatch{border-color:var(--warn)!important;background:var(--warn-soft)!im
 .row-h,.crow,.erow{display:grid;gap:8px;align-items:center}
 .crow,.row-h.c{grid-template-columns:minmax(120px,1fr) 64px 64px 70px 52px 74px 74px 176px 30px}
 .c-name{display:grid;gap:6px}
-.erow,.row-h.e{grid-template-columns:minmax(0,1fr) 130px 110px 30px}
+.erow,.row-h.e{grid-template-columns:minmax(0,1fr) 130px 30px}
 .row-h{padding:0 2px}
 .calc{height:40px;display:flex;align-items:center;justify-content:flex-end;padding:0 10px;border-radius:8px;background:var(--note);font-weight:700;font-variant-numeric:tabular-nums}
 .calc.auto{background:var(--accent-soft);color:var(--accent)}
@@ -334,14 +334,14 @@ body.boss .hist-head h2{font-size:26px}
   <section class="card" id="sec-exp">
     <div class="card-h"><span class="no">3</span><h2>Приход и расход</h2><span class="sub" id="o_exp_sub"></span></div>
     <p class="subhead">Расход</p>
-    <div class="row-h e"><span class="th">Статья</span><span class="th" style="text-align:right">Сумма</span><span class="th" style="text-align:center">Из Передан. суммы</span><span></span></div>
+    <div class="row-h e"><span class="th">Статья</span><span class="th" style="text-align:right">Сумма</span><span></span></div>
     <div class="rows" id="exp"></div>
     <button type="button" class="add" id="add_exp">+ Добавить расход</button>
     <p class="subhead">Приход</p>
     <div class="rows" id="inc"></div>
     <button type="button" class="add" id="add_inc">+ Добавить приход</button>
-    <datalist id="articles"><option value="Такси сотрудникам"><option value="Возврат ДС чек №"><option value="Вахта"><option value="Хлеб"><option value="Продукты"><option value="Канцтовары"><option value="Хозтовары"></datalist>
-    <p class="hint">Расходы с выключенным переключателем идут в отчёт отдельным списком и из «Переданной суммы» не вычитаются, как в текущих отчётах. Если расход оплачен из кассы и должен уменьшать переданную сумму, включите переключатель.</p>
+    <datalist id="articles"><option value="Такси сотрудникам"><option value="Возврат ДС чек №"><option value="Вахта"><option value="Продукты"><option value="Канцтовары"><option value="Хозтовары"></datalist>
+    <p class="hint">Приходы и расходы идут в отчёт отдельным списком и на «Переданную сумму» (выручку наличными) не влияют.</p>
   </section>
 </main>
 
@@ -405,7 +405,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='35';
+  const BUILD='36';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -694,7 +694,6 @@ body.boss .hist-head h2{font-size:26px}
     // дата прихода/расхода = дата кассовой смены (поле «Дата» в первом блоке)
     r.innerHTML=`<div class="e-art"><span class="lbl-m">Статья</span><input data-k="art" list="articles" placeholder="${inc?'Внесение размена…':'Такси сотрудникам'}" value="${esc(d.art)}" aria-label="Статья"></div>
       <div><span class="lbl-m">Сумма</span><input data-k="sum" class="num" inputmode="decimal" value="${esc(d.sum)}" aria-label="Сумма"></div>
-      <div>${inc?'':`<span class="lbl-m">Из Передан. суммы</span><button type="button" class="tog" data-k="w" aria-pressed="${d.w?'true':'false'}">${d.w?'Вычесть':'Отдельно'}</button>`}</div>
       <button type="button" class="del" aria-label="Удалить строку">×</button>`;
     $('#'+box).appendChild(r);
   }
@@ -722,7 +721,7 @@ body.boss .hist-head h2{font-size:26px}
     const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),bfact:$('#r_bfact').value.trim(),rev:{},cour:[],exp:[],inc:[]};
     REV.forEach(([id])=>s.rev[id]=$('#'+id).value.trim());
     $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:{y:true,n:false,p:'p'}[wGet(r)],ws:wGet(r)==='p'?g('ws').value.trim():'',manual:!!r.dataset.manual,...zoneState(r),ex:[...r.querySelectorAll('.xrow')].map(extraState).filter(x=>x.sum||x.kind==='Довоз'),exSum:num(r.dataset.ex)})});
-    ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:$('#date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:b==='exp'?g('w').getAttribute('aria-pressed')==='true':false})}));
+    ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:$('#date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:false})}));
     return s;
   }
   let R={};
@@ -774,7 +773,7 @@ body.boss .hist-head h2{font-size:26px}
     const rv={};let rev=0;REV.forEach(([id])=>{rv[id]=num($('#'+id).value);rev+=rv[id]});
     // expenses
     let ex=0,exW=0,inc=0;
-    $$('#exp .erow').forEach(r=>{const v=num(r.querySelector('[data-k=sum]').value);ex+=v;if(r.querySelector('[data-k=w]').getAttribute('aria-pressed')==='true')exW+=v});
+    $$('#exp .erow').forEach(r=>{const v=num(r.querySelector('[data-k=sum]').value);ex+=v});
     $$('#inc .erow').forEach(r=>inc+=num(r.querySelector('[data-k=sum]').value));
     const pass=rv.r_cash-cw-exW;
     R={rev,rv,ch,co,cx,ct,cw,cn,cq,ex,exW,inc,pass,rate};
