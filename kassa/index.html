@@ -405,7 +405,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='38';
+  const BUILD='39';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -498,7 +498,23 @@ body.boss .hist-head h2{font-size:26px}
     const K={},RD={};rows.forEach(x=>{if(!x.redo)return;const a=x.redo;Object.keys(a.kinds||{}).forEach(k=>{K[k]=K[k]||[0,0];K[k][0]+=a.kinds[k][0];K[k][1]+=a.kinds[k][1]});Object.keys(a.redo||{}).forEach(k=>{RD[k]=RD[k]||[0,0];RD[k][0]+=a.redo[k][0];RD[k][1]+=a.redo[k][1]})});
     const kn=Object.keys(K),rn=Object.keys(RD).sort((a,b)=>RD[b][0]-RD[a][0]);
     const xtbl=kn.length?`<p class="h-sec">Доплаты курьерам</p><div class="h-table"><table><tr><th>Вид</th><th class="n">Кол-во</th><th class="n">Сумма</th></tr>${kn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${K[k][0]}</td><td class="n">${money(K[k][1])}</td></tr>`).join('')}</table></div>`+(rn.length?`<p class="h-sec">Довозы по причинам</p><div class="h-table"><table><tr><th>Причина</th><th class="n">Довозов</th><th class="n">Сумма</th></tr>${rn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${RD[k][0]}</td><td class="n">${money(RD[k][1])}</td></tr>`).join('')}</table></div>`:''):'';
-    $('#hb_sum').innerHTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}${xtbl}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
+    $('#hb_sum').innerHTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}${xtbl}${moneyHtml(rows)}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
+  }
+  // денежные движения: приход и расход по статьям из отчётов, которые входят в итоги
+  function moneyArts(rows){const g={'Приход':{},'Расход':{}};
+    rows.forEach(x=>(x.money||[]).forEach(([t,a,v])=>{const G=g[t];if(!G)return;const art=a?a[0].toUpperCase()+a.slice(1):'без статьи',k=art.toLowerCase().replace(/\s+/g,' ');
+      const o=G[k]=G[k]||{art,n:0,sum:0,br:{}};o.n++;o.sum+=v;o.br[x.branch]=(o.br[x.branch]||0)+v}));
+    const L=t=>Object.values(g[t]).sort((a,b)=>b.sum-a.sum);return {inc:L('Приход'),exp:L('Расход')}}
+  function moneyHtml(rows){
+    const by={};rows.forEach(x=>{if(!x.inc&&!x.ex)return;const b=by[x.branch]=by[x.branch]||{inc:0,ex:0};b.inc+=x.inc||0;b.ex+=x.ex||0});
+    const names=Object.keys(by).sort((a,b)=>(by[b].inc+by[b].ex)-(by[a].inc+by[a].ex));if(!names.length)return '';
+    const ti=names.reduce((a,n)=>a+by[n].inc,0),te=names.reduce((a,n)=>a+by[n].ex,0);
+    let h=`<p class="h-sec">Денежные движения</p>`;
+    h+=`<div class="h-table"><table><tr><th>Филиал</th><th class="n">Приход</th><th class="n">Расход</th></tr>${names.map(n=>`<tr><td>${esc(n)}</td><td class="n">${money(by[n].inc)}</td><td class="n">${money(by[n].ex)}</td></tr>`).join('')}${names.length>1?`<tr><td><b>Итого</b></td><td class="n"><b>${money(ti)}</b></td><td class="n"><b>${money(te)}</b></td></tr>`:''}</table></div>`;
+    if(rows.some(x=>x.money===undefined))return h+`<p class="hint">Разбивка по статьям появится после обновления скрипта в Google-таблице.</p>`;
+    const A=moneyArts(rows),many=names.length>1,short=b=>String(b).replace(/^[^,]*,\s*/,'');
+    const t=(title,list)=>list.length?`<p class="h-sec">${title}</p><div class="h-table"><table><tr><th>Статья</th><th class="n">Раз</th><th class="n">Сумма</th>${many?'<th>По филиалам</th>':''}</tr>${list.map(o=>`<tr><td>${esc(o.art)}</td><td class="n">${o.n}</td><td class="n"><b>${money(o.sum)}</b></td>${many?`<td>${Object.keys(o.br).sort((a,b)=>o.br[b]-o.br[a]).map(b=>esc(short(b))+' '+money(o.br[b])).join(' · ')}</td>`:''}</tr>`).join('')}</table></div>`:'';
+    return h+t('Расход по статьям',A.exp)+t('Приход по статьям',A.inc);
   }
   function bossXlsx(){
     if(!window.XLSX){toast('Excel не загрузился. Обновите страницу.');return}
@@ -507,6 +523,14 @@ body.boss .hist-head h2{font-size:26px}
     const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),kg(x,'Довоз')[0],kg(x,'Довоз')[1],...RR.map(r=>x.redo&&x.redo.redo&&x.redo.redo[r]?x.redo.redo[r][0]:0),kg(x,'Шашка')[1],kg(x,'Листовки')[0],kg(x,'Листовки')[1],kg(x,'Наклейка')[1],kg(x,'Другое')[1],x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
     const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map((h,i)=>({wch:i<3?(i===1?26:18):13}));
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Отчёты');
+    const live=BOSS_ROWS.filter(x=>!x.old);
+    if(live.some(x=>x.money&&x.money.length)){
+      const m=[['Дата смены','Филиал','Администратор','Тип','Статья','Сумма']];live.forEach(x=>x.money.forEach(([t,a,v])=>m.push([x.date,x.branch,x.admin,t,a||'без статьи',v])));
+      const w2=XLSX.utils.aoa_to_sheet(m);w2['!cols']=[{wch:12},{wch:26},{wch:18},{wch:9},{wch:36},{wch:12}];XLSX.utils.book_append_sheet(wb,w2,'Приход-расход');
+      const A=moneyArts(live),brs=[...new Set(live.map(x=>x.branch))].sort(),a=[['Тип','Статья','Раз','Сумма',...brs]];
+      [['Расход',A.exp],['Приход',A.inc]].forEach(([t,l])=>l.forEach(o=>a.push([t,o.art,o.n,o.sum,...brs.map(b=>o.br[b]||0)])));
+      const w3=XLSX.utils.aoa_to_sheet(a);w3['!cols']=[{wch:9},{wch:36},{wch:6},{wch:12},...brs.map(()=>({wch:16}))];XLSX.utils.book_append_sheet(wb,w3,'По статьям');
+    }
     const fn=`Отчёты ${ruDate($('#hb_from').value)}–${ruDate($('#hb_to').value)}.xlsx`;
     try{XLSX.writeFile(wb,fn);toast('Excel скачан')}catch(e){toast('Не удалось скачать файл')}
   }
