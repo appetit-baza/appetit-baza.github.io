@@ -6,25 +6,25 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Кассовый отчёт «Аппетит»">
 <meta property="og:description" content="Выручка, выплаты курьерам, расходы и переданная сумма считаются сами. Отправка в бухгалтерию и готовый Excel.">
-<meta name="theme-color" content="#1D6A57">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@600;700&family=JetBrains+Mono:wght@500&display=swap">
+<meta name="theme-color" content="#ED1C24">
 <style>
 /* Layout: рабочий бланк — слева три блока отчёта (сводка, курьеры, расходы), справа липкая колонка итогов с кнопками; на узком экране итоги уходят вниз в липкую плашку */
 :root{
-  --bg:#F2F4F1; --surface:#FFFFFF; --ink:#16201C; --muted:#5A6661; --line:#DCE2DE;
-  --accent:#1D6A57; --accent-ink:#FFFFFF; --accent-soft:#E2EFE9;
-  --warn:#B9412A; --warn-soft:#FBEAE5; --amber:#7A5600; --amber-soft:#FFF1C9; --note:#EEF1EF;
-  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
-  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  /* фирменный стиль «Аппетита» (appetitfood.ru): красный #ED1C24, светло-серый фон, белые карточки, системный шрифт */
+  --bg:#F6F6F6; --surface:#FFFFFF; --ink:#00000F; --muted:#6B6B76; --line:#E6E6E8; --field:#F1F1F3;
+  --accent:#ED1C24; --accent-ink:#FFFFFF; --accent-soft:#FDE8E9; --accent-hover:#D3141C;
+  --ok:#1E8E4E; --ok-soft:#E4F4EA;
+  --warn:#C2410C; --warn-soft:#FDEDE3; --amber:#7A5600; --amber-soft:#FFF1C9; --note:#F1F1F3;
+  --f-display:-apple-system,BlinkMacSystemFont,Roboto,"Segoe UI",Tahoma,sans-serif;
+  --f-body:-apple-system,BlinkMacSystemFont,Roboto,"Segoe UI",Tahoma,sans-serif;
+  --f-mono:ui-monospace,Menlo,Consolas,monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#0F1513; --surface:#161E1B; --ink:#E4EBE8; --muted:#97A39E; --line:#28332F;
-  --accent:#5EC2A4; --accent-ink:#06231B; --accent-soft:#18302A;
-  --warn:#F08C72; --warn-soft:#38211B; --amber:#F1C55E; --amber-soft:#352B10; --note:#1C2522; color-scheme:dark}}
+  --bg:#121214; --surface:#1C1C20; --ink:#F2F2F5; --muted:#A0A0AB; --line:#2E2E34; --field:#26262C;
+  --accent:#FF3B43; --accent-ink:#FFFFFF; --accent-soft:#3A1A1C; --accent-hover:#FF5A61;
+  --ok:#5BD08B; --ok-soft:#163222;
+  --warn:#FF8A5C; --warn-soft:#3A2116; --amber:#F1C55E; --amber-soft:#352B10; --note:#24242A; color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
@@ -261,10 +261,42 @@ body.boss .hist-head h2{font-size:26px}
 #admin[readonly]{background:var(--note);color:var(--ink)}
 @media (max-width:640px){.brand small{display:none}.top a.kb{display:none}.user span.u-lbl{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ---------- стиль «Аппетита» ---------- */
+.logo{height:34px;width:auto;display:block}
+.logo-gate{height:44px;margin:0 auto}
+.brand{font-weight:600;font-size:15px;padding-left:12px;border-left:1px solid var(--line)}
+.top{background:var(--surface);border-bottom:0;box-shadow:0 1px 0 var(--line)}
+h1,h2,.hist-head h2,.gate-box h2{font-weight:700;letter-spacing:0}
+.card,.res{border:0;border-radius:20px}
+.card{padding:22px}
+.card-h .no{background:var(--accent);color:var(--accent-ink);border-radius:50%;width:26px;height:26px;padding:0;display:inline-grid;place-items:center;font-family:var(--f-body);font-weight:700}
+input,select{background:var(--field);border-color:transparent;border-radius:12px}
+input:focus,select:focus{outline:2px solid var(--accent);border-color:transparent}
+.calc{border-radius:12px}
+.total-line{border-radius:15px}
+.btn{border-radius:15px;padding:14px 16px}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.sec{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.add{border-radius:15px}
+.sumrow div{border-radius:15px}
+.res .big{border-radius:15px}
+.sent{background:var(--ok-soft);color:var(--ok)}
+.flag.ok,.fix-st.ok{color:var(--ok)}
+.wsel{background:var(--ok);border-color:var(--ok);color:#fff;border-radius:12px}
+#cour .crow{background:var(--bg);border:0;border-radius:18px}
+#cour .crow input,#cour .crow select:not(.wsel){background:var(--surface)}
+#cour .crow input[readonly].zsum{background:var(--accent-soft);color:var(--accent)}
+.crow input[readonly].zsum{background:var(--accent-soft);color:var(--accent)}
+.xrow,.z,.wpart{border-radius:12px}
+.hist-box,.gate-box{border:0;border-radius:20px}
+.h-item,.hb-tile,.fixbox{border-radius:15px}
+.user button{border-radius:12px}
+@media (max-width:860px){.crow,.erow{border:0;background:var(--bg);border-radius:16px}}
+@media (max-width:640px){.brand{border-left:0;padding-left:6px;font-size:14px}.logo{height:28px}}
 </style>
 </head><body>
 <header class="top"><div class="top-in">
-  <span class="mark">А</span><span class="brand">Кассовый отчёт<small>«Аппетит» · смена филиала</small></span>
+  <img class="logo" src="https://cdn.arora.pro/k/upload/c3a4fcd8-7bad-4b1a-bd05-d080143e1c44/file_manager/theme/logo%201200%D1%85350.png?png" alt="Аппетит" width="120" height="35" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://che.appetitfood.ru/upload/c3a4fcd8-7bad-4b1a-bd05-d080143e1c44/file_manager/theme/logo%201200%D1%85350.png'}else{this.hidden=true}"><span class="brand">Кассовый отчёт<small>смена филиала</small></span>
   <div class="user" id="user" hidden><span class="u-lbl">Вошли:</span><b id="u_name"></b><button type="button" id="b_hist">Мои смены</button><button type="button" id="b_logout">Выйти</button></div>
   <a class="kb" href="../">База знаний →</a>
 </div></header>
@@ -377,7 +409,7 @@ body.boss .hist-head h2{font-size:26px}
 </div>
 <div class="gate" id="gate" hidden>
   <form class="gate-box" id="gate_form" autocomplete="off">
-    <span class="mark">А</span>
+<img class="logo logo-gate" src="https://cdn.arora.pro/k/upload/c3a4fcd8-7bad-4b1a-bd05-d080143e1c44/file_manager/theme/logo%201200%D1%85350.png?png" alt="Аппетит" width="120" height="35" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://che.appetitfood.ru/upload/c3a4fcd8-7bad-4b1a-bd05-d080143e1c44/file_manager/theme/logo%201200%D1%85350.png'}else{this.hidden=true}">
     <h2>Кассовый отчёт</h2>
     <p>Введите свой PIN-код администратора</p>
     <input class="pin" id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" aria-label="PIN-код" autocomplete="off">
@@ -392,7 +424,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='25';
+  const BUILD='26';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -427,7 +459,7 @@ body.boss .hist-head h2{font-size:26px}
     refreshNames();
     // руководитель: вместо формы кассира — своя страница со всеми сменами
     const boss=!!(u&&u.boss);document.body.classList.toggle('boss',boss);
-    $('.brand small').textContent=boss?'«Аппетит» · кабинет руководителя':'«Аппетит» · смена филиала';
+    $('.brand small').textContent=boss?'кабинет руководителя':'смена филиала';
     document.title=boss?'Все смены — «Аппетит»':'Кассовый отчёт «Аппетит»';
     if(boss)openHist();else if(!u)H.hidden=true;
   }
