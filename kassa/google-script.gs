@@ -596,3 +596,35 @@ function log_(event, name, branch) {
 function json_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
+
+// ---------- Резервная копия таблицы: каждую ночь полная копия в папку на Диске, храним год
+var BACKUP_FOLDER = 'Кассовые отчёты — резервные копии';
+var BACKUP_KEEP_DAYS = 365;
+
+// Запустить ОДИН раз вручную из редактора: включает ежедневную копию (около 3 ночи по Москве) и сразу делает первую.
+function setupBackup() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'backupDaily') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('backupDaily').timeBased().everyDays(1).atHour(3).inTimezone('Europe/Moscow').create();
+  backupDaily();
+}
+
+function backupDaily() {
+  var it = DriveApp.getFoldersByName(BACKUP_FOLDER);
+  var folder = it.hasNext() ? it.next() : DriveApp.createFolder(BACKUP_FOLDER);
+  var day = Utilities.formatDate(new Date(), 'Europe/Moscow', 'yyyy-MM-dd');
+  var name = 'Кассовые отчёты — копия ' + day;
+  // одна копия в день: если уже есть за сегодня — заменяем
+  var same = folder.getFilesByName(name);
+  while (same.hasNext()) same.next().setTrashed(true);
+  DriveApp.getFileById(ss_().getId()).makeCopy(name, folder);
+  // старше года — в корзину (только наши копии в этой папке)
+  var limit = new Date().getTime() - BACKUP_KEEP_DAYS * 24 * 3600 * 1000;
+  var files = folder.getFiles();
+  while (files.hasNext()) {
+    var f = files.next();
+    if (f.getName().indexOf('Кассовые отчёты — копия ') === 0 && f.getDateCreated().getTime() < limit) f.setTrashed(true);
+  }
+  log_('Резервная копия ' + day, '', '');
+}
