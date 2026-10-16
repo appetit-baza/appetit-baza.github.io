@@ -7,18 +7,16 @@
 <meta property="og:title" content="Кассовый отчёт «Аппетит»">
 <meta property="og:description" content="Выручка, выплаты курьерам, расходы и переданная сумма считаются сами. Отправка в бухгалтерию и готовый Excel.">
 <meta name="theme-color" content="#1D6A57">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@600;700&family=JetBrains+Mono:wght@500&display=swap">
 <style>
 /* Layout: рабочий бланк — слева три блока отчёта (сводка, курьеры, расходы), справа липкая колонка итогов с кнопками; на узком экране итоги уходят вниз в липкую плашку */
 :root{
   --bg:#F2F4F1; --surface:#FFFFFF; --ink:#16201C; --muted:#5A6661; --line:#DCE2DE;
   --accent:#1D6A57; --accent-ink:#FFFFFF; --accent-soft:#E2EFE9;
   --warn:#B9412A; --warn-soft:#FBEAE5; --amber:#7A5600; --amber-soft:#FFF1C9; --note:#EEF1EF;
-  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
-  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  /* шрифт как на сайте «Аппетита» (appetitfood.ru) — системный */
+  --f-display:-apple-system,BlinkMacSystemFont,Roboto,"Segoe UI",Tahoma,sans-serif;
+  --f-body:-apple-system,BlinkMacSystemFont,Roboto,"Segoe UI",Tahoma,sans-serif;
+  --f-mono:ui-monospace,Menlo,Consolas,monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
@@ -396,7 +394,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='28';
+  const BUILD='29';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
