@@ -405,7 +405,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='39';
+  const BUILD='40';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -501,8 +501,10 @@ body.boss .hist-head h2{font-size:26px}
     $('#hb_sum').innerHTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}${xtbl}${moneyHtml(rows)}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
   }
   // денежные движения: приход и расход по статьям из отчётов, которые входят в итоги
+  // «Возврат ДС чек №4512» и «Возврат ДС чек № 77» → «Возврат ДС»: номера чеков и прочие хвостовые номера не делят статью
+  function artBase(a){return String(a||'').replace(/\s+/g,' ').trim().replace(/\s*(чек\s*)?(№|N|#)\s*[\w\-\/.]*\s*$/i,'').replace(/\s+чек\s*[\d\-\/.]*\s*$/i,'').replace(/\s+\d[\d\-\/.]*\s*$/,'').replace(/[\s,.:;\-–]+$/,'').trim()}
   function moneyArts(rows){const g={'Приход':{},'Расход':{}};
-    rows.forEach(x=>(x.money||[]).forEach(([t,a,v])=>{const G=g[t];if(!G)return;const art=a?a[0].toUpperCase()+a.slice(1):'без статьи',k=art.toLowerCase().replace(/\s+/g,' ');
+    rows.forEach(x=>(x.money||[]).forEach(([t,a,v])=>{const G=g[t];if(!G)return;a=artBase(a);const art=a?a[0].toUpperCase()+a.slice(1):'без статьи',k=art.toLowerCase();
       const o=G[k]=G[k]||{art,n:0,sum:0,br:{}};o.n++;o.sum+=v;o.br[x.branch]=(o.br[x.branch]||0)+v}));
     const L=t=>Object.values(g[t]).sort((a,b)=>b.sum-a.sum);return {inc:L('Приход'),exp:L('Расход')}}
   function moneyHtml(rows){
