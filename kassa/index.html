@@ -378,7 +378,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='21';
+  const BUILD='22';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -851,6 +851,8 @@ body.boss .hist-head h2{font-size:26px}
     L.push('',`ПЕРЕДАНА СУММА: ${rub(R.pass)}`);
     return L.join('\n');
   }
+  // довозы за смену по причинам: [[причина, кол-во], …]
+  function redoList(s){const m={};s.cour.forEach(c=>(c.ex||[]).forEach(x=>{if(x.kind==='Довоз'){const k=x.reason||'причина не указана';m[k]=(m[k]||0)+(num(x.n)||1)}}));return Object.entries(m)}
   // ---------- revenue to MAX chat
   $('#b_rev').addEventListener('click',async()=>{
     if(!USER){openGate();return}
@@ -860,7 +862,7 @@ body.boss .hist-head h2{font-size:26px}
     const b=$('#b_rev'),key=JSON.stringify([s.branch,s.date,s.rev]);
     if(b.dataset.sentFor===key&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлено. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить выручку в чат «АДМИНЫ АППЕТИТ»'},4000);return}
     b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';
-    try{const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:s.rev}});
+    try{const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:s.rev,redo:redoList(s)}});
       if(r.ok){b.dataset.sentFor=key;const t=new Date();$('#rev_sent').textContent=`Отправлено в ${pad(t.getHours())}:${pad(t.getMinutes())}`;toast('Выручка отправлена в чат')}
       else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}
       else toast({no_token:'Бот MAX ещё не подключён',no_chat:'Бот не добавлен в чат «АДМИНЫ АППЕТИТ»',empty:'Выручка пустая'}[r.error]||'Не отправилось, попробуйте ещё раз');

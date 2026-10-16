@@ -221,12 +221,19 @@ function sendRevenue_(r, admin) {
   names.forEach(function (x) { var v = num_(rev[x[0]]); total += v; if (v) lines.push(x[1] + ': ' + fmtRub_(v)); });
   if (!total) return { ok: false, error: 'empty' };
   var text = '💰 Выручка ' + (r.dateRu || '') + '\n' + (r.branch || admin.branch) + '\nАдминистратор: ' + admin.name +
-    '\n\n' + lines.join('\n') + '\n\nВСЕГО: ' + fmtRub_(total);
+    '\n\n' + lines.join('\n') + '\n\nВСЕГО: ' + fmtRub_(total) + '\n\n' + redoText_(r.redo);
   var chat = maxChatId_();
   if (!chat) return { ok: false, error: PropertiesService.getScriptProperties().getProperty('MAX_TOKEN') ? 'no_chat' : 'no_token' };
   var res = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: text });
   if (res.code >= 200 && res.code < 300) return { ok: true };
   return { ok: false, error: 'max_' + res.code };
+}
+
+// Довозы за смену: «🚚 Довозы: 0» или «🚚 Довозы: 3 — Кухня недокомплект 2, Ошибка КЦ 1»
+function redoText_(list) {
+  var n = 0, parts = [];
+  (list || []).forEach(function (x) { var k = num_(x[1]); if (!k) return; n += k; parts.push(String(x[0] || 'причина не указана') + ' ' + k); });
+  return '🚚 Довозы: ' + n + (n ? ' — ' + parts.join(', ') : '');
 }
 
 // Запустите вручную после того, как добавите бота в чат: проверит ключ и найдёт чат.
