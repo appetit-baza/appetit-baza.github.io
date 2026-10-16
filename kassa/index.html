@@ -237,6 +237,57 @@ input.mismatch{border-color:var(--warn)!important;background:var(--warn-soft)!im
 .fixbox .btn{width:auto;padding-inline:16px}
 .fix-st{font-weight:600}.fix-st.wait{color:var(--amber)}.fix-st.ok{color:var(--accent)}.fix-st.no{color:#b3261e}
 .hb-fix{display:grid;gap:8px;margin-bottom:12px}
+/* ---------- статистика руководителя */
+:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6}
+@media (prefers-color-scheme: dark){:root{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9}}
+.hb-tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin:4px 0 14px;scrollbar-width:none}
+.hb-tabs::-webkit-scrollbar{display:none}
+.hb-tabs button{font:inherit;font-size:14.5px;font-weight:600;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
+.hb-tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+.hb-tile .sub{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.hb-tile.t-bad{border-color:var(--warn)}.hb-tile.t-bad b{color:var(--warn)}
+.hb-tile.t-amber{border-color:var(--amber)}.hb-tile.t-amber b{color:var(--amber)}
+.t-warn{color:var(--warn)}.t-up{color:var(--accent);font-weight:600}.t-down{color:var(--warn);font-weight:600}
+.mut{color:var(--muted)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:baseline}
+.v-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin:2px 0 8px}
+.v-leg span{display:inline-flex;align-items:center;gap:4px}
+.v-leg .cc{display:inline-grid;width:20px;height:20px;font-style:normal;border-radius:5px}
+.v-chart{border:1px solid var(--line);border-radius:10px;padding:8px 6px 0;background:var(--surface);min-height:120px;touch-action:pan-y}
+.v-chart svg{display:block}
+.v-chart .gl{stroke:var(--line);stroke-width:1}
+.v-chart .ax{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.v-chart .xh{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.v-chart .ring{stroke:var(--surface);stroke-width:2}
+.vtip{position:fixed;z-index:90;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.45;box-shadow:0 6px 24px rgba(0,0,0,.14);max-width:280px}
+.vtip .tt-t{border-top:1px solid var(--line);margin-top:4px;padding-top:4px}
+.h-table.cal table{width:auto}
+.h-table.cal th,.h-table.cal td{padding:4px 3px}
+.h-table.cal td:first-child,.h-table.cal th:first-child{padding:4px 10px;position:sticky;left:0;background:var(--surface);z-index:1}
+.h-table.cal th:first-child{background:var(--note)}
+.h-table.cal th.cd{text-align:center;min-width:26px;font-weight:600;line-height:1.1}
+.h-table.cal th.cd small{display:block;font-weight:400;font-size:10px}
+.h-table.cal th.we{color:var(--warn)}
+.cc{text-align:center;font-weight:700;font-size:12px;border-radius:5px;place-items:center}
+td.cc{min-width:26px;height:26px;box-shadow:inset 0 0 0 2px var(--surface)}
+.c-ok{background:var(--accent-soft);color:var(--accent)}
+.c-late{background:var(--amber-soft);color:var(--amber)}
+.c-miss{background:var(--warn-soft);color:var(--warn)}
+.c-wait{background:var(--note);color:var(--muted)}
+td.c-ok,td.c-late{cursor:pointer}
+.v-list{margin:0 0 8px;padding-left:18px}
+td.hm{background:color-mix(in srgb,var(--s1) var(--a),transparent)}
+.pbars{display:grid;gap:8px;margin:4px 0 12px}
+.pb-row{display:grid;grid-template-columns:110px minmax(0,1fr) 64px;gap:10px;align-items:center;font-size:13.5px}
+.pb-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pb-t{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.pb{display:flex;gap:2px;height:18px}
+.pb i{display:block;min-width:2px;height:100%}
+.pb i:first-child{border-radius:4px 0 0 4px}.pb i:last-child{border-radius:0 4px 4px 0}.pb i:only-child{border-radius:4px}
+tr.clk{cursor:pointer}tr.clk:hover td{background:var(--note)}
+tr.tot td{font-weight:700;border-top:2px solid var(--line)}
+@media (max-width:560px){.pb-row{grid-template-columns:80px minmax(0,1fr) 52px}}
+
 .hb-fix .fixbox{border-color:var(--amber)}
 .fixbar{border:2px solid var(--amber);background:var(--surface);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:10px 0 0}
 .fixbar p{margin:0;font-size:14.5px}
@@ -405,7 +456,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='40';
+  const BUILD='41';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -481,6 +532,7 @@ body.boss .hist-head h2{font-size:26px}
       if(!r.ok){if(r.error==='bad_pin'){closeHist();LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}else $('#hist_list').innerHTML='<p class="hint">Не удалось загрузить. Попробуйте ещё раз.</p>';return}
       if(r.boss&&!boss){USER.boss=true;LS.set('session',USER);setUser(USER);openHist();return}
       if(boss)loadFixList();
+      if(!r.shifts.length&&boss){FIX_PENDING=r.fixPending||0;histLabel();BOSS_ROWS=[];ITOGI_HTML='';renderBoss()}
       if(!r.shifts.length){$('#hist_list').innerHTML=boss?'<p class="hint">За этот период отчётов нет.</p>':'<p class="hint">Отправленных отчётов пока нет. Они появятся здесь после кнопки «Отправить в бухгалтерию».</p>';return}
       if(boss){FIX_PENDING=r.fixPending||0;histLabel();const seen=new Set();r.shifts.forEach(x=>{const k=x.dk+'|'+x.branch;x.old=!!x.replaced||seen.has(k);if(!x.replaced)seen.add(k)});BOSS_ROWS=r.shifts;bossSum()}
       $('#hist_list').innerHTML=r.shifts.map(x=>itemHtml(x,boss)).join('');
@@ -498,7 +550,8 @@ body.boss .hist-head h2{font-size:26px}
     const K={},RD={};rows.forEach(x=>{if(!x.redo)return;const a=x.redo;Object.keys(a.kinds||{}).forEach(k=>{K[k]=K[k]||[0,0];K[k][0]+=a.kinds[k][0];K[k][1]+=a.kinds[k][1]});Object.keys(a.redo||{}).forEach(k=>{RD[k]=RD[k]||[0,0];RD[k][0]+=a.redo[k][0];RD[k][1]+=a.redo[k][1]})});
     const kn=Object.keys(K),rn=Object.keys(RD).sort((a,b)=>RD[b][0]-RD[a][0]);
     const xtbl=kn.length?`<p class="h-sec">Доплаты курьерам</p><div class="h-table"><table><tr><th>Вид</th><th class="n">Кол-во</th><th class="n">Сумма</th></tr>${kn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${K[k][0]}</td><td class="n">${money(K[k][1])}</td></tr>`).join('')}</table></div>`+(rn.length?`<p class="h-sec">Довозы по причинам</p><div class="h-table"><table><tr><th>Причина</th><th class="n">Довозов</th><th class="n">Сумма</th></tr>${rn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${RD[k][0]}</td><td class="n">${money(RD[k][1])}</td></tr>`).join('')}</table></div>`:''):'';
-    $('#hb_sum').innerHTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}${xtbl}${moneyHtml(rows)}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
+    ITOGI_HTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}${xtbl}${moneyHtml(rows)}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
+    renderBoss();
   }
   // денежные движения: приход и расход по статьям из отчётов, которые входят в итоги
   // «Возврат ДС чек №4512» и «Возврат ДС чек № 77» → «Возврат ДС»: номера чеков и прочие хвостовые номера не делят статью
@@ -518,6 +571,256 @@ body.boss .hist-head h2{font-size:26px}
     const t=(title,list)=>list.length?`<p class="h-sec">${title}</p><div class="h-table"><table><tr><th>Статья</th><th class="n">Раз</th><th class="n">Сумма</th>${many?'<th>По филиалам</th>':''}</tr>${list.map(o=>`<tr><td>${esc(o.art)}</td><td class="n">${o.n}</td><td class="n"><b>${money(o.sum)}</b></td>${many?`<td>${Object.keys(o.br).sort((a,b)=>o.br[b]-o.br[a]).map(b=>esc(short(b))+' '+money(o.br[b])).join(' · ')}</td>`:''}</tr>`).join('')}</table></div>`:'';
     return h+t('Расход по статьям',A.exp)+t('Приход по статьям',A.inc);
   }
+  // ================= статистика руководителя: вкладки =================
+  const STABS=[['sum','Итоги'],['disc','Сдача отчётов'],['rev','Выручка'],['pay','Оплаты'],['cour','Курьеры'],['redo','Довозы'],['bf','Сверка']];
+  let STAB=(LS.get('stab')||'sum'),ITOGI_HTML='',PREV={key:'',rows:null,busy:false};
+  const LATE_HOUR=12; // отчёт вовремя, если отправлен до 12:00 (МСК) следующего дня
+  const RR4=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'];
+  const PAY=[['mp','Онлайн'],['cash','Наличные'],['card','Карта'],['ye','Яндекс/Деливери'],['chib','Чиббис'],['sber','Сбермаркет'],['bon','Бонусы iiko']];
+  const BR_ALL=()=>[...$('#branch').options].filter(o=>o.value).map(o=>o.value);
+  const brIdx=b=>{const i=BR_ALL().indexOf(b);return i<0?6:i};
+  const brCol=b=>`var(--s${brIdx(b)%7+1})`;
+  const brShort=b=>{b=String(b);const m=b.match(/^(Казань|Челябинск|Уфа),?\s*(.*)$/);if(!m)return b;if(m[1]!=='Казань')return m[1];return m[2].replace(/^(проспект|пр\.|Академика|Ильгама|Хади)\s+/i,'').replace(/\s*\d.*$/,'')||b};
+  const pct=(a,b)=>b?a/b*100:0;
+  const pf=v=>(Math.round(v*10)/10).toLocaleString('ru-RU')+'%';
+  const kfmt=n=>Math.abs(n)>=1e6?(Math.round(n/1e5)/10).toLocaleString('ru-RU')+' млн':Math.abs(n)>=1e3?Math.round(n/1e3).toLocaleString('ru-RU')+' тыс':String(Math.round(n));
+  const dkD=k=>new Date(Date.UTC(Math.floor(k/1e4),Math.floor(k/100)%100-1,k%100));
+  const dDk=d=>d.getUTCFullYear()*1e4+(d.getUTCMonth()+1)*100+d.getUTCDate();
+  const isoDk=s=>Number(String(s||'').replace(/-/g,''))||0;
+  const dkRu=k=>`${pad(k%100)}.${pad(Math.floor(k/100)%100)}`;
+  const WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const todayDk=()=>dDk(new Date(Date.now()+3*3600e3));
+  function dayList(f,t){const out=[];if(!f||!t||f>t)return out;for(let d=dkD(f);dDk(d)<=t&&out.length<400;d.setUTCDate(d.getUTCDate()+1))out.push(dDk(d));return out}
+  function markOld(rows){const seen=new Set();rows.forEach(x=>{const k=x.dk+'|'+x.branch;x.old=!!x.replaced||seen.has(k);if(!x.replaced)seen.add(k)});return rows}
+  const liveRows=()=>BOSS_ROWS.filter(x=>!x.old);
+  const brList=rows=>{const sel=$('#hb_branch').value;if(sel)return [sel];const s=new Set(rows.map(x=>x.branch));return BR_ALL().filter(b=>s.has(b)).concat([...s].filter(b=>!BR_ALL().includes(b)))};
+  const tile=(l,v,sub,cls)=>`<div class="hb-tile${cls?' '+cls:''}"><small>${l}</small><b>${v}</b>${sub?`<span class="sub">${sub}</span>`:''}</div>`;
+  const tbl=(head,rows,foot)=>`<div class="h-table"><table><tr>${head.map(h=>Array.isArray(h)?`<th class="n">${h[0]}</th>`:`<th>${h}</th>`).join('')}</tr>${rows.join('')}${foot||''}</table></div>`;
+  const sw=c=>`<i class="sw" style="background:${c}"></i>`;
+
+  // ---------- 1. сдача отчётов
+  function discData(){
+    const f=isoDk($('#hb_from').value),t=isoDk($('#hb_to').value),today=todayDk();
+    let days=dayList(f,t),cut=false;if(days.length>62){days=days.slice(-62);cut=true}
+    const sel=$('#hb_branch').value,brs=sel?[sel]:BR_ALL();
+    const by={};BOSS_ROWS.forEach(x=>(by[x.branch+'|'+x.dk]=by[x.branch+'|'+x.dk]||[]).push(x));
+    const noTs=BOSS_ROWS.length&&BOSS_ROWS.every(x=>!x.sentMs);
+    const cell=(b,k)=>{const rs=by[b+'|'+k];
+      if(!rs){return {st:k>today?'fut':k===today?'wait':'miss'}}
+      const first=rs.reduce((a,x)=>!a||(x.sentMs&&x.sentMs<a.sentMs)?x:a,null),live=rs.find(x=>!x.old)||rs[0];
+      const dl=Date.UTC(Math.floor(k/1e4),Math.floor(k/100)%100-1,k%100+1,LATE_HOUR-3);
+      const late=first.sentMs&&first.sentMs>dl;
+      return {st:late?'late':'ok',first,live,lateH:late?Math.round((first.sentMs-dl)/36e5):0,n:rs.length}};
+    const grid=brs.map(b=>({b,cells:days.map(k=>Object.assign({k},cell(b,k)))}));
+    const adm={};grid.forEach(g=>g.cells.forEach(c=>{if(!c.first)return;const a=adm[c.first.admin]=adm[c.first.admin]||{n:0,late:0,offs:[],fix:0,rep:0,br:new Set()};
+      a.n++;if(c.st==='late')a.late++;a.br.add(g.b);if(c.first.sentMs)a.offs.push((c.first.sentMs-Date.UTC(Math.floor(c.k/1e4),Math.floor(c.k/100)%100-1,c.k%100+1,-3))/6e4)}));
+    BOSS_ROWS.forEach(x=>{const a=adm[x.admin];if(!a)return;if(x.fix)a.fix++;if(x.repeat)a.rep++});
+    return {days,cut,grid,adm,noTs};
+  }
+  const offTxt=m=>{if(m==null)return '—';if(m<0){const t=1440+m;return 'в день смены, '+pad(Math.floor(t/60))+':'+pad(Math.floor(t%60))}if(m<1440)return 'на след. день, '+pad(Math.floor(m/60))+':'+pad(Math.floor(m%60));return 'через '+Math.floor(m/1440+1)+' дн.'};
+  const median=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)]};
+  function discHtml(){
+    const D=discData();if(!D.days.length)return '<p class="hint">Выберите период.</p>';
+    const all=D.grid.flatMap(g=>g.cells),miss=all.filter(c=>c.st==='miss').length,late=all.filter(c=>c.st==='late').length,ok=all.filter(c=>c.st==='ok').length;
+    const SYM={ok:'✓',late:'!',miss:'✕',wait:'…',fut:''};
+    const head=`<tr><th>Филиал</th>${D.days.map(k=>{const w=dkD(k).getUTCDay();return `<th class="cd${w===0||w===6?' we':''}">${k%100}<small>${WD[w]}</small></th>`}).join('')}</tr>`;
+    const body=D.grid.map(g=>`<tr><td title="${esc(g.b)}">${esc(brShort(g.b))}</td>${g.cells.map(c=>{
+      const tip=c.first?`${dkRu(c.k)} · ${c.first.admin} · отправлено ${c.first.sent}${c.st==='late'?` · опоздание ~${c.lateH} ч`:''}${c.n>1?` · отправок: ${c.n}`:''}`:c.st==='miss'?`${dkRu(c.k)} · отчёта нет`:c.st==='wait'?`${dkRu(c.k)} · смена сегодня, ждём отчёт`:'';
+      return `<td class="cc c-${c.st}"${tip?` data-tip="${esc(tip)}"`:''}${c.live?` data-open="${esc(c.live.id)}"`:''}>${SYM[c.st]}</td>`}).join('')}</tr>`).join('');
+    const legend=`<div class="v-leg"><span><i class="cc c-ok">✓</i>вовремя (до ${LATE_HOUR}:00 следующего дня)</span><span><i class="cc c-late">!</i>с опозданием</span><span><i class="cc c-miss">✕</i>нет отчёта</span><span><i class="cc c-wait">…</i>сегодня, ждём</span></div>`;
+    const missList=D.grid.map(g=>{const m=g.cells.filter(c=>c.st==='miss').map(c=>dkRu(c.k));return m.length?`<li><b>${esc(brShort(g.b))}</b> — ${m.join(', ')}</li>`:''}).join('');
+    const A=Object.entries(D.adm).sort((a,b)=>b[1].late-a[1].late||b[1].n-a[1].n);
+    const atbl=A.length?tbl(['Администратор','Филиал',['Смен'],['С опозданием'],['Обычно отправляет'],['Запросов на исправление'],['Повторных отправок']],
+      A.map(([n,a])=>`<tr><td>${esc(n)}</td><td>${esc([...a.br].map(brShort).join(', '))}</td><td class="n">${a.n}</td><td class="n">${a.late?`<b class="t-warn">${a.late}</b>`:'0'}</td><td class="n">${offTxt(median(a.offs))}</td><td class="n">${a.fix}</td><td class="n">${a.rep}</td></tr>`)):'';
+    return `<div class="hb-tiles">${tile('Сдано вовремя',ok)}${tile('С опозданием',late,'',late?'t-amber':'')}${tile('Нет отчёта',miss,'',miss?'t-bad':'')}</div>
+      ${D.noTs?'<p class="hint">Время отправки появится после обновления скрипта в Google-таблице.</p>':''}
+      <p class="h-sec">Календарь сдачи${D.cut?' · последние 62 дня периода':''}</p>${legend}<div class="h-table cal"><table>${head}${body}</table></div>
+      <p class="hint">Нажмите на день с отчётом, чтобы открыть смену.</p>
+      ${missList?`<p class="h-sec">Дни без отчёта</p><ul class="v-list">${missList}</ul>`:''}
+      ${atbl?`<p class="h-sec">По администраторам</p>${atbl}`:''}`;
+  }
+
+  // ---------- 2. выручка: динамика, сравнение, дни недели
+  function prevRange(){const f=$('#hb_from').value,t=$('#hb_to').value;if(!f||!t)return null;
+    const F=dkD(isoDk(f)),T=dkD(isoDk(t));
+    if(F.getUTCDate()===1&&F.getUTCMonth()===T.getUTCMonth()&&F.getUTCFullYear()===T.getUTCFullYear()){ // месяц (или его начало) — те же числа прошлого месяца
+      const pf=new Date(Date.UTC(F.getUTCFullYear(),F.getUTCMonth()-1,1)),last=new Date(Date.UTC(F.getUTCFullYear(),F.getUTCMonth(),0)).getUTCDate();
+      const pt=new Date(Date.UTC(F.getUTCFullYear(),F.getUTCMonth()-1,Math.min(T.getUTCDate(),last)));
+      if(T.getUTCDate()===new Date(Date.UTC(T.getUTCFullYear(),T.getUTCMonth()+1,0)).getUTCDate())pt.setUTCDate(last);
+      return {f:dDk(pf),t:dDk(pt)}}
+    const len=Math.round((T-F)/864e5)+1,pt=new Date(F);pt.setUTCDate(pt.getUTCDate()-1);const pf=new Date(pt);pf.setUTCDate(pf.getUTCDate()-len+1);return {f:dDk(pf),t:dDk(pt)}}
+  async function loadPrev(){const r=prevRange();if(!r)return;const key=r.f+'|'+r.t+'|'+$('#hb_branch').value;
+    if(PREV.key===key&&(PREV.rows||PREV.busy))return;PREV={key,rows:null,busy:true,f:r.f,t:r.t};
+    try{const res=await api({action:'history',pin:USER.pin,from:String(r.f),to:String(r.t),branch:$('#hb_branch').value});
+      if(PREV.key!==key)return;PREV.rows=res.ok?markOld(res.shifts).filter(x=>!x.old):[];}catch(e){if(PREV.key===key)PREV.rows=[]}
+    PREV.busy=false;if(['rev','pay'].includes(STAB))renderBoss()}
+  const prevTxt=()=>PREV.rows?`${dkRu(PREV.f)}.${Math.floor(PREV.f/1e4)}–${dkRu(PREV.t)}.${Math.floor(PREV.t/1e4)}`:'';
+  const delta=(a,b)=>b?`<span class="${a>=b?'t-up':'t-down'}">${a>=b?'▲':'▼'} ${pf(Math.abs(pct(a-b,b)))}</span>`:'—';
+  function revData(){
+    const rows=liveRows(),f=isoDk($('#hb_from').value),t=isoDk($('#hb_to').value);let days=dayList(f,Math.min(t,todayDk()));
+    const weekly=days.length>62,brs=brList(rows);
+    const bk=k=>{if(!weekly)return k;const d=dkD(k),w=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-w);return dDk(d)};
+    const buckets=[...new Set(days.map(bk))];
+    const ser=brs.map(b=>{const m={};rows.filter(x=>x.branch===b).forEach(x=>{const k=bk(x.dk);m[k]=(m[k]||0)+x.rev});return {name:b,color:brCol(b),vals:buckets.map(k=>k in m?m[k]:null)}});
+    return {rows,brs,buckets,weekly,ser};
+  }
+  function revHtml(){
+    const R=revData(),rows=R.rows;if(!rows.length)return '<p class="hint">За этот период отчётов нет.</p>';
+    const tot=rows.reduce((a,x)=>a+x.rev,0),P=PREV.rows,ptot=P?P.reduce((a,x)=>a+x.rev,0):0;
+    const dayTot={};rows.forEach(x=>dayTot[x.dk]=(dayTot[x.dk]||0)+x.rev);const best=Object.entries(dayTot).sort((a,b)=>b[1]-a[1])[0];
+    const tiles=tile('Выручка за период',money(tot),P?`прошлый период ${money(ptot)} ${delta(tot,ptot)}`:PREV.busy?'сравнение загружается…':'','main')
+      +tile('Средняя за смену',money(Math.round(tot/rows.length)),`смен: ${rows.length}`)+(best?tile('Лучший день',money(best[1]),dkRu(Number(best[0]))):'');
+    const legend=R.ser.length>1?`<div class="v-leg">${R.ser.map(s=>`<span>${sw(s.color)}${esc(brShort(s.name))}</span>`).join('')}</div>`:'';
+    const bt=R.brs.map(b=>{const r=rows.filter(x=>x.branch===b),s=r.reduce((a,x)=>a+x.rev,0),p=P?P.filter(x=>x.branch===b).reduce((a,x)=>a+x.rev,0):0;
+      return `<tr><td title="${esc(b)}">${sw(brCol(b))}${esc(brShort(b))}</td><td class="n"><b>${money(s)}</b></td><td class="n">${P?money(p):'…'}</td><td class="n">${P?delta(s,p):'…'}</td><td class="n">${r.length}</td><td class="n">${money(r.length?Math.round(s/r.length):0)}</td></tr>`});
+    // дни недели: средняя выручка за смену
+    const wd=[1,2,3,4,5,6,0],W={};rows.forEach(x=>{const w=dkD(x.dk).getUTCDay(),o=W[x.branch+'|'+w]=W[x.branch+'|'+w]||[0,0];o[0]+=x.rev;o[1]++});
+    const wrows=R.brs.map(b=>{const v=wd.map(w=>{const o=W[b+'|'+w];return o?o[0]/o[1]:null}),nn=v.filter(x=>x!=null),mx=Math.max(...nn),mn=Math.min(...nn);
+      return `<tr><td>${esc(brShort(b))}</td>${v.map(x=>x==null?'<td class="n">—</td>':`<td class="n hm" style="--a:${mx>mn?Math.round(8+(x-mn)/(mx-mn)*40):20}%"${x===mx&&nn.length>1?' data-tip="лучший день недели"':''}>${kfmt(x)}${x===mx&&nn.length>1?' ★':''}</td>`).join('')}</tr>`});
+    return `<div class="hb-tiles">${tiles}</div>
+      <p class="h-sec">Выручка ${R.weekly?'по неделям':'по дням'}</p>${legend}<div class="v-chart" id="v_rev"></div>
+      <p class="h-sec">По филиалам${P?` · прошлый период ${prevTxt()}`:''}</p>${tbl(['Филиал',['Выручка'],['Прошлый период'],['Изменение'],['Смен'],['Средняя за смену']],bt)}
+      <p class="h-sec">Средняя выручка за смену по дням недели</p>${tbl(['Филиал',...wd.map(w=>[WD[w]])],wrows)}<p class="hint">Чем темнее ячейка, тем выше выручка в этот день недели для филиала. ★ — лучший день.</p>`;
+  }
+  // линейный график: ось одна, линии 2px, перекрестие с подсказкой
+  function drawLine(el,labels,ser){
+    if(!el)return;const W=Math.max(300,el.clientWidth),H=240,L=56,Rp=26,T=12,B=28,iw=W-L-Rp,ih=H-T-B;
+    const all=ser.flatMap(s=>s.vals).filter(v=>v!=null);if(!all.length){el.innerHTML='<p class="hint">Нет данных.</p>';return}
+    let mx=Math.max(...all);const step=Math.pow(10,Math.floor(Math.log10(mx||1))),nice=[1,2,2.5,5,10].map(m=>m*step).find(v=>mx/v<=5)||step*10;mx=Math.ceil(mx/nice)*nice||1;
+    const n=labels.length,x=i=>L+(n<2?iw/2:i*iw/(n-1)),y=v=>T+ih-v/mx*ih;
+    let g='';for(let v=0;v<=mx+1e-9;v+=nice)g+=`<line x1="${L}" x2="${W-Rp}" y1="${y(v)}" y2="${y(v)}" class="gl"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="ax">${kfmt(v)}</text>`;
+    const every=Math.max(1,Math.ceil(n/Math.floor(iw/46)));labels.forEach((k,i)=>{if(i%every===0||i===n-1&&n<=12)g+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" class="ax">${dkRu(k)}</text>`});
+    const paths=ser.map(s=>{let d='',pen=false;s.vals.forEach((v,i)=>{if(v==null){pen=false;return}d+=(pen?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1);pen=true});
+      const dots=s.vals.map((v,i)=>v!=null&&(i===0||s.vals[i-1]==null)&&(i===n-1||s.vals[i+1]==null)?`<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="${s.color}" class="ring"/>`:'').join('');
+      return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}`}).join('');
+    el.innerHTML=`<svg width="${W}" height="${H}" role="img" aria-label="График выручки">${g}${paths}<line class="xh" x1="0" x2="0" y1="${T}" y2="${T+ih}" visibility="hidden"/><g class="xd"></g><rect x="${L}" y="${T}" width="${iw}" height="${ih}" fill="transparent" class="hit"/></svg>`;
+    const svg=el.querySelector('svg'),xh=svg.querySelector('.xh'),xd=svg.querySelector('.xd'),hit=svg.querySelector('.hit');
+    const move=e=>{const r=svg.getBoundingClientRect(),px=e.clientX-r.left,i=Math.max(0,Math.min(n-1,Math.round(n<2?0:(px-L)/iw*(n-1))));
+      xh.setAttribute('x1',x(i));xh.setAttribute('x2',x(i));xh.setAttribute('visibility','visible');
+      xd.innerHTML=ser.map(s=>s.vals[i]==null?'':`<circle cx="${x(i)}" cy="${y(s.vals[i])}" r="4" fill="${s.color}" class="ring"/>`).join('');
+      const items=ser.filter(s=>s.vals[i]!=null).sort((a,b)=>b.vals[i]-a.vals[i]);
+      showTip(e,`<b>${dkRu(labels[i])}${REVW?` – неделя`:''}</b>${items.map(s=>`<div>${sw(s.color)}${esc(brShort(s.name))} <b>${money(s.vals[i])}</b></div>`).join('')||'<div>нет отчётов</div>'}${items.length>1?`<div class="tt-t">Всего <b>${money(items.reduce((a,s)=>a+s.vals[i],0))}</b></div>`:''}`)};
+    hit.addEventListener('pointermove',move);hit.addEventListener('pointerdown',move);hit.addEventListener('pointerleave',()=>{xh.setAttribute('visibility','hidden');xd.innerHTML='';hideTip()});
+  }
+  let REVW=false;
+
+  // ---------- 3. структура оплат
+  function payHtml(){
+    const rows=liveRows();if(!rows.length)return '<p class="hint">За этот период отчётов нет.</p>';
+    const P=PREV.rows,brs=brList(rows),sum=(rs,k)=>rs.reduce((a,x)=>a+(x[k]||0),0);
+    const groups=[['Все филиалы',rows,P]].concat(brs.length>1?brs.map(b=>[b,rows.filter(x=>x.branch===b),P?P.filter(x=>x.branch===b):null]):[]);
+    const legend=`<div class="v-leg">${PAY.map(([k,l],i)=>`<span>${sw(`var(--s${i+1})`)}${l}</span>`).join('')}</div>`;
+    const bars=groups.map(([n,rs])=>{const tot=PAY.reduce((a,[k])=>a+sum(rs,k),0);
+      return `<div class="pb-row"><span class="pb-n">${esc(n==='Все филиалы'?n:brShort(n))}</span><div class="pb">${PAY.map(([k,l],i)=>{const v=sum(rs,k);return v?`<i style="flex:${v} 1 0;background:var(--s${i+1})" data-tip="${esc(`${l}: ${rub(v)} · ${pf(pct(v,tot))}`)}"></i>`:''}).join('')}</div><span class="pb-t">${kfmt(tot)}</span></div>`}).join('');
+    const ptbl=tbl(['Филиал',...PAY.map(([k,l])=>[l])],groups.map(([n,rs])=>{const tot=PAY.reduce((a,[k])=>a+sum(rs,k),0);
+      return `<tr><td>${esc(n==='Все филиалы'?n:brShort(n))}</td>${PAY.map(([k])=>{const v=sum(rs,k);return `<td class="n">${v?`${pf(pct(v,tot))}<small class="mut"> ${kfmt(v)}</small>`:'—'}</td>`}).join('')}</tr>`}));
+    const share=(rs,keys)=>{const tot=PAY.reduce((a,[k])=>a+sum(rs,k),0);return pct(keys.reduce((a,k)=>a+sum(rs,k),0),tot)};
+    const pp=(a,b)=>{const d=Math.round((a-b)*10)/10;return `${d>0?'+':''}${d.toLocaleString('ru-RU')} п.п.`};
+    const AG=['ye','chib','sber'];
+    const ctbl=P?tbl(['Филиал',['Наличные сейчас'],['Было'],['Разница'],['Агрегаторы сейчас'],['Было'],['Разница']],groups.map(([n,rs,ps])=>{const c=share(rs,['cash']),cp=share(ps||[],['cash']),a=share(rs,AG),ap=share(ps||[],AG);
+      return `<tr><td>${esc(n==='Все филиалы'?n:brShort(n))}</td><td class="n">${pf(c)}</td><td class="n">${ps&&ps.length?pf(cp):'—'}</td><td class="n">${ps&&ps.length?pp(c,cp):'—'}</td><td class="n">${pf(a)}</td><td class="n">${ps&&ps.length?pf(ap):'—'}</td><td class="n">${ps&&ps.length?pp(a,ap):'—'}</td></tr>`})):`<p class="hint">${PREV.busy?'Сравнение с прошлым периодом загружается…':'Нет данных за прошлый период.'}</p>`;
+    const atbl=tbl(['Филиал',['Яндекс/Деливери'],['Чиббис'],['Сбермаркет'],['Всего агрегаторы'],['Доля в выручке']],groups.map(([n,rs])=>{const a=AG.map(k=>sum(rs,k)),t=a.reduce((x,y)=>x+y,0);
+      return `<tr><td>${esc(n==='Все филиалы'?n:brShort(n))}</td>${a.map(v=>`<td class="n">${money(v)}</td>`).join('')}<td class="n"><b>${money(t)}</b></td><td class="n">${pf(pct(t,sum(rs,'rev')))}</td></tr>`}));
+    return `<p class="h-sec">Доли видов оплаты</p>${legend}<div class="pbars">${bars}</div>${ptbl}
+      <p class="h-sec">Изменение к прошлому периоду${P?` (${prevTxt()})`:''}</p>${ctbl}
+      <p class="h-sec">Агрегаторы — для расчёта комиссий</p>${atbl}`;
+  }
+
+  // ---------- 4. курьеры
+  function courData(){
+    const rows=liveRows(),brs=brList(rows),C={},B={};
+    rows.forEach(x=>{const b=B[x.branch]=B[x.branch]||{rev:0,ct:0,qty:0,ord:0,hrs:0,ex:0,cw:0,cn:0,n:0};b.n++;b.rev+=x.rev;b.ct+=x.ct;b.cw+=x.cw||0;b.cn+=x.cn||0;
+      (x.cour||[]).forEach(([nm,h,q,o,t,e])=>{b.qty+=q;b.ord+=o;b.hrs+=h;b.ex+=e;const k=(nm||'без ФИО')+'|'+x.branch,c=C[k]=C[k]||{nm:nm||'без ФИО',b:x.branch,n:0,q:0,h:0,o:0,e:0,t:0};c.n++;c.q+=q;c.h+=h;c.o+=o;c.e+=e;c.t+=t})});
+    return {rows,brs,B,C:Object.values(C).sort((a,b)=>b.t-a.t),noC:rows.length&&rows.every(x=>x.cour===undefined)};
+  }
+  let COUR_ALL=false;
+  function courHtml(){
+    const D=courData(),rows=D.rows;if(!rows.length)return '<p class="hint">За этот период отчётов нет.</p>';
+    const T=Object.values(D.B).reduce((a,b)=>{Object.keys(b).forEach(k=>a[k]=(a[k]||0)+b[k]);return a},{});
+    const tiles=tile('Курьерам всего',money(T.ct),`${pf(pct(T.ct,T.rev))} от выручки`,'main')+tile('Заказов',(T.qty||0).toLocaleString('ru-RU'),T.qty?`в среднем ${money(Math.round(T.ord/T.qty))} за заказ`:'')
+      +tile('За часы',money(T.hrs))+tile('Доплаты',money(T.ex))+tile('Из кассы смены',money(T.cw),`не из кассы: ${money(T.cn)}`);
+    const bt=tbl(['Филиал',['Выручка'],['Курьерам'],['% от выручки'],['Заказов'],['За заказы'],['Ср. за заказ'],['За часы'],['Доплаты'],['С изъятием'],['Без изъятия']],
+      D.brs.map(b=>{const x=D.B[b]||{};return `<tr><td>${esc(brShort(b))}</td><td class="n">${money(x.rev||0)}</td><td class="n"><b>${money(x.ct||0)}</b></td><td class="n">${pf(pct(x.ct,x.rev))}</td><td class="n">${x.qty||0}</td><td class="n">${money(x.ord||0)}</td><td class="n">${x.qty?money(Math.round(x.ord/x.qty)):'—'}</td><td class="n">${money(x.hrs||0)}</td><td class="n">${money(x.ex||0)}</td><td class="n">${money(x.cw||0)}</td><td class="n">${money(x.cn||0)}</td></tr>`}));
+    const list=COUR_ALL?D.C:D.C.slice(0,20);
+    const ct=D.C.length?tbl(['#','Курьер','Филиал',['Смен'],['Заказов'],['За часы'],['За заказы'],['Доплаты'],['Итого'],['Ср. за заказ']],
+      list.map((c,i)=>`<tr><td class="n">${i+1}</td><td>${esc(c.nm)}</td><td>${esc(brShort(c.b))}</td><td class="n">${c.n}</td><td class="n">${c.q}</td><td class="n">${money(c.h)}</td><td class="n">${money(c.o)}</td><td class="n">${money(c.e)}</td><td class="n"><b>${money(c.t)}</b></td><td class="n">${c.q?money(Math.round(c.o/c.q)):'—'}</td></tr>`))
+      +(D.C.length>20?`<button type="button" class="btn ghost" data-act="courall" style="margin-top:8px">${COUR_ALL?'Показать первых 20':`Показать всех (${D.C.length})`}</button>`:''):'';
+    return `${D.noC?'<p class="hint">Данные по курьерам появятся после обновления скрипта в Google-таблице.</p>':''}<div class="hb-tiles">${tiles}</div>
+      <p class="h-sec">По филиалам</p>${bt}<p class="hint">В Челябинске часовая выдаётся 2 раза в месяц и в отчётах смены не учитывается, поэтому «% от выручки» там ниже.</p>
+      ${ct?`<p class="h-sec">Курьеры по сумме выплат</p>${ct}`:''}`;
+  }
+
+  // ---------- 5. довозы
+  function redoData(){
+    const rows=liveRows(),brs=brList(rows),B={},A={};let N=0,S=0,Q=0;
+    rows.forEach(x=>{const q=(x.cour||[]).reduce((a,c)=>a+c[2],0),b=B[x.branch]=B[x.branch]||{n:0,s:0,q:0,r:{}},a=A[x.admin]=A[x.admin]||{n:0,s:0,sh:0,r:{},br:new Set()};
+      b.q+=q;Q+=q;a.sh++;a.br.add(x.branch);const rd=x.redo&&x.redo.redo||{};
+      Object.keys(rd).forEach(k=>{const [n,s]=rd[k];b.n+=n;b.s+=s;b.r[k]=(b.r[k]||0)+n;a.n+=n;a.s+=s;a.r[k]=(a.r[k]||0)+n;N+=n;S+=s})});
+    const rs=[...new Set(RR4.concat(...Object.values(B).map(b=>Object.keys(b.r))))];
+    return {rows,brs,B,A,N,S,Q,rs};
+  }
+  function redoHtml(){
+    const D=redoData();if(!D.rows.length)return '<p class="hint">За этот период отчётов нет.</p>';
+    const byR={};Object.values(D.B).forEach(b=>Object.keys(b.r).forEach(k=>byR[k]=(byR[k]||0)+b.r[k]));const top=Object.entries(byR).sort((a,b)=>b[1]-a[1])[0];
+    const tiles=tile('Довозов',D.N,D.Q?`${pf(pct(D.N,D.Q))} от заказов (${D.Q})`:'','main')+tile('Доплачено за довозы',money(D.S))+(top?tile('Частая причина',esc(top[0]),`${top[1]} из ${D.N}`):'');
+    const bt=tbl(['Филиал',['Довозов'],['Заказов'],['Доля'],['Сумма'],...D.rs.map(r=>[r])],D.brs.map(b=>{const x=D.B[b]||{n:0,s:0,q:0,r:{}};
+      return `<tr><td>${esc(brShort(b))}</td><td class="n"><b>${x.n}</b></td><td class="n">${x.q}</td><td class="n">${x.q?pf(pct(x.n,x.q)):'—'}</td><td class="n">${money(x.s)}</td>${D.rs.map(r=>`<td class="n">${x.r[r]||0}</td>`).join('')}</tr>`}),
+      D.brs.length>1?`<tr class="tot"><td>Итого</td><td class="n">${D.N}</td><td class="n">${D.Q}</td><td class="n">${D.Q?pf(pct(D.N,D.Q)):'—'}</td><td class="n">${money(D.S)}</td>${D.rs.map(r=>`<td class="n">${byR[r]||0}</td>`).join('')}</tr>`:'');
+    const A=Object.entries(D.A).filter(([n,a])=>a.n).sort((a,b)=>b[1].n-a[1].n);
+    const at=A.length?tbl(['Администратор на смене','Филиал',['Смен'],['Довозов'],['На смену'],['Сумма'],...D.rs.map(r=>[r])],A.map(([n,a])=>`<tr><td>${esc(n)}</td><td>${esc([...a.br].map(brShort).join(', '))}</td><td class="n">${a.sh}</td><td class="n"><b>${a.n}</b></td><td class="n">${(Math.round(a.n/a.sh*10)/10).toLocaleString('ru-RU')}</td><td class="n">${money(a.s)}</td>${D.rs.map(r=>`<td class="n">${a.r[r]||0}</td>`).join('')}</tr>`)):'<p class="hint">Довозов за период нет.</p>';
+    return `<div class="hb-tiles">${tiles}</div><p class="h-sec">По филиалам и причинам</p>${bt}<p class="h-sec">По администраторам на смене</p>${at}
+      <p class="hint">Доля довозов считается от заказов курьеров, указанных в отчётах смены.</p>`;
+  }
+
+  // ---------- 6. сверка «карта = безнал по сверкам»
+  function bfHtml(){
+    const rows=liveRows();if(!rows.length)return '<p class="hint">За этот период отчётов нет.</p>';
+    const mis=rows.filter(x=>x.bdiff),empty=rows.filter(x=>x.bfact==null),g=(key)=>{const m={};rows.forEach(x=>{const o=m[x[key]]=m[x[key]]||{n:0,mis:0,plus:0,minus:0,empty:0};o.n++;if(x.bfact==null)o.empty++;if(x.bdiff){o.mis++;if(x.bdiff>0)o.plus+=x.bdiff;else o.minus+=-x.bdiff}});return m};
+    const tiles=tile('Смен с расхождением',mis.length,`из ${rows.length}`,mis.length?'t-bad':'')+tile('Сумма расхождений',money(mis.reduce((a,x)=>a+Math.abs(x.bdiff),0)),'по модулю')+tile('Безнал по сверкам не заполнен',empty.length,'смен',empty.length?'t-amber':'');
+    const gt=(m,first)=>tbl([first,['Смен'],['С расхождением'],['Безнал больше карты'],['Безнал меньше карты'],['Не заполнен']],Object.entries(m).sort((a,b)=>b[1].mis-a[1].mis).map(([n,o])=>`<tr><td>${esc(first==='Филиал'?brShort(n):n)}</td><td class="n">${o.n}</td><td class="n">${o.mis?`<b class="t-warn">${o.mis}</b>`:'0'}</td><td class="n">${money(o.plus)}</td><td class="n">${money(o.minus)}</td><td class="n">${o.empty}</td></tr>`));
+    const lt=mis.length?tbl(['Дата','Филиал','Администратор',['Карта'],['Безнал по сверкам'],['Разница']],mis.sort((a,b)=>b.dk-a.dk).map(x=>`<tr class="clk" data-open="${esc(x.id)}"><td>${esc(x.date)}</td><td>${esc(brShort(x.branch))}</td><td>${esc(x.admin)}</td><td class="n">${money(x.card)}</td><td class="n">${money(x.bfact)}</td><td class="n"><b class="t-warn">${x.bdiff>0?'+':''}${money(x.bdiff)}</b></td></tr>`)):'<p class="hint">Расхождений нет — карта везде совпала с безналом по сверкам.</p>';
+    return `<div class="hb-tiles">${tiles}</div><p class="h-sec">Смены с расхождением</p>${lt}${mis.length?'<p class="hint">Нажмите на строку, чтобы открыть смену. «+» — по сверкам пришло больше, чем записано в «Карта».</p>':''}
+      <p class="h-sec">По филиалам</p>${gt(g('branch'),'Филиал')}<p class="h-sec">По администраторам</p>${gt(g('admin'),'Администратор')}`;
+  }
+
+  // ---------- вкладки
+  function renderBoss(){
+    const tabs=`<div class="hb-tabs" role="tablist">${STABS.map(([k,l])=>`<button type="button" role="tab" data-tab="${k}" aria-selected="${k===STAB}">${l}</button>`).join('')}</div>`;
+    const xl=`<div style="display:flex;justify-content:flex-end;margin-top:14px"><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
+    let body='';
+    try{body=STAB==='sum'?ITOGI_HTML:STAB==='disc'?discHtml():STAB==='rev'?revHtml():STAB==='pay'?payHtml():STAB==='cour'?courHtml():STAB==='redo'?redoHtml():bfHtml()}
+    catch(e){console.error(e);body='<p class="hint">Не удалось посчитать статистику. Обновите страницу.</p>'}
+    $('#hb_sum').innerHTML=tabs+body+(STAB==='sum'?'':xl);
+    $('#hist_list').hidden=STAB!=='sum';
+    if(STAB==='rev'){const R=revData();REVW=R.weekly;drawLine($('#v_rev'),R.buckets,R.ser)}
+    if(['rev','pay'].includes(STAB))loadPrev();
+  }
+  $('#hb_sum').addEventListener('click',e=>{
+    const t=e.target.closest('[data-tab]');if(t){STAB=t.dataset.tab;LS.set('stab',STAB);hideTip();renderBoss();return}
+    const o=e.target.closest('[data-open]');if(o){hideTip();openShift(o.dataset.open);return}
+    if(e.target.closest('[data-act=courall]')){COUR_ALL=!COUR_ALL;renderBoss()}
+  });
+  // подсказки при наведении
+  const TIP=document.createElement('div');TIP.className='vtip';TIP.hidden=true;document.body.appendChild(TIP);
+  function showTip(e,html){TIP.innerHTML=html;TIP.hidden=false;const w=TIP.offsetWidth,h=TIP.offsetHeight;let x=e.clientX+14,y=e.clientY+14;if(x+w>innerWidth-8)x=e.clientX-w-14;if(y+h>innerHeight-8)y=e.clientY-h-14;TIP.style.left=Math.max(8,x)+'px';TIP.style.top=Math.max(8,y)+'px'}
+  function hideTip(){TIP.hidden=true}
+  $('#hb_sum').addEventListener('pointermove',e=>{const t=e.target.closest('[data-tip]');if(t)showTip(e,esc(t.dataset.tip));else if(!e.target.closest('.v-chart'))hideTip()});
+  $('#hb_sum').addEventListener('pointerleave',hideTip);
+  let RZ;addEventListener('resize',()=>{clearTimeout(RZ);RZ=setTimeout(()=>{if(STAB==='rev'&&!$('#hist_boss').hidden){const R=revData();drawLine($('#v_rev'),R.buckets,R.ser)}},150)});
+
+  // ---------- листы статистики для Excel
+  function statSheets(wb){
+    const add=(name,aoa,w)=>{if(aoa.length<2)return;const s=XLSX.utils.aoa_to_sheet(aoa);s['!cols']=aoa[0].map((h,i)=>({wch:(w&&w[i])||Math.max(10,String(h).length+2)}));XLSX.utils.book_append_sheet(wb,s,name)};
+    const D=discData(),ST={ok:'вовремя',late:'с опозданием',miss:'нет отчёта',wait:'ждём',fut:''};
+    add('Сдача отчётов',[['Дата','Филиал','Статус','Администратор','Отправлено']].concat(D.grid.flatMap(g=>g.cells.filter(c=>c.st!=='fut').map(c=>[dkRu(c.k)+'.'+Math.floor(c.k/1e4),g.b,ST[c.st],c.first?c.first.admin:'',c.first?c.first.sent:'']))),[12,30,14,22,18]);
+    add('Админы',[['Администратор','Смен','С опозданием','Обычно отправляет','Запросов на исправление','Повторных отправок']].concat(Object.entries(D.adm).map(([n,a])=>[n,a.n,a.late,offTxt(median(a.offs)),a.fix,a.rep])),[22,8,14,24,14,14]);
+    const R=revData();add('Выручка по дням',[[R.weekly?'Неделя с':'Дата',...R.ser.map(s=>s.name),'Всего']].concat(R.buckets.map((k,i)=>[dkRu(k)+'.'+Math.floor(k/1e4),...R.ser.map(s=>s.vals[i]||0),R.ser.reduce((a,s)=>a+(s.vals[i]||0),0)])),[12]);
+    const rows=liveRows(),brs=brList(rows),sum=(rs,k)=>rs.reduce((a,x)=>a+(x[k]||0),0);
+    add('Структура оплат',[['Филиал',...PAY.map(p=>p[1]+', ₽'),...PAY.map(p=>p[1]+', %')]].concat([['Все филиалы',rows]].concat(brs.map(b=>[b,rows.filter(x=>x.branch===b)])).map(([n,rs])=>{const t=PAY.reduce((a,[k])=>a+sum(rs,k),0);return [n,...PAY.map(([k])=>sum(rs,k)),...PAY.map(([k])=>Math.round(pct(sum(rs,k),t)*10)/10)]})),[30]);
+    const C=courData();add('Курьеры',[['Курьер','Филиал','Смен','Заказов','За часы','За заказы','Доплаты','Итого']].concat(C.C.map(c=>[c.nm,c.b,c.n,c.q,c.h,c.o,c.e,c.t])),[28,30]);
+    const Rd=redoData();add('Довозы',[['Администратор на смене','Смен','Довозов','Сумма',...Rd.rs]].concat(Object.entries(Rd.A).map(([n,a])=>[n,a.sh,a.n,a.s,...Rd.rs.map(r=>a.r[r]||0)])),[24]);
+    add('Сверка',[['Дата','Филиал','Администратор','Карта','Безнал по сверкам','Разница']].concat(rows.filter(x=>x.bdiff).map(x=>[x.date,x.branch,x.admin,x.card,x.bfact,x.bdiff])),[12,30,22]);
+  }
   function bossXlsx(){
     if(!window.XLSX){toast('Excel не загрузился. Обновите страницу.');return}
     const RR=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'],kg=(x,k)=>x.redo&&x.redo.kinds&&x.redo.kinds[k]?x.redo.kinds[k]:[0,0];
@@ -525,6 +828,7 @@ body.boss .hist-head h2{font-size:26px}
     const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),kg(x,'Довоз')[0],kg(x,'Довоз')[1],...RR.map(r=>x.redo&&x.redo.redo&&x.redo.redo[r]?x.redo.redo[r][0]:0),kg(x,'Шашка')[1],kg(x,'Листовки')[0],kg(x,'Листовки')[1],kg(x,'Наклейка')[1],kg(x,'Другое')[1],x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
     const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map((h,i)=>({wch:i<3?(i===1?26:18):13}));
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Отчёты');
+    try{statSheets(wb)}catch(e){console.error(e)}
     const live=BOSS_ROWS.filter(x=>!x.old);
     if(live.some(x=>x.money&&x.money.length)){
       const m=[['Дата смены','Филиал','Администратор','Тип','Статья','Сумма']];live.forEach(x=>x.money.forEach(([t,a,v])=>m.push([x.date,x.branch,x.admin,t,a||'без статьи',v])));

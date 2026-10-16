@@ -266,7 +266,7 @@ function history_(admin, q) {
   var to = Number(String(q.to || '').replace(/\D/g, '')) || 99999999;
   var branch = String(q.branch || '');
   var limit = admin.boss ? 2000 : 100;
-  var fx = fixMap_(), rd = redoMap_(), mm = admin.boss ? moneyMap_() : {};
+  var fx = fixMap_(), rd = redoMap_(), mm = admin.boss ? moneyMap_() : {}, cm = admin.boss ? courMap_() : {};
   var out = [];
   for (var i = rows.length - 1; i >= 1 && out.length < limit; i--) {
     var r = rows[i];
@@ -283,7 +283,8 @@ function history_(admin, q) {
       ct: Number(r[13]) || 0, ex: Number(r[16]) || 0, inc: Number(r[18]) || 0, pass: Number(r[19]) || 0,
       repeat: String(r[20]) === 'да', fixed: String(r[20]) === 'исправление',
       bfact: r[23] === '' || r[23] === undefined || r[23] === null ? null : Number(r[23]) || 0,
-      bdiff: r[23] === '' || r[23] === undefined || r[23] === null ? 0 : Math.round(((Number(r[23]) || 0) - (Number(r[6]) || 0)) * 100) / 100, replaced: String(r[22] || ''), fix: (fx[String(r[21])] || {}).status || '', redo: rd[String(r[21])] || null, money: mm[String(r[21])] || [] });
+      bdiff: r[23] === '' || r[23] === undefined || r[23] === null ? 0 : Math.round(((Number(r[23]) || 0) - (Number(r[6]) || 0)) * 100) / 100, replaced: String(r[22] || ''), fix: (fx[String(r[21])] || {}).status || '', redo: rd[String(r[21])] || null, money: mm[String(r[21])] || [],
+      sentMs: r[0] instanceof Date ? r[0].getTime() : 0, cw: Number(r[14]) || 0, cn: Number(r[15]) || 0, cour: cm[String(r[21])] || [] });
   }
   return out;
 }
@@ -490,6 +491,17 @@ function redoMap_() {
     var kind = String(r[5]) || 'Другое', n = Number(r[8]) || 1, s = Number(r[9]) || 0;
     a.kinds[kind] = a.kinds[kind] || [0, 0]; a.kinds[kind][0] += n; a.kinds[kind][1] += s;
     if (kind === 'Довоз') { var k = String(r[7]) || '—'; a.redo[k] = a.redo[k] || [0, 0]; a.redo[k][0] += n; a.redo[k][1] += s; }
+  });
+  return m;
+}
+// по каждому отчёту: курьеры — [[ФИО, за часы, заказов, за заказы, итого, доплаты], …] — для статистики руководителя
+function courMap_() {
+  var sh = ss_().getSheetByName(SHEET_COURIERS), m = {};
+  if (!sh || sh.getLastRow() < 2) return m;
+  sh.getRange(2, 1, sh.getLastRow() - 1, 14).getValues().forEach(function (r) {
+    var id = String(r[0]);
+    if (!id) return;
+    (m[id] = m[id] || []).push([String(r[3]).trim(), num_(r[6]), num_(r[7]), num_(r[8]), num_(r[9]), num_(r[13])]);
   });
   return m;
 }
