@@ -40,6 +40,7 @@ var SHEET_LOG = 'Журнал входов';
 var SHEET_STAFF = 'Справочник курьеров';
 var SHEET_FIX = 'Исправления';
 var SHEET_DRAFTS = 'Черновики';
+var SHEET_EXTRA = 'Доплаты курьерам';
 
 var HEADERS = {};
 HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен', 'Роль'];
@@ -53,6 +54,8 @@ HEADERS[SHEET_MONEY] = ['ID отчёта', 'Дата смены', 'Филиал'
 HEADERS[SHEET_LOG] = ['Время', 'Событие', 'ФИО', 'Филиал'];
 HEADERS[SHEET_STAFF] = ['Филиал', 'ФИО курьера', 'Активен'];
 HEADERS[SHEET_DRAFTS] = ['Администратор', 'Обновлён', 'Черновик'];
+HEADERS[SHEET_EXTRA] = ['ID отчёта', 'Дата смены', 'Филиал', 'Администратор', 'Курьер', 'Вид', 'Зона',
+  'Причина / комментарий', 'Кол-во', 'Сумма'];
 HEADERS[SHEET_FIX] = ['Запрошено', 'ID отчёта', 'Дата смены', 'Филиал', 'Администратор', 'Причина',
   'Статус', 'Решение', 'Новый отчёт', 'ID запроса'];
 
@@ -253,7 +256,7 @@ function history_(admin, q) {
   var to = Number(String(q.to || '').replace(/\D/g, '')) || 99999999;
   var branch = String(q.branch || '');
   var limit = admin.boss ? 2000 : 100;
-  var fx = fixMap_();
+  var fx = fixMap_(), rd = redoMap_();
   var out = [];
   for (var i = rows.length - 1; i >= 1 && out.length < limit; i--) {
     var r = rows[i];
@@ -268,7 +271,7 @@ function history_(admin, q) {
       card: Number(r[6]) || 0, ye: Number(r[7]) || 0, mp: Number(r[8]) || 0, chib: Number(r[9]) || 0,
       sber: Number(r[10]) || 0, bon: Number(r[11]) || 0,
       ct: Number(r[13]) || 0, ex: Number(r[16]) || 0, inc: Number(r[18]) || 0, pass: Number(r[19]) || 0,
-      repeat: String(r[20]) === 'да', fixed: String(r[20]) === 'исправление', replaced: String(r[22] || ''), fix: (fx[String(r[21])] || {}).status || '' });
+      repeat: String(r[20]) === 'да', fixed: String(r[20]) === 'исправление', replaced: String(r[22] || ''), fix: (fx[String(r[21])] || {}).status || '', redo: rd[String(r[21])] || null });
   }
   return out;
 }
@@ -287,7 +290,9 @@ function shift_(id, admin) {
     summary.push([String(head[j]), v instanceof Date ? d_(v) : v]);
   }
   var cour = ss.getSheetByName(SHEET_COURIERS).getDataRange().getDisplayValues().filter(function (r) { return r[0] === id; })
-    .map(function (r) { return { name: r[3], from: r[4], to: r[5], hours: r[6], qty: r[7], orders: r[8], total: r[9], w: r[10], other: r[11], zones: r[12] || '' }; });
+    .map(function (r) { return { name: r[3], from: r[4], to: r[5], hours: r[6], qty: r[7], orders: r[8], total: r[9], w: r[10], other: r[11], zones: r[12] || '', exSum: r[13] || '',
+      extras: extraRows_().filter(function (x) { return String(x[0]) === id && String(x[4]) === String(r[3]); })
+        .map(function (x) { return { kind: String(x[5]), zone: String(x[6]), reason: String(x[7]), n: Number(x[8]) || 1, sum: Number(x[9]) || 0 }; }) }; });
   var money = ss.getSheetByName(SHEET_MONEY).getDataRange().getDisplayValues().filter(function (r) { return r[0] === id; })
     .map(function (r) { return { type: r[3], date: r[4], art: r[5], sum: r[6], w: r[7] }; });
   var f = fixFind_(id);
@@ -444,6 +449,35 @@ function zonesText_(c) { return String((c && c.zt) || '').slice(0, 500); }
 function ensureZonesHeader_() {
   var cs = ss_().getSheetByName(SHEET_COURIERS);
   if (cs && !String(cs.getRange('M1').getValue()).trim()) cs.getRange('M1').setValue('По зонам').setFontWeight('bold');
+  if (cs && !String(cs.getRange('N1').getValue()).trim()) cs.getRange('N1').setValue('Доплаты').setFontWeight('bold');
+  if (cs && !String(cs.getRange('O1').getValue()).trim()) cs.getRange('O1').setValue('Доплаты подробно').setFontWeight('bold');
+}
+// ---------- Доплаты курьерам: довозы (зона + причина) и прочие доплаты
+function extraSheet_() {
+  var ss = ss_();
+  var sh = ss.getSheetByName(SHEET_EXTRA);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_EXTRA);
+    sh.appendRow(HEADERS[SHEET_EXTRA]);
+    sh.getRange(1, 1, 1, HEADERS[SHEET_EXTRA].length).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function extraRows_() {
+  var sh = ss_().getSheetByName(SHEET_EXTRA);
+  return sh ? sh.getDataRange().getValues().slice(1) : [];
+}
+// по каждому отчёту: доплаты по видам и довозы по причинам — { kinds: {вид: [кол-во, сумма]}, redo: {причина: [кол-во, сумма]} }
+function redoMap_() {
+  var m = {};
+  extraRows_().forEach(function (r) {
+    var id = String(r[0]), a = m[id] = m[id] || { kinds: {}, redo: {} };
+    var kind = String(r[5]) || 'Другое', n = Number(r[8]) || 1, s = Number(r[9]) || 0;
+    a.kinds[kind] = a.kinds[kind] || [0, 0]; a.kinds[kind][0] += n; a.kinds[kind][1] += s;
+    if (kind === 'Довоз') { var k = String(r[7]) || '—'; a.redo[k] = a.redo[k] || [0, 0]; a.redo[k][0] += n; a.redo[k][1] += s; }
+  });
+  return m;
 }
 
 function num_(v) {
@@ -466,11 +500,19 @@ function saveReport_(r, admin) {
     r.r041 ? num_(r.r041) : '', num_(t.ct), num_(t.cw), num_(t.cn), num_(t.ex), num_(t.exW), num_(t.inc),
     num_(t.pass), repeat ? 'да' : '', id]);
   var cs = ss.getSheetByName(SHEET_COURIERS);
-  if ((r.cour || []).some(function (c) { return c.zt; })) ensureZonesHeader_();
+  if ((r.cour || []).some(function (c) { return c.zt || (c.ex && c.ex.length); })) ensureZonesHeader_();
+  var xs = null;
   (r.cour || []).forEach(function (c) {
-    var h = num_(c.hours), o = num_(c.orders);
-    if (!h && !o && !c.name) return;
-    cs.appendRow([id, r.dateRu, branch, c.name, c.from, c.to, h, num_(c.qty), o, h + o, wText_(c, h + o), c.other ? 'да' : '', zonesText_(c)]);
+    var h = num_(c.hours), o = num_(c.orders), ex = 0, exTxt = [];
+    (c.ex || []).forEach(function (x) {
+      var s = num_(x.sum); if (!s) return; ex += s;
+      var k = x.kind || 'Другое', n = num_(x.n) || 1;
+      exTxt.push(k + (x.zone ? ' ' + x.zone : '') + (k === 'Довоз' || k === 'Листовки' ? ' × ' + n : '') + (x.reason ? ' (' + x.reason + ')' : '') + ' = ' + s);
+      if (!xs) xs = extraSheet_();
+      xs.appendRow([id, r.dateRu, branch, admin.name, c.name, k, x.zone || '', String(x.reason || '').slice(0, 200), n, s]);
+    });
+    if (!h && !o && !ex && !c.name) return;
+    cs.appendRow([id, r.dateRu, branch, c.name, c.from, c.to, h, num_(c.qty), o, h + o + ex, wText_(c, h + o + ex), c.other ? 'да' : '', zonesText_(c), ex || '', exTxt.join('; ')]);
   });
   var ms = ss.getSheetByName(SHEET_MONEY);
   (r.exp || []).forEach(function (x) {

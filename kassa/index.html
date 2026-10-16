@@ -145,7 +145,21 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .zchips[hidden]{display:none}
 .z-tog{border:0;background:none;color:var(--accent);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;padding:2px 0}
 .zones.opt .zchips{margin-top:6px}
-@media (min-width:861px){#cour .crow:has(.zchips:not([hidden])){padding-bottom:12px;border-bottom:1px dashed var(--line);margin-bottom:4px}}
+@media (min-width:861px){#cour .crow{padding-bottom:12px;border-bottom:1px dashed var(--line);margin-bottom:4px}}
+/* доплаты курьеру: довоз, шашка, листовки, другое */
+.cx{grid-column:1/-1;display:grid;gap:6px}
+.cx-list{display:grid;gap:6px}
+.cx-list:empty{display:none}
+.xrow{display:grid;grid-template-columns:120px minmax(0,1fr) 30px;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:6px 6px 6px 8px}
+.xf{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;min-width:0}
+.xf>*{flex:1 1 120px;min-width:0}
+.xf input[data-xk=n]{flex:0 1 90px}
+.xf input[data-xk=sum]{flex:0 1 110px}
+.xf .xu{flex:0 0 auto;color:var(--muted);font-size:13px;margin-left:-4px}
+.xf .xsum{flex:0 0 auto;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.xrow .xdel{width:30px;height:30px;border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer}
+.cx-add{justify-self:start;border:0;background:none;color:var(--accent);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;padding:2px 0}
+@media (max-width:560px){.xrow{grid-template-columns:minmax(0,1fr) 30px}.xrow>select{grid-column:1}.xf{grid-column:1/-1;grid-row:2}}
 @media (max-width:860px){.zchips{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}}
 .zones[hidden]{display:none}
 .z{display:flex;align-items:center;justify-content:space-between;gap:4px;min-width:0;border:1px solid var(--line);border-left:5px solid var(--zc,var(--muted));border-radius:8px;padding:3px 4px 3px 8px;background:var(--surface);font-size:12.5px;line-height:1.15;color:var(--ink)}
@@ -284,7 +298,7 @@ body.boss .hist-head h2{font-size:26px}
     <button type="button" class="add" id="add_cour">+ Добавить курьера</button>
     <p class="hint c-h-only">«За часы» считается по времени × ставку, копейки отбрасываются. Вручную её не вписать — укажите время «С» и «По». «Изъятие сделано» — выплата из кассы с изъятием; «Изъятие не сделано» — выдали из сейфа без изъятия; «Изъятие частично» — часть с изъятием, остальное из сейфа (впишите, сколько с изъятием). Выберите в списке у курьера.</p>
     <div class="sumrow">
-      <div class="c-h">За часы<b id="o_c_h">0</b></div><div>За заказы<b id="o_c_o">0</b></div><div>Итого курьерам<b id="o_c_t">0</b></div>
+      <div class="c-h">За часы<b id="o_c_h">0</b></div><div>За заказы<b id="o_c_o">0</b></div><div id="o_c_x_box" hidden>Доплаты<b id="o_c_x">0</b></div><div>Итого курьерам<b id="o_c_t">0</b></div>
       <div>Делали изъятие<b id="o_c_w">0</b></div><div>Не делали изъятие<b id="o_c_n">0</b></div><div>Заказов<b id="o_c_q">0</b></div>
     </div>
   </section>
@@ -364,7 +378,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='20';
+  const BUILD='21';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -452,12 +466,16 @@ body.boss .hist-head h2{font-size:26px}
     const tiles=SUMF.filter(([k])=>k==='rev'||tot[k]).map(([k,l])=>`<div class="hb-tile${k==='rev'?' main':''}"><small>${l}</small><b>${money(tot[k])}</b></div>`).join('');
     const names=Object.keys(by).sort((a,b)=>by[b].rev-by[a].rev);
     const tbl=names.length>1?`<p class="h-sec">По филиалам</p><div class="h-table"><table><tr><th>Филиал</th><th class="n">Смен</th><th class="n">Выручка</th><th class="n">Наличка</th><th class="n">Курьерам</th><th class="n">Расходы</th><th class="n">Передано</th></tr>${names.map(n=>{const b=by[n];return `<tr><td>${esc(n)}</td><td class="n">${b.n}</td><td class="n"><b>${money(b.rev)}</b></td><td class="n">${money(b.cash)}</td><td class="n">${money(b.ct)}</td><td class="n">${money(b.ex)}</td><td class="n">${money(b.pass)}</td></tr>`}).join('')}</table></div>`:'';
-    $('#hb_sum').innerHTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
+    const K={},RD={};rows.forEach(x=>{if(!x.redo)return;const a=x.redo;Object.keys(a.kinds||{}).forEach(k=>{K[k]=K[k]||[0,0];K[k][0]+=a.kinds[k][0];K[k][1]+=a.kinds[k][1]});Object.keys(a.redo||{}).forEach(k=>{RD[k]=RD[k]||[0,0];RD[k][0]+=a.redo[k][0];RD[k][1]+=a.redo[k][1]})});
+    const kn=Object.keys(K),rn=Object.keys(RD).sort((a,b)=>RD[b][0]-RD[a][0]);
+    const xtbl=kn.length?`<p class="h-sec">Доплаты курьерам</p><div class="h-table"><table><tr><th>Вид</th><th class="n">Кол-во</th><th class="n">Сумма</th></tr>${kn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${K[k][0]}</td><td class="n">${money(K[k][1])}</td></tr>`).join('')}</table></div>`+(rn.length?`<p class="h-sec">Довозы по причинам</p><div class="h-table"><table><tr><th>Причина</th><th class="n">Довозов</th><th class="n">Сумма</th></tr>${rn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${RD[k][0]}</td><td class="n">${money(RD[k][1])}</td></tr>`).join('')}</table></div>`:''):'';
+    $('#hb_sum').innerHTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}${xtbl}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
   }
   function bossXlsx(){
     if(!window.XLSX){toast('Excel не загрузился. Обновите страницу.');return}
-    const head=['Дата смены','Филиал','Администратор',...SUMF.map(x=>x[1]),'Отправлено','В итогах'];
-    const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
+    const RR=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'],kg=(x,k)=>x.redo&&x.redo.kinds&&x.redo.kinds[k]?x.redo.kinds[k]:[0,0];
+    const head=['Дата смены','Филиал','Администратор',...SUMF.map(x=>x[1]),'Довозов','Довозы, ₽',...RR.map(r=>'Довоз: '+r),'Шашка, ₽','Листовок, шт','Листовки, ₽','Другие доплаты, ₽','Отправлено','В итогах'];
+    const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),kg(x,'Довоз')[0],kg(x,'Довоз')[1],...RR.map(r=>x.redo&&x.redo.redo&&x.redo.redo[r]?x.redo.redo[r][0]:0),kg(x,'Шашка')[1],kg(x,'Листовки')[0],kg(x,'Листовки')[1],kg(x,'Другое')[1],x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
     const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map((h,i)=>({wch:i<3?(i===1?26:18):13}));
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Отчёты');
     const fn=`Отчёты ${ruDate($('#hb_from').value)}–${ruDate($('#hb_to').value)}.xlsx`;
@@ -493,7 +511,7 @@ body.boss .hist-head h2{font-size:26px}
       if(!r.ok){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Отчёт не найден.</p>';return}
       const s=r.shift;SHIFT=s;
       const kv=s.summary.filter(([k])=>!(USER&&USER.boss?/^(Повторная)/:/^(Отправлено|Администратор|Повторная)/).test(k)).map(([k,v])=>`<span>${esc(k)}</span><span>${typeof v==='number'?money(v):esc(v)}</span>`).join('');
-      const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>${c.zones?`<tr><td colspan="7"><small>По зонам: ${esc(c.zones)}</small></td></tr>`:''}`).join('')}</table></div>`:'';
+      const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>${c.zones?`<tr><td colspan="7"><small>По зонам: ${esc(c.zones)}</small></td></tr>`:''}${(c.extras||[]).length?`<tr><td colspan="7"><small>Доплаты: ${c.extras.map(x=>esc(x.kind+(x.zone?' '+x.zone:'')+(x.kind==='Довоз'||x.kind==='Листовки'?' × '+x.n:'')+(x.reason?' ('+x.reason+')':'')+' = '+money(x.sum))).join('; ')}</small></td></tr>`:''}`).join('')}</table></div>`:'';
       const mt=s.money.length?`<p class="h-sec">Приход и расход</p><div class="h-table"><table><tr><th>Тип</th><th>Дата</th><th>Статья</th><th>Сумма</th></tr>${s.money.map(m=>`<tr><td>${esc(m.type)}</td><td>${esc(m.date)}</td><td>${esc(m.art)}</td><td>${esc(m.sum)}</td></tr>`).join('')}</table></div>`:'';
       one.innerHTML=`<button type="button" class="h-back">← Назад к списку</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${ct}${mt}<div id="fx_box">${fixBox(s)}</div>`;
     }catch(x){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Нет связи с сервером.</p>'}
@@ -514,7 +532,8 @@ body.boss .hist-head h2{font-size:26px}
     const cour=s.cour.map(c=>{const from=tm(c.from),to=tm(c.to),a=minutes(from),b=minutes(to);let auto=null;if(a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;auto=Math.floor(m/60*RATE)}
       let z=null;const zb=/казань/i.test(s.raw.branch)?'kzn':/уфа|челябинск/i.test(s.raw.branch)?'chu':null;
       if(zb&&c.zones){const n=ZONESETS[zb].z.map(()=>'');String(c.zones).split(/;\s*/).forEach(p=>{const m=p.match(/^(.*) × (\d+)$/);if(m){const i=ZONESETS[zb].z.findIndex(q=>zLabel(q)===m[1].trim());if(i>=0)n[i]=m[2]}});z={id:zb,n}}
-      return {z,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),...(/частично/i.test(c.w)?{w:'p',ws:String((String(c.w).match(/([\d\s.,]+)\s*₽?\s*с изъятием/)||[])[1]||'').replace(/\s/g,'')}:{w:!/нет/i.test(c.w)}),manual:auto!==null&&auto!==num(c.hours)}});
+      const ex=(c.extras||[]).map(x=>({kind:x.kind,zone:x.zone,reason:x.reason,n:x.n,sum:x.kind==='Довоз'?'':x.sum}));
+      return {z,ex,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),...(/частично/i.test(c.w)?{w:'p',ws:String((String(c.w).match(/([\d\s.,]+)\s*₽?\s*с изъятием/)||[])[1]||'').replace(/\s/g,'')}:{w:!/нет/i.test(c.w)}),manual:auto!==null&&auto!==num(c.hours)}});
     const mon=t=>s.money.filter(m=>m.type===t).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
     return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,rev:s.raw.rev,cour,exp:mon('Расход'),inc:mon('Приход')};
   }
@@ -569,6 +588,33 @@ body.boss .hist-head h2{font-size:26px}
   const wOf=w=>w==='p'?'p':w===false?'n':'y';
   const wGet=r=>r.querySelector('[data-k=w]').value||'y';
   document.addEventListener('change',e=>{const sel=e.target.closest('.wsel');if(!sel)return;const row=sel.closest('.crow');sel.dataset.v=sel.value;const wp=row.querySelector('.wpart');wp.hidden=sel.value!=='p';if(sel.value==='p')wp.querySelector('input').focus();calc()});
+  const XKINDS=['Довоз','Шашка','Листовки','Другое'];
+  const REDO_REASONS=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'];
+  function zoneOpts(sel){const id=zoneSet();if(!id)return '<option value="">—</option>';return '<option value="">Зона…</option>'+ZONESETS[id].z.map(z=>{const l=zLabel(z);return `<option value="${esc(l)}"${l===sel?' selected':''}>${esc(l)} — ${z[2]} ₽</option>`}).join('')}
+  function extraFields(x){
+    const k=x.kind||'Довоз';
+    if(k==='Довоз')return `<select data-xk="zone" aria-label="Зона">${zoneOpts(x.zone)}</select><select data-xk="reason" aria-label="Причина довоза"><option value="">Причина…</option>${REDO_REASONS.map(r=>`<option${r===x.reason?' selected':''}>${r}</option>`).join('')}</select><input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||1)}" aria-label="Количество довозов"><span class="xu">шт</span><span class="xsum" data-o="xs"></span>`;
+    if(k==='Шашка')return `<input data-xk="sum" class="num" inputmode="decimal" placeholder="Сумма" value="${esc(x.sum)}" aria-label="Сумма за шашку"><span class="xu">₽</span>`;
+    if(k==='Листовки')return `<input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||'')}" aria-label="Количество листовок"><span class="xu">шт</span><input data-xk="sum" class="num" inputmode="decimal" placeholder="Сумма" value="${esc(x.sum)}" aria-label="Сумма за листовки"><span class="xu">₽</span>`;
+    return `<input data-xk="sum" class="num" inputmode="decimal" placeholder="Сумма" value="${esc(x.sum)}" aria-label="Сумма доплаты"><span class="xu">₽</span><input data-xk="note" placeholder="За что" value="${esc(x.reason)}" aria-label="Комментарий">`;
+  }
+  function addExtra(r,x={}){
+    const el=document.createElement('div');el.className='xrow';el.dataset.zs=zoneSet()||'';
+    el.innerHTML=`<select data-xk="kind" aria-label="Вид доплаты">${XKINDS.map(k=>`<option${k===(x.kind||'Довоз')?' selected':''}>${k}</option>`).join('')}</select><div class="xf">${extraFields(x)}</div><button type="button" class="xdel" aria-label="Удалить доплату">×</button>`;
+    r.querySelector('.cx-list').appendChild(el);return el;
+  }
+  function extraState(el){
+    const g0=k=>el.querySelector(`[data-xk=${k}]`),g=k=>g0(k)||{value:''},kind=g('kind').value;
+    if(kind==='Довоз'){const zone=g('zone').value,n=num(g('n').value)||0,id=zoneSet(),z=id?ZONESETS[id].z.find(q=>zLabel(q)===zone):null;return {kind,zone,reason:g('reason').value,n:g('n').value.trim(),sum:z?z[2]*n:0}}
+    if(kind==='Листовки')return {kind,n:g('n').value.trim(),sum:num(g('sum').value)};
+    if(kind==='Шашка')return {kind,sum:num(g('sum').value)};
+    return {kind,reason:g('note').value.trim(),sum:num(g('sum').value)};
+  }
+  document.addEventListener('click',e=>{
+    const a=e.target.closest('.cx-add');if(a){const el=addExtra(a.closest('.crow'));el.querySelector('select').focus();calc();return}
+    const d=e.target.closest('.xdel');if(d){d.closest('.xrow').remove();calc()}
+  });
+  document.addEventListener('change',e=>{const k=e.target.closest('[data-xk=kind]');if(!k)return;const el=k.closest('.xrow');el.querySelector('.xf').innerHTML=extraFields({kind:k.value});const f=el.querySelector('.xf select,.xf input');if(f)f.focus();calc()});
   function addCour(d={}){
     const r=document.createElement('div');r.className='crow';
     r.innerHTML=`<div class="c-name"><span class="lbl-m">ФИО</span><select data-k="pick" aria-label="Курьер" hidden></select><input data-k="name" placeholder="Фамилия" value="${esc(d.name)}" aria-label="ФИО курьера"></div>
@@ -581,8 +627,10 @@ body.boss .hist-head h2{font-size:26px}
       <div class="c-w"><span class="lbl-m">Изъятие</span><select data-k="w" class="wsel" data-v="${wOf(d.w)}" aria-label="Изъятие">${Object.keys(WST).map(k=>`<option value="${k}"${wOf(d.w)===k?' selected':''}>${WST[k][1]}</option>`).join('')}</select></div>
       <button type="button" class="del" aria-label="Удалить строку">×</button>
       <div class="wpart"${wOf(d.w)==='p'?'':' hidden'}><label>Из них с изъятием, ₽ <input data-k="ws" class="num" inputmode="decimal" value="${esc(d.ws)}" aria-label="Сумма с изъятием"></label><span class="rest" data-o="wrest"></span></div>
-      <div class="zones" hidden></div>`;
-    r.dataset.manual=''; // «За часы» только автоматически — вручную не вписатьr._zinit=d.z||null;
+      <div class="zones" hidden></div>
+      <div class="cx"><div class="cx-list"></div><button type="button" class="cx-add">+ Доплата (довоз, шашка, листовки…)</button></div>`;
+    r.dataset.manual=''; // «За часы» только автоматически — вручную не вписать
+    (d.ex||[]).forEach(x=>addExtra(r,x));r._zinit=d.z||null;
     $('#cour').appendChild(r);
     fillName(r);
   }
@@ -639,7 +687,7 @@ body.boss .hist-head h2{font-size:26px}
   function state(){
     const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),rev:{},cour:[],exp:[],inc:[]};
     REV.forEach(([id])=>s.rev[id]=$('#'+id).value.trim());
-    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:{y:true,n:false,p:'p'}[wGet(r)],ws:wGet(r)==='p'?g('ws').value.trim():'',manual:!!r.dataset.manual,...zoneState(r)})});
+    $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:{y:true,n:false,p:'p'}[wGet(r)],ws:wGet(r)==='p'?g('ws').value.trim():'',manual:!!r.dataset.manual,...zoneState(r),ex:[...r.querySelectorAll('.xrow')].map(extraState).filter(x=>x.sum||x.kind==='Довоз'),exSum:num(r.dataset.ex)})});
     ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:g('date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:b==='exp'?g('w').getAttribute('aria-pressed')==='true':false})}));
     return s;
   }
@@ -648,7 +696,7 @@ body.boss .hist-head h2{font-size:26px}
     const rate=RATE;
     const warns=[];
     // couriers
-    let ch=0,co=0,cw=0,cn=0,cq=0;
+    let ch=0,co=0,cw=0,cn=0,cq=0,cx=0;
     const NOH=noHours();$('#sec-cour').classList.toggle('noh',NOH);
     const ZS=zoneSet(),ZOPT=!!ZS&&zoneOptional(),zn=$('#zone_note');zn.hidden=!ZS||ZOPT;
     if(ZS)zn.innerHTML=`Оплата курьеру за заказ по зонам (${ZONESETS[ZS].city}): впишите, сколько заказов в каждой зоне — «Заказов» и «За заказы» посчитаются сами.`;
@@ -665,7 +713,14 @@ body.boss .hist-head h2{font-size:26px}
       const hi=g('hours');
       if(a!=null&&b!=null&&!r.dataset.manual){let m=b-a;if(m<0)m+=1440;const v=Math.floor(m/60*rate);hi.value=v;hi.classList.add('auto-v');hi.title=`${Math.floor(m/60)} ч ${m%60} мин × ${rate} ₽`}
       else{hi.value='';hi.title=''}
-      const h=NOH?0:num(hi.value),o=num(g('orders').value),t=h+o;
+      let ex=0;r.querySelectorAll('.xrow').forEach(el=>{
+        if(el.querySelector('[data-xk=zone]')&&el.dataset.zs!==(ZS||'')){const zsel=el.querySelector('[data-xk=zone]');zsel.innerHTML=zoneOpts(zsel.value);el.dataset.zs=ZS||''}
+        const x=extraState(el);ex+=x.sum;const xs=el.querySelector('[data-o=xs]');if(xs)xs.textContent=x.sum?'= '+rub(x.sum):'';
+        const nm=g('name').value.trim()||'Курьер';
+        if(x.kind==='Довоз'&&(!x.zone||!x.reason))warns.push(['warn',`${nm}: у довоза укажите зону и причину.`]);
+        else if(x.kind!=='Довоз'&&!x.sum)warns.push(['warn',`${nm}: у доплаты «${x.kind}» не указана сумма.`]);});
+      r.dataset.ex=ex;cx+=ex;
+      const h=NOH?0:num(hi.value),o=num(g('orders').value),t=h+o+ex;
       r.querySelector('[data-o=tot]').textContent=fmt(t);
       ch+=h;co+=o;cq+=num(g('qty').value);
       const wst=wGet(r);
@@ -680,7 +735,7 @@ body.boss .hist-head h2{font-size:26px}
       if(num(g('qty').value)>0&&!o)warns.push(['warn',`${g('name').value.trim()||'Курьер'}: заказы указаны, а сумма за заказы пустая.`]);
       if(!NOH&&r.dataset.manual&&a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;const v=Math.floor(m/60*rate);if(Math.abs(v-h)>=1)warns.push(['warn',`${g('name').value.trim()||'Курьер'}: «За часы» ${fmt(h)} ₽, а по времени ${Math.floor(m/60)} ч ${m%60} мин × ${rate} ₽ = ${fmt(v)} ₽.`])}
     });
-    const ct=ch+co;
+    const ct=ch+co+cx;
     // revenue
     const rv={};let rev=0;REV.forEach(([id])=>{rv[id]=num($('#'+id).value);rev+=rv[id]});
     // expenses
@@ -688,12 +743,12 @@ body.boss .hist-head h2{font-size:26px}
     $$('#exp .erow').forEach(r=>{const v=num(r.querySelector('[data-k=sum]').value);ex+=v;if(r.querySelector('[data-k=w]').getAttribute('aria-pressed')==='true')exW+=v});
     $$('#inc .erow').forEach(r=>inc+=num(r.querySelector('[data-k=sum]').value));
     const pass=rv.r_cash-cw-exW;
-    R={rev,rv,ch,co,ct,cw,cn,cq,ex,exW,inc,pass,rate};
+    R={rev,rv,ch,co,cx,ct,cw,cn,cq,ex,exW,inc,pass,rate};
     // outputs
     $('#o_rev').textContent=rub(rev);
     const f=$('#f_041');const r041=$('#r_041').value.trim();
     if(r041&&rev>0){const d=num(r041)-rev;f.className='flag '+(Math.abs(d)<0.01?'ok':'bad');f.textContent=Math.abs(d)<0.01?'Выручка сходится с отчётом 041.':`Расхождение с отчётом 041: ${rub(Math.abs(d))} (${d>0?'в 041 больше':'в отчёте больше'}).`;if(Math.abs(d)>=0.01)warns.push(['err','Выручка не сходится с отчётом 041 на '+rub(Math.abs(d))+'.'])}else{f.textContent=''}
-    $('#o_c_h').textContent=fmt(ch);$('#o_c_o').textContent=fmt(co);$('#o_c_t').textContent=fmt(ct);$('#o_c_w').textContent=fmt(cw);$('#o_c_n').textContent=fmt(cn);$('#o_c_q').textContent=fmt(cq);
+    $('#o_c_h').textContent=fmt(ch);$('#o_c_o').textContent=fmt(co);$('#o_c_x').textContent=fmt(cx);$('#o_c_x_box').hidden=!cx;$('#o_c_t').textContent=fmt(ct);$('#o_c_w').textContent=fmt(cw);$('#o_c_n').textContent=fmt(cn);$('#o_c_q').textContent=fmt(cq);
     $('#o_cour_sub').textContent=$$('.crow').length+' чел. · '+rub(ct);
     $('#o_exp_sub').textContent='расход '+rub(ex)+(inc?' · приход '+rub(inc):'');
     $('#s_rev').textContent=rub(rev);$('#s_cash').textContent=rub(rv.r_cash);$('#s_cour').textContent=rub(ct);$('#s_noW').textContent=rub(cn);$('#s_exp').textContent=rub(ex)+(exW?` (вычтено ${fmt(exW)})`:'');$('#s_inc').textContent=rub(inc);
@@ -848,7 +903,7 @@ body.boss .hist-head h2{font-size:26px}
     const w1=XLSX.utils.aoa_to_sheet(s1);w1['!cols']=[{wch:30},{wch:26}];XLSX.utils.book_append_sheet(wb,w1,'Сводка');
     // sheet 2
     const s2=[['НЕОТОБРАЖЕННЫЕ ДОСТАВКИ В КУРЬЕРИКЕ'],['Должность','Время','За часы','ФИО','кол-во заказов','За заказы','Итого Сумма','ДЕЛАЛИ ИЗЪЯТИЕ','НЕ ДЕЛАЛИ ИЗЪЯТИЕ']];
-    s.cour.forEach(c=>{const h=num(c.hours),o=num(c.orders),t=h+o;if(!t&&!c.name)return;s2.push(['Курьер',c.from&&c.to?`${c.from}-${c.to}`:'',h||null,c.name,n(c.qty),o||null,t,c.w==='p'?Math.min(num(c.ws),t):c.w?t:null,c.w==='p'?t-Math.min(num(c.ws),t):c.w?null:t])});
+    s.cour.forEach(c=>{const h=num(c.hours),o=num(c.orders),t=h+o+num(c.exSum);if(!t&&!c.name)return;s2.push(['Курьер',c.from&&c.to?`${c.from}-${c.to}`:'',h||null,c.name,n(c.qty),o||null,t,c.w==='p'?Math.min(num(c.ws),t):c.w?t:null,c.w==='p'?t-Math.min(num(c.ws),t):c.w?null:t])});
     s2.push([],['ИТОГО',null,R.ch,'-',R.cq||null,R.co,R.ct,R.cw,R.cn]);
     const w2=XLSX.utils.aoa_to_sheet(s2);w2['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];w2['!cols']=[{wch:10},{wch:13},{wch:9},{wch:24},{wch:9},{wch:10},{wch:12},{wch:15},{wch:17}];XLSX.utils.book_append_sheet(wb,w2,'Курьеры');
     // sheet 3
