@@ -281,7 +281,9 @@ function history_(admin, q) {
       card: Number(r[6]) || 0, ye: Number(r[7]) || 0, mp: Number(r[8]) || 0, chib: Number(r[9]) || 0,
       sber: Number(r[10]) || 0, bon: Number(r[11]) || 0,
       ct: Number(r[13]) || 0, ex: Number(r[16]) || 0, inc: Number(r[18]) || 0, pass: Number(r[19]) || 0,
-      repeat: String(r[20]) === 'да', fixed: String(r[20]) === 'исправление', replaced: String(r[22] || ''), fix: (fx[String(r[21])] || {}).status || '', redo: rd[String(r[21])] || null });
+      repeat: String(r[20]) === 'да', fixed: String(r[20]) === 'исправление',
+      bfact: r[23] === '' || r[23] === undefined || r[23] === null ? null : Number(r[23]) || 0,
+      bdiff: r[23] === '' || r[23] === undefined || r[23] === null ? 0 : Math.round(((Number(r[23]) || 0) - (Number(r[6]) || 0)) * 100) / 100, replaced: String(r[22] || ''), fix: (fx[String(r[21])] || {}).status || '', redo: rd[String(r[21])] || null });
   }
   return out;
 }

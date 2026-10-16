@@ -2,9 +2,7 @@
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Кассовый отчёт «Аппетит»</title>
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="https://che.appetitfood.ru/upload/c3a4fcd8-7bad-4b1a-bd05-d080143e1c44/file_manager/theme/favicon.png" type="image/png">
 <meta name="description" content="Кассовый отчёт смены для кассиров «Аппетита»: выручка, выплаты курьерам, расходы, переданная сумма. Отправка в бухгалтерию и Excel-файл.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Кассовый отчёт «Аппетит»">
@@ -59,6 +57,8 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .flag{font-size:13.5px;font-weight:600;margin:8px 0 0}
 .flag:empty{display:none}
 .flag.ok{color:var(--accent)} .flag.bad{color:var(--warn)}
+input.mismatch{border-color:var(--warn)!important;background:var(--warn-soft)!important;color:var(--warn)}
+.h-item .bad{color:var(--warn);font-weight:700}
 /* table-like rows */
 .rows{display:grid;gap:8px}
 .to-chat{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:12px}
@@ -307,6 +307,7 @@ body.boss .hist-head h2{font-size:26px}
     <div class="total-line"><span>Выручка всего</span><strong id="o_rev">0 ₽</strong></div>
     <div class="to-chat" id="to_chat" hidden><button type="button" class="btn sec" id="b_rev">Отправить выручку в чат «АДМИНЫ АППЕТИТ»</button><span class="hint" id="rev_sent"></span></div>
     <p class="flag" id="f_041"></p>
+    <p class="flag" id="f_bfact"></p>
   </section>
 
   <!-- 2 -->
@@ -402,7 +403,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='31';
+  const BUILD='32';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -468,7 +469,7 @@ body.boss .hist-head h2{font-size:26px}
     else if(q==='week'){f=new Date(d);f.setDate(d.getDate()-6)}else if(q==='month')f=new Date(d.getFullYear(),d.getMonth(),1);
     else{f=new Date(d.getFullYear(),d.getMonth()-1,1);t=new Date(d.getFullYear(),d.getMonth(),0)}
     $('#hb_from').value=iso(f);$('#hb_to').value=iso(t);$$('#hb_quick button').forEach(x=>x.classList.toggle('on',x.dataset.q===q))}
-  function itemHtml(x,boss){return `<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b${x.old||x.replaced?' class="old"':''}>${esc(x.date)}</b>${boss?' · '+esc(x.admin):''}<br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.replaced?' · <span class="rep">заменён исправленным отчётом</span>'+(boss?', в итоги не входит':''):x.old?' · <span class="rep">заменён повторной отправкой, в итоги не входит</span>':x.fixed?' · <span class="rep">исправленный отчёт</span>':x.repeat?' · <span class="rep">повторная отправка</span>':''}${x.fix==='ожидает'?' · <span class="rep">ждёт разрешения на исправление</span>':x.fix==='разрешено'?' · <span class="rep">исправление разрешено</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`}
+  function itemHtml(x,boss){return `<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b${x.old||x.replaced?' class="old"':''}>${esc(x.date)}</b>${boss?' · '+esc(x.admin):''}<br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.replaced?' · <span class="rep">заменён исправленным отчётом</span>'+(boss?', в итоги не входит':''):x.old?' · <span class="rep">заменён повторной отправкой, в итоги не входит</span>':x.fixed?' · <span class="rep">исправленный отчёт</span>':x.repeat?' · <span class="rep">повторная отправка</span>':''}${x.bdiff?` · <span class="bad">⚠ Карта ≠ безнал по сверкам на ${money(Math.abs(x.bdiff))}</span>`:''}${x.fix==='ожидает'?' · <span class="rep">ждёт разрешения на исправление</span>':x.fix==='разрешено'?' · <span class="rep">исправление разрешено</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`}
   async function loadHist(){
     const boss=!!(USER&&USER.boss);
     $('#hist_list').innerHTML='<p class="hint">Загружаю…</p>';if(boss)$('#hb_sum').innerHTML='';
@@ -487,7 +488,9 @@ body.boss .hist-head h2{font-size:26px}
   function bossSum(){
     const rows=BOSS_ROWS.filter(x=>!x.old);const tot={};SUMF.forEach(([k])=>tot[k]=rows.reduce((a,x)=>a+(x[k]||0),0));
     const by={};rows.forEach(x=>{const b=by[x.branch]=by[x.branch]||{n:0,rev:0,cash:0,ct:0,ex:0,pass:0};b.n++;['rev','cash','ct','ex','pass'].forEach(k=>b[k]+=x[k]||0)});
-    const tiles=SUMF.filter(([k])=>k==='rev'||tot[k]).map(([k,l])=>`<div class="hb-tile${k==='rev'?' main':''}"><small>${l}</small><b>${money(tot[k])}</b></div>`).join('');
+    const mis=rows.filter(x=>x.bdiff);
+    const tiles=SUMF.filter(([k])=>k==='rev'||tot[k]).map(([k,l])=>`<div class="hb-tile${k==='rev'?' main':''}"><small>${l}</small><b>${money(tot[k])}</b></div>`).join('')
+      +(mis.length?`<div class="hb-tile" style="border-color:var(--warn)"><small>Карта ≠ безнал по сверкам</small><b style="color:var(--warn)">смен: ${mis.length}</b></div>`:'');
     const names=Object.keys(by).sort((a,b)=>by[b].rev-by[a].rev);
     const tbl=names.length>1?`<p class="h-sec">По филиалам</p><div class="h-table"><table><tr><th>Филиал</th><th class="n">Смен</th><th class="n">Выручка</th><th class="n">Наличные</th><th class="n">Курьерам</th><th class="n">Расходы</th><th class="n">Передано</th></tr>${names.map(n=>{const b=by[n];return `<tr><td>${esc(n)}</td><td class="n">${b.n}</td><td class="n"><b>${money(b.rev)}</b></td><td class="n">${money(b.cash)}</td><td class="n">${money(b.ct)}</td><td class="n">${money(b.ex)}</td><td class="n">${money(b.pass)}</td></tr>`}).join('')}</table></div>`:'';
     const K={},RD={};rows.forEach(x=>{if(!x.redo)return;const a=x.redo;Object.keys(a.kinds||{}).forEach(k=>{K[k]=K[k]||[0,0];K[k][0]+=a.kinds[k][0];K[k][1]+=a.kinds[k][1]});Object.keys(a.redo||{}).forEach(k=>{RD[k]=RD[k]||[0,0];RD[k][0]+=a.redo[k][0];RD[k][1]+=a.redo[k][1]})});
@@ -537,7 +540,8 @@ body.boss .hist-head h2{font-size:26px}
       const kv=s.summary.filter(([k])=>!(USER&&USER.boss?/^(Повторная)/:/^(Отправлено|Администратор|Повторная)/).test(k)).map(([k,v])=>`<span>${esc(k)}</span><span>${typeof v==='number'?money(v):esc(v)}</span>`).join('');
       const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>${c.zones?`<tr><td colspan="7"><small>По зонам: ${esc(c.zones)}</small></td></tr>`:''}${(c.extras||[]).length?`<tr><td colspan="7"><small>Доплаты: ${c.extras.map(x=>esc(x.kind+(x.zone?' '+x.zone:'')+(x.kind==='Довоз'||x.kind==='Листовки'?' × '+x.n:'')+(x.reason?' ('+x.reason+')':'')+' = '+money(x.sum))).join('; ')}</small></td></tr>`:''}`).join('')}</table></div>`:'';
       const mt=s.money.length?`<p class="h-sec">Приход и расход</p><div class="h-table"><table><tr><th>Тип</th><th>Дата</th><th>Статья</th><th>Сумма</th></tr>${s.money.map(m=>`<tr><td>${esc(m.type)}</td><td>${esc(m.date)}</td><td>${esc(m.art)}</td><td>${esc(m.sum)}</td></tr>`).join('')}</table></div>`:'';
-      one.innerHTML=`<button type="button" class="h-back">← Назад к списку</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${ct}${mt}<div id="fx_box">${fixBox(s)}</div>`;
+      const bd=s.raw&&s.raw.bfact!==''&&s.raw.bfact!=null?num(s.raw.bfact)-num(s.raw.rev&&s.raw.rev.r_card):0;
+      one.innerHTML=`<button type="button" class="h-back">← Назад к списку</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${Math.abs(bd)>=0.01?`<p class="flag bad">⚠ Карта не сходится с безналом по сверкам: разница ${money(Math.abs(bd))}.</p>`:''}${ct}${mt}<div id="fx_box">${fixBox(s)}</div>`;
     }catch(x){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Нет связи с сервером.</p>'}
   }
   $('#hist_list').addEventListener('click',e=>{const b=e.target.closest('.h-item');if(b)openShift(b.dataset.id)});
@@ -776,6 +780,12 @@ body.boss .hist-head h2{font-size:26px}
     $('#o_rev').textContent=rub(rev);
     const f=$('#f_041');const r041=$('#r_041').value.trim();
     if(r041&&rev>0){const d=num(r041)-rev;f.className='flag '+(Math.abs(d)<0.01?'ok':'bad');f.textContent=Math.abs(d)<0.01?'Выручка сходится с отчётом 041.':`Расхождение с отчётом 041: ${rub(Math.abs(d))} (${d>0?'в 041 больше':'в отчёте больше'}).`;if(Math.abs(d)>=0.01)warns.push(['err','Выручка не сходится с отчётом 041 на '+rub(Math.abs(d))+'.'])}else{f.textContent=''}
+    // Карта должна совпадать с безналом по сверкам
+    {const fb=$('#f_bfact'),bf=$('#r_bfact').value.trim(),card=$('#r_card').value.trim();let bad=false;
+      if(bf!==''||card!==''){const d=num(bf)-num(card);bad=bf!==''&&Math.abs(d)>=0.01;
+        fb.className='flag '+(bad?'bad':'ok');fb.textContent=bf===''?'':bad?`Карта не сходится с безналом по сверкам: разница ${rub(Math.abs(d))} (${d>0?'по сверкам больше':'в «Карте» больше'}).`:'Карта сходится с безналом по сверкам.';
+        if(bad)warns.push(['err',`Карта (${rub(num(card))}) не сходится с безналом по сверкам (${rub(num(bf))}) — разница ${rub(Math.abs(d))}.`])}else fb.textContent='';
+      $('#r_card').classList.toggle('mismatch',bad);$('#r_bfact').classList.toggle('mismatch',bad)}
     $('#o_c_h').textContent=fmt(ch);$('#o_c_o').textContent=fmt(co);$('#o_c_x').textContent=fmt(cx);$('#o_c_x_box').hidden=!cx;$('#o_c_t').textContent=fmt(ct);$('#o_c_w').textContent=fmt(cw);$('#o_c_n').textContent=fmt(cn);$('#o_c_q').textContent=fmt(cq);
     $('#o_cour_sub').textContent=$$('.crow').length+' чел. · '+rub(ct);
     $('#o_exp_sub').textContent='расход '+rub(ex)+(inc?' · приход '+rub(inc):'');
