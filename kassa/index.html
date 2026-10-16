@@ -2,7 +2,9 @@
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Кассовый отчёт «Аппетит»</title>
-<link rel="icon" href="https://che.appetitfood.ru/upload/c3a4fcd8-7bad-4b1a-bd05-d080143e1c44/file_manager/theme/favicon.png" type="image/png">
+<link rel="icon" href="/icons/kassa-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/icons/kassa.ico" sizes="any">
+<link rel="apple-touch-icon" href="/icons/kassa-180.png">
 <meta name="description" content="Кассовый отчёт смены для кассиров «Аппетита»: выручка, выплаты курьерам, расходы, переданная сумма. Отправка в бухгалтерию и Excel-файл.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Кассовый отчёт «Аппетит»">
@@ -403,7 +405,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='32';
+  const BUILD='33';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
