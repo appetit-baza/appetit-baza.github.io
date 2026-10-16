@@ -392,7 +392,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='23';
+  const BUILD='24';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -581,7 +581,8 @@ body.boss .hist-head h2{font-size:26px}
   };
   // Челябинск — вручную (курьерская программа считает сама); Казань и Уфа — по зонам
   function zoneSet(){const b=$('#branch').value;return /казань/i.test(b)?'kzn':/уфа|челябинск/i.test(b)?'chu':null}
-  const zoneOptional=()=>/челябинск/i.test($('#branch').value); // в Челябинске зоны — по желанию, обычно вручную
+  const zoneOptional=()=>/челябинск|казань/i.test($('#branch').value); // Челябинск и Казань: обычно вручную из iiko, зоны — если iiko не работает
+  const zTogText=(open,id)=>id==='kzn'?(open?'Скрыть зоны ▴':'Посчитать по зонам ▾'):(open?'Скрыть километраж ▴':'Посчитать по километрам ▾');
   const zLabel=z=>(z[0]?z[0]+' ':'')+z[1];
   function ensureZones(r,id,opt){
     const key=id?id+(opt?'*':''):'';const box=r.querySelector('.zones');if(r.dataset.zs===key)return;
@@ -589,10 +590,10 @@ body.boss .hist-head h2{font-size:26px}
     if(!id){box.hidden=true;box.innerHTML='';return}
     const init=prev&&prev.id===id?prev.n:[];const has=init.some(v=>num(v)>0);
     box.classList.toggle('opt',!!opt);
-    box.innerHTML=(opt?`<button type="button" class="z-tog">${has?'Скрыть километраж ▴':'Посчитать по километрам ▾'}</button>`:'')+`<div class="zchips"${opt&&!has?' hidden':''}>`+ZONESETS[id].z.map((z,i)=>`<label class="z" style="--zc:${z[3]||'var(--muted)'}"><span>${esc(z[0]||z[1])}<small>${z[0]?esc(z[1])+' · ':''}${z[2]} ₽</small></span><input data-zi="${i}" inputmode="numeric" value="${esc(init[i]||'')}" aria-label="${esc(zLabel(z))}, заказов"></label>`).join('')+'</div>';
+    box.innerHTML=(opt?`<button type="button" class="z-tog">${zTogText(has,id)}</button>`:'')+`<div class="zchips"${opt&&!has?' hidden':''}>`+ZONESETS[id].z.map((z,i)=>`<label class="z" style="--zc:${z[3]||'var(--muted)'}"><span>${esc(z[0]||z[1])}<small>${z[0]?esc(z[1])+' · ':''}${z[2]} ₽</small></span><input data-zi="${i}" inputmode="numeric" value="${esc(init[i]||'')}" aria-label="${esc(zLabel(z))}, заказов"></label>`).join('')+'</div>';
     const ch=box.querySelector('.zchips');ch.style.setProperty('--zn',ZONESETS[id].z.length);ch.classList.toggle('v',ZONESETS[id].z.length>5);box.hidden=false;
   }
-  document.addEventListener('click',e=>{const t=e.target.closest('.z-tog');if(!t)return;const ch=t.parentElement.querySelector('.zchips');ch.hidden=!ch.hidden;t.textContent=ch.hidden?'Посчитать по километрам ▾':'Скрыть километраж ▴';if(!ch.hidden){const i=ch.querySelector('input');if(i)i.focus()}});
+  document.addEventListener('click',e=>{const t=e.target.closest('.z-tog');if(!t)return;const ch=t.parentElement.querySelector('.zchips');ch.hidden=!ch.hidden;t.textContent=zTogText(!ch.hidden,t.closest('.crow').dataset.zid);if(!ch.hidden){const i=ch.querySelector('input');if(i)i.focus()}});
   const REV=[['r_cash','Наличка'],['r_card','Б/Н расчет (картой)'],['r_ye','Деливери/ЯЕ'],['r_mp','МП (online)'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
 
   // ---------- rows
@@ -712,8 +713,8 @@ body.boss .hist-head h2{font-size:26px}
     // couriers
     let ch=0,co=0,cw=0,cn=0,cq=0,cx=0;
     const NOH=noHours();$('#sec-cour').classList.toggle('noh',NOH);
-    const ZS=zoneSet(),ZOPT=!!ZS&&zoneOptional(),zn=$('#zone_note');zn.hidden=!ZS||ZOPT;
-    if(ZS)zn.innerHTML=`Оплата курьеру за заказ по зонам (${ZONESETS[ZS].city}): впишите, сколько заказов в каждой зоне — «Заказов» и «За заказы» посчитаются сами.`;
+    const ZS=zoneSet(),ZOPT=!!ZS&&zoneOptional(),zn=$('#zone_note');zn.hidden=!ZS||(ZOPT&&ZS!=='kzn');
+    if(ZS)zn.innerHTML=ZOPT?'Впишите «Заказов» и «За заказы» из iiko. Если iiko не работает — нажмите у курьера «Посчитать по зонам», впишите заказы по зонам, и сумма посчитается сама.':`Оплата курьеру за заказ по зонам (${ZONESETS[ZS].city}): впишите, сколько заказов в каждой зоне — «Заказов» и «За заказы» посчитаются сами.`;
     $$('.crow').forEach(r=>{
       const g=k=>r.querySelector(`[data-k=${k}]`);
       ensureZones(r,ZS,ZOPT);
