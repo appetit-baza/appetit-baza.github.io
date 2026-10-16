@@ -405,7 +405,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='37';
+  const BUILD='38';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -692,7 +692,7 @@ body.boss .hist-head h2{font-size:26px}
     const r=document.createElement('div');r.className='erow';
     const inc=box==='inc';
     // дата прихода/расхода = дата кассовой смены (поле «Дата» в первом блоке)
-    r.innerHTML=`<div class="e-art"><span class="lbl-m">Статья</span><input data-k="art" list="articles" placeholder="${inc?'':'Такси сотрудникам'}" value="${esc(d.art)}" aria-label="Статья"></div>
+    r.innerHTML=`<div class="e-art"><span class="lbl-m">Статья</span><input data-k="art" ${inc?'':'list="articles" placeholder="Такси сотрудникам"'} value="${esc(d.art)}" aria-label="Статья"></div>
       <div><span class="lbl-m">Сумма</span><input data-k="sum" class="num" inputmode="decimal" value="${esc(d.sum)}" aria-label="Сумма"></div>
       <button type="button" class="del" aria-label="Удалить строку">×</button>`;
     $('#'+box).appendChild(r);
