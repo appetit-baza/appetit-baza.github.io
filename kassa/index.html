@@ -12,7 +12,7 @@
 :root{
   /* фирменный стиль «Аппетита» (appetitfood.ru): красный #ED1C24, светло-серый фон, белые карточки, системный шрифт */
   --bg:#F6F6F6; --surface:#FFFFFF; --ink:#00000F; --muted:#6B6B76; --line:#E6E6E8; --field:#F1F1F3;
-  --accent:#ED1C24; --accent-ink:#FFFFFF; --accent-soft:#FDE8E9; --accent-hover:#D3141C;
+  --accent:#D9474F; --accent-ink:#FFFFFF; --accent-soft:#FCEFEF; --accent-hover:#C73A42;
   --ok:#1E8E4E; --ok-soft:#E4F4EA;
   --warn:#C2410C; --warn-soft:#FDEDE3; --amber:#7A5600; --amber-soft:#FFF1C9; --note:#F1F1F3;
   --f-display:-apple-system,BlinkMacSystemFont,Roboto,"Segoe UI",Tahoma,sans-serif;
@@ -266,10 +266,12 @@ body.boss .hist-head h2{font-size:26px}
 .logo-gate{height:44px;margin:0 auto}
 .brand{font-weight:600;font-size:15px;padding-left:12px;border-left:1px solid var(--line)}
 .top{background:var(--surface);border-bottom:0;box-shadow:0 1px 0 var(--line)}
+.top a.kb{color:var(--ink)}
+.mob-bar a{background:var(--accent-soft);color:var(--accent)}
 h1,h2,.hist-head h2,.gate-box h2{font-weight:700;letter-spacing:0}
 .card,.res{border:0;border-radius:20px}
 .card{padding:22px}
-.card-h .no{background:var(--accent);color:var(--accent-ink);border-radius:50%;width:26px;height:26px;padding:0;display:inline-grid;place-items:center;font-family:var(--f-body);font-weight:700}
+.card-h .no{background:var(--accent-soft);color:var(--accent);border-radius:50%;width:26px;height:26px;padding:0;display:inline-grid;place-items:center;font-family:var(--f-body);font-weight:700}
 input,select{background:var(--field);border-color:transparent;border-radius:12px}
 input:focus,select:focus{outline:2px solid var(--accent);border-color:transparent}
 .calc{border-radius:12px}
@@ -279,10 +281,14 @@ input:focus,select:focus{outline:2px solid var(--accent);border-color:transparen
 .btn.sec{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
 .add{border-radius:15px}
 .sumrow div{border-radius:15px}
-.res .big{border-radius:15px}
+.res .big{border-radius:15px;background:var(--accent-soft);color:var(--ink)}
+.res .big b{color:var(--accent)}
+.res .big small,.res .big span{color:var(--muted)}
+.res .big.neg{background:var(--warn-soft)}
+.res .big.neg b{color:var(--warn)}
 .sent{background:var(--ok-soft);color:var(--ok)}
 .flag.ok,.fix-st.ok{color:var(--ok)}
-.wsel{background:var(--ok);border-color:var(--ok);color:#fff;border-radius:12px}
+.wsel{background:var(--ok-soft);border-color:var(--ok-soft);color:var(--ok);border-radius:12px}
 #cour .crow{background:var(--bg);border:0;border-radius:18px}
 #cour .crow input,#cour .crow select:not(.wsel){background:var(--surface)}
 #cour .crow input[readonly].zsum{background:var(--accent-soft);color:var(--accent)}
@@ -424,7 +430,7 @@ input:focus,select:focus{outline:2px solid var(--accent);border-color:transparen
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='26';
+  const BUILD='27';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
