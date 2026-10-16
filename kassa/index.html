@@ -392,7 +392,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='24';
+  const BUILD='25';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -488,8 +488,8 @@ body.boss .hist-head h2{font-size:26px}
   function bossXlsx(){
     if(!window.XLSX){toast('Excel не загрузился. Обновите страницу.');return}
     const RR=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'],kg=(x,k)=>x.redo&&x.redo.kinds&&x.redo.kinds[k]?x.redo.kinds[k]:[0,0];
-    const head=['Дата смены','Филиал','Администратор',...SUMF.map(x=>x[1]),'Довозов','Довозы, ₽',...RR.map(r=>'Довоз: '+r),'Шашка, ₽','Листовок, шт','Листовки, ₽','Другие доплаты, ₽','Отправлено','В итогах'];
-    const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),kg(x,'Довоз')[0],kg(x,'Довоз')[1],...RR.map(r=>x.redo&&x.redo.redo&&x.redo.redo[r]?x.redo.redo[r][0]:0),kg(x,'Шашка')[1],kg(x,'Листовки')[0],kg(x,'Листовки')[1],kg(x,'Другое')[1],x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
+    const head=['Дата смены','Филиал','Администратор',...SUMF.map(x=>x[1]),'Довозов','Довозы, ₽',...RR.map(r=>'Довоз: '+r),'Шашка, ₽','Листовок, шт','Листовки, ₽','Наклейки, ₽','Другие доплаты, ₽','Отправлено','В итогах'];
+    const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),kg(x,'Довоз')[0],kg(x,'Довоз')[1],...RR.map(r=>x.redo&&x.redo.redo&&x.redo.redo[r]?x.redo.redo[r][0]:0),kg(x,'Шашка')[1],kg(x,'Листовки')[0],kg(x,'Листовки')[1],kg(x,'Наклейка')[1],kg(x,'Другое')[1],x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
     const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map((h,i)=>({wch:i<3?(i===1?26:18):13}));
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Отчёты');
     const fn=`Отчёты ${ruDate($('#hb_from').value)}–${ruDate($('#hb_to').value)}.xlsx`;
@@ -603,13 +603,15 @@ body.boss .hist-head h2{font-size:26px}
   const wOf=w=>w==='p'?'p':w===false?'n':'y';
   const wGet=r=>r.querySelector('[data-k=w]').value||'y';
   document.addEventListener('change',e=>{const sel=e.target.closest('.wsel');if(!sel)return;const row=sel.closest('.crow');sel.dataset.v=sel.value;const wp=row.querySelector('.wpart');wp.hidden=sel.value!=='p';if(sel.value==='p')wp.querySelector('input').focus();calc()});
-  const XKINDS=['Довоз','Шашка','Листовки','Другое'];
+  const XKINDS=['Довоз','Шашка','Листовки','Наклейка','Другое'];
+  const STICKER=2000; // наклейка — фиксированная доплата
   const REDO_REASONS=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'];
   function zoneOpts(sel){const id=zoneSet();if(!id)return '<option value="">—</option>';return '<option value="">Зона…</option>'+ZONESETS[id].z.map(z=>{const l=zLabel(z);return `<option value="${esc(l)}"${l===sel?' selected':''}>${esc(l)} — ${z[2]} ₽</option>`}).join('')}
   function extraFields(x){
     const k=x.kind||'Довоз';
     if(k==='Довоз')return `<select data-xk="zone" aria-label="Зона">${zoneOpts(x.zone)}</select><select data-xk="reason" aria-label="Причина довоза"><option value="">Причина…</option>${REDO_REASONS.map(r=>`<option${r===x.reason?' selected':''}>${r}</option>`).join('')}</select><input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||1)}" aria-label="Количество довозов"><span class="xu">шт</span><span class="xsum" data-o="xs"></span>`;
     if(k==='Шашка')return `<input data-xk="sum" class="num" inputmode="decimal" placeholder="Сумма" value="${esc(x.sum)}" aria-label="Сумма за шашку"><span class="xu">₽</span>`;
+    if(k==='Наклейка')return `<span class="xsum">${rub(STICKER)}</span><span class="xu">фиксированная сумма</span>`;
     if(k==='Листовки')return `<input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||'')}" aria-label="Количество листовок"><span class="xu">шт</span><input data-xk="sum" class="num" inputmode="decimal" placeholder="Сумма" value="${esc(x.sum)}" aria-label="Сумма за листовки"><span class="xu">₽</span>`;
     return `<input data-xk="sum" class="num" inputmode="decimal" placeholder="Сумма" value="${esc(x.sum)}" aria-label="Сумма доплаты"><span class="xu">₽</span><input data-xk="note" placeholder="За что" value="${esc(x.reason)}" aria-label="Комментарий">`;
   }
@@ -622,6 +624,7 @@ body.boss .hist-head h2{font-size:26px}
     const g0=k=>el.querySelector(`[data-xk=${k}]`),g=k=>g0(k)||{value:''},kind=g('kind').value;
     if(kind==='Довоз'){const zone=g('zone').value,n=num(g('n').value)||0,id=zoneSet(),z=id?ZONESETS[id].z.find(q=>zLabel(q)===zone):null;return {kind,zone,reason:g('reason').value,n:g('n').value.trim(),sum:z?z[2]*n:0}}
     if(kind==='Листовки')return {kind,n:g('n').value.trim(),sum:num(g('sum').value)};
+    if(kind==='Наклейка')return {kind,sum:STICKER};
     if(kind==='Шашка')return {kind,sum:num(g('sum').value)};
     return {kind,reason:g('note').value.trim(),sum:num(g('sum').value)};
   }
@@ -643,7 +646,7 @@ body.boss .hist-head h2{font-size:26px}
       <button type="button" class="del" aria-label="Удалить строку">×</button>
       <div class="wpart"${wOf(d.w)==='p'?'':' hidden'}><label>Из них с изъятием, ₽ <input data-k="ws" class="num" inputmode="decimal" value="${esc(d.ws)}" aria-label="Сумма с изъятием"></label><span class="rest" data-o="wrest"></span></div>
       <div class="zones" hidden></div>
-      <div class="cx"><div class="cx-list"></div><button type="button" class="cx-add">+ Доплата (довоз, шашка, листовки…)</button></div>`;
+      <div class="cx"><div class="cx-list"></div><button type="button" class="cx-add">+ Доплата (довоз, шашка, листовки, наклейка…)</button></div>`;
     r.dataset.manual=''; // «За часы» только автоматически — вручную не вписать
     (d.ex||[]).forEach(x=>addExtra(r,x));r._zinit=d.z||null;
     $('#cour').appendChild(r);
