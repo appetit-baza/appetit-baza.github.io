@@ -263,6 +263,7 @@ body.boss .hist-head h2{font-size:26px}
 @media (max-width:640px){.brand small{display:none}.top a.kb{display:none}.user span.u-lbl{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 /* логотип «Аппетита» */
+.h-sub{margin:14px 0 8px;font-size:13px;font-weight:600;color:var(--muted)}
 .logo{height:32px;width:auto;display:block}
 .logo-gate{height:42px;margin:0 auto}
 @media (max-width:640px){.logo{height:26px}}
@@ -290,14 +291,18 @@ body.boss .hist-head h2{font-size:26px}
       <div class="field"><label for="admin">ФИО администратора</label><input id="admin" placeholder="Фамилия И.О." autocomplete="off"></div>
     </div>
     <div class="rev">
-      <div class="field"><label for="r_cash">Наличка</label><input id="r_cash" class="num" inputmode="decimal"></div>
-      <div class="field"><label for="r_card">Б/Н расчёт (картой)</label><input id="r_card" class="num" inputmode="decimal"></div>
-      <div class="field"><label for="r_ye">Деливери / ЯЕ</label><input id="r_ye" class="num" inputmode="decimal"></div>
-      <div class="field"><label for="r_mp">МП (online)</label><input id="r_mp" class="num" inputmode="decimal"></div>
+      <div class="field"><label for="r_mp">Онлайн</label><input id="r_mp" class="num" inputmode="decimal"></div>
+      <div class="field"><label for="r_cash">Наличные</label><input id="r_cash" class="num" inputmode="decimal"></div>
+      <div class="field"><label for="r_card">Карта</label><input id="r_card" class="num" inputmode="decimal"></div>
+      <div class="field"><label for="r_ye">Яндекс/Деливери</label><input id="r_ye" class="num" inputmode="decimal"></div>
       <div class="field"><label for="r_chib">Чиббис</label><input id="r_chib" class="num" inputmode="decimal"></div>
       <div class="field"><label for="r_sber">Сбермаркет</label><input id="r_sber" class="num" inputmode="decimal"></div>
       <div class="field"><label for="r_bon">Бонусы iiko (iikocard)</label><input id="r_bon" class="num" inputmode="decimal"></div>
+    </div>
+    <p class="h-sub">Сверка <span class="lbl-note">— в чат не отправляется</span></p>
+    <div class="rev">
       <div class="field"><label for="r_041">Итого по отчёту 041</label><input id="r_041" class="num" inputmode="decimal" placeholder="для сверки"></div>
+      <div class="field"><label for="r_bfact">Безнал факт (по сверкам)</label><input id="r_bfact" class="num" inputmode="decimal" placeholder="по сверкам"></div>
     </div>
     <div class="total-line"><span>Выручка всего</span><strong id="o_rev">0 ₽</strong></div>
     <div class="to-chat" id="to_chat" hidden><button type="button" class="btn sec" id="b_rev">Отправить выручку в чат «АДМИНЫ АППЕТИТ»</button><span class="hint" id="rev_sent"></span></div>
@@ -341,13 +346,13 @@ body.boss .hist-head h2{font-size:26px}
   <div class="res">
     <h3>Итоги смены</h3>
     <div class="line"><span>Выручка всего</span><span id="s_rev">0 ₽</span></div>
-    <div class="line"><span>Наличка</span><span id="s_cash">0 ₽</span></div>
+    <div class="line"><span>Наличные</span><span id="s_cash">0 ₽</span></div>
     <div class="line"><span>Расходы (курьеры)</span><span id="s_cour">0 ₽</span></div>
     <div class="line"><span>из них не делали изъятие</span><span id="s_noW">0 ₽</span></div>
     <div class="line"><span>Прочие расходы</span><span id="s_exp">0 ₽</span></div>
     <div class="line"><span>Приход</span><span id="s_inc">0 ₽</span></div>
     <div class="big" id="s_big"><small>Передана сумма</small><b id="s_pass">0 ₽</b></div>
-    <p class="formula" id="s_formula">Наличка − выплаты курьерам с изъятием</p>
+    <p class="formula" id="s_formula">Наличные − выплаты курьерам с изъятием</p>
   </div>
   <div class="warns" id="warns"></div>
   <p class="hint" style="margin:0" id="send_hint" hidden>Нужен Excel — скачайте до отправки: после отправки форма очистится.</p>
@@ -397,7 +402,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='30';
+  const BUILD='31';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -478,13 +483,13 @@ body.boss .hist-head h2{font-size:26px}
       $('#hist_list').innerHTML=r.shifts.map(x=>itemHtml(x,boss)).join('');
     }catch(e){$('#hist_list').innerHTML='<p class="hint">Нет связи с сервером. Попробуйте ещё раз.</p>'}
   }
-  const SUMF=[['rev','Выручка всего'],['cash','Наличка'],['card','Картой'],['ye','Деливери/ЯЕ'],['mp','МП (online)'],['chib','Чиббис'],['sber','Сбермаркет'],['bon','Бонусы iiko'],['ct','Курьерам'],['ex','Прочие расходы'],['inc','Приход'],['pass','Передано']];
+  const SUMF=[['rev','Выручка всего'],['mp','Онлайн'],['cash','Наличные'],['card','Карта'],['ye','Яндекс/Деливери'],['chib','Чиббис'],['sber','Сбермаркет'],['bon','Бонусы iiko'],['ct','Курьерам'],['ex','Прочие расходы'],['inc','Приход'],['pass','Передано']];
   function bossSum(){
     const rows=BOSS_ROWS.filter(x=>!x.old);const tot={};SUMF.forEach(([k])=>tot[k]=rows.reduce((a,x)=>a+(x[k]||0),0));
     const by={};rows.forEach(x=>{const b=by[x.branch]=by[x.branch]||{n:0,rev:0,cash:0,ct:0,ex:0,pass:0};b.n++;['rev','cash','ct','ex','pass'].forEach(k=>b[k]+=x[k]||0)});
     const tiles=SUMF.filter(([k])=>k==='rev'||tot[k]).map(([k,l])=>`<div class="hb-tile${k==='rev'?' main':''}"><small>${l}</small><b>${money(tot[k])}</b></div>`).join('');
     const names=Object.keys(by).sort((a,b)=>by[b].rev-by[a].rev);
-    const tbl=names.length>1?`<p class="h-sec">По филиалам</p><div class="h-table"><table><tr><th>Филиал</th><th class="n">Смен</th><th class="n">Выручка</th><th class="n">Наличка</th><th class="n">Курьерам</th><th class="n">Расходы</th><th class="n">Передано</th></tr>${names.map(n=>{const b=by[n];return `<tr><td>${esc(n)}</td><td class="n">${b.n}</td><td class="n"><b>${money(b.rev)}</b></td><td class="n">${money(b.cash)}</td><td class="n">${money(b.ct)}</td><td class="n">${money(b.ex)}</td><td class="n">${money(b.pass)}</td></tr>`}).join('')}</table></div>`:'';
+    const tbl=names.length>1?`<p class="h-sec">По филиалам</p><div class="h-table"><table><tr><th>Филиал</th><th class="n">Смен</th><th class="n">Выручка</th><th class="n">Наличные</th><th class="n">Курьерам</th><th class="n">Расходы</th><th class="n">Передано</th></tr>${names.map(n=>{const b=by[n];return `<tr><td>${esc(n)}</td><td class="n">${b.n}</td><td class="n"><b>${money(b.rev)}</b></td><td class="n">${money(b.cash)}</td><td class="n">${money(b.ct)}</td><td class="n">${money(b.ex)}</td><td class="n">${money(b.pass)}</td></tr>`}).join('')}</table></div>`:'';
     const K={},RD={};rows.forEach(x=>{if(!x.redo)return;const a=x.redo;Object.keys(a.kinds||{}).forEach(k=>{K[k]=K[k]||[0,0];K[k][0]+=a.kinds[k][0];K[k][1]+=a.kinds[k][1]});Object.keys(a.redo||{}).forEach(k=>{RD[k]=RD[k]||[0,0];RD[k][0]+=a.redo[k][0];RD[k][1]+=a.redo[k][1]})});
     const kn=Object.keys(K),rn=Object.keys(RD).sort((a,b)=>RD[b][0]-RD[a][0]);
     const xtbl=kn.length?`<p class="h-sec">Доплаты курьерам</p><div class="h-table"><table><tr><th>Вид</th><th class="n">Кол-во</th><th class="n">Сумма</th></tr>${kn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${K[k][0]}</td><td class="n">${money(K[k][1])}</td></tr>`).join('')}</table></div>`+(rn.length?`<p class="h-sec">Довозы по причинам</p><div class="h-table"><table><tr><th>Причина</th><th class="n">Довозов</th><th class="n">Сумма</th></tr>${rn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${RD[k][0]}</td><td class="n">${money(RD[k][1])}</td></tr>`).join('')}</table></div>`:''):'';
@@ -554,7 +559,7 @@ body.boss .hist-head h2{font-size:26px}
       const ex=(c.extras||[]).map(x=>({kind:x.kind,zone:x.zone,reason:x.reason,n:x.n,sum:x.kind==='Довоз'?'':x.sum}));
       return {z,ex,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),...(/частично/i.test(c.w)?{w:'p',ws:String((String(c.w).match(/([\d\s.,]+)\s*₽?\s*с изъятием/)||[])[1]||'').replace(/\s/g,'')}:{w:!/нет/i.test(c.w)}),manual:auto!==null&&auto!==num(c.hours)}});
     const mon=t=>s.money.filter(m=>m.type===t).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
-    return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,rev:s.raw.rev,cour,exp:mon('Расход'),inc:mon('Приход')};
+    return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,bfact:s.raw.bfact||'',rev:s.raw.rev,cour,exp:mon('Расход'),inc:mon('Приход')};
   }
   function setFix(f){FIX=f;if(USER){if(f)LS.set('fix:'+USER.name,f);else LS.del('fix:'+USER.name)}$('#fixbar').hidden=!f;if(f)$('#fix_date').textContent=f.date}
   $('#fix_cancel').addEventListener('click',()=>{setFix(null);dropDraft(true);loadFor(USER,null);toast('Исправление отменено')});
@@ -599,7 +604,7 @@ body.boss .hist-head h2{font-size:26px}
     const ch=box.querySelector('.zchips');ch.style.setProperty('--zn',ZONESETS[id].z.length);ch.classList.toggle('v',ZONESETS[id].z.length>5);box.hidden=false;
   }
   document.addEventListener('click',e=>{const t=e.target.closest('.z-tog');if(!t)return;const ch=t.parentElement.querySelector('.zchips');ch.hidden=!ch.hidden;t.textContent=zTogText(!ch.hidden,t.closest('.crow').dataset.zid);if(!ch.hidden){const i=ch.querySelector('input');if(i)i.focus()}});
-  const REV=[['r_cash','Наличка'],['r_card','Б/Н расчет (картой)'],['r_ye','Деливери/ЯЕ'],['r_mp','МП (online)'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
+  const REV=[['r_mp','Онлайн'],['r_cash','Наличные'],['r_card','Карта'],['r_ye','Яндекс/Деливери'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
 
   // ---------- rows
   function minutes(t){t=String(t||'').trim().replace(/[.,;\-]/g,':');if(/^\d{3,4}$/.test(t))t=t.slice(0,-2)+':'+t.slice(-2);if(!/^\d{1,2}:\d{2}$/.test(t))return null;const [h,m]=t.split(':').map(Number);if(h>24||m>59)return null;return h*60+m}
@@ -708,7 +713,7 @@ body.boss .hist-head h2{font-size:26px}
     if(r.dataset.zs.endsWith('*')&&!n.some(v=>num(v)>0))return {};
     return {z:{id,n},zt:ZONESETS[id].z.map((z,i)=>num(n[i])>0?`${zLabel(z)} × ${num(n[i])}`:'').filter(Boolean).join('; ')}}
   function state(){
-    const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),rev:{},cour:[],exp:[],inc:[]};
+    const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),bfact:$('#r_bfact').value.trim(),rev:{},cour:[],exp:[],inc:[]};
     REV.forEach(([id])=>s.rev[id]=$('#'+id).value.trim());
     $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:{y:true,n:false,p:'p'}[wGet(r)],ws:wGet(r)==='p'?g('ws').value.trim():'',manual:!!r.dataset.manual,...zoneState(r),ex:[...r.querySelectorAll('.xrow')].map(extraState).filter(x=>x.sum||x.kind==='Довоз'),exSum:num(r.dataset.ex)})});
     ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:g('date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:b==='exp'?g('w').getAttribute('aria-pressed')==='true':false})}));
@@ -777,7 +782,7 @@ body.boss .hist-head h2{font-size:26px}
     $('#s_rev').textContent=rub(rev);$('#s_cash').textContent=rub(rv.r_cash);$('#s_cour').textContent=rub(ct);$('#s_noW').textContent=rub(cn);$('#s_exp').textContent=rub(ex)+(exW?` (вычтено ${fmt(exW)})`:'');$('#s_inc').textContent=rub(inc);
     $('#s_pass').textContent=rub(pass);$('#m_pass').textContent=rub(pass);
     $('#s_big').classList.toggle('neg',pass<0);
-    $('#s_formula').textContent='Наличка − выплаты курьерам с изъятием'+(exW?' − расходы, отмеченные «Вычесть»':'');
+    $('#s_formula').textContent='Наличные − выплаты курьерам с изъятием'+(exW?' − расходы, отмеченные «Вычесть»':'');
     if(pass<0&&$('#r_cash').value.trim())warns.push(['err','Передана сумма отрицательная: выплат из кассы больше, чем наличных. Проверьте, кому платили из сейфа.']);
     if(!$('#branch').value)warns.push(['warn','Не выбран филиал.']);
     if(!$('#admin').value.trim())warns.push(['warn','Не указано ФИО администратора.']);
@@ -816,7 +821,7 @@ body.boss .hist-head h2{font-size:26px}
     if(server&&API_URL)api({action:'draft_save',pin:USER.pin,draft:null}).catch(()=>{})}
   function load(s){
     loading=true;
-    $('#branch').value=s.branch||'';$('#date').value=s.date||today();$('#admin').value=s.admin||'';$('#r_041').value=s.r041||'';
+    $('#branch').value=s.branch||'';$('#date').value=s.date||today();$('#admin').value=s.admin||'';$('#r_041').value=s.r041||'';$('#r_bfact').value=s.bfact||'';
     REV.forEach(([id])=>$('#'+id).value=(s.rev&&s.rev[id])||'');
     $('#cour').innerHTML='';$('#exp').innerHTML='';$('#inc').innerHTML='';
     (s.cour&&s.cour.length?s.cour:[{},{},{}]).forEach(addCour);
@@ -903,7 +908,7 @@ body.boss .hist-head h2{font-size:26px}
     const b=$('#b_send');
     if(b.dataset.sentFor===JSON.stringify(s)&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлен. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить в бухгалтерию'},4000);return}
     b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';$('#send_err').hidden=true;
-    const report={branch:s.branch,dateRu:ruDate(s.date),r041:s.r041,rev:s.rev,totals:{rev:R.rev,ct:R.ct,cw:R.cw,cn:R.cn,ex:R.ex,exW:R.exW,inc:R.inc,pass:R.pass},
+    const report={branch:s.branch,dateRu:ruDate(s.date),r041:s.r041,bfact:s.bfact,rev:s.rev,totals:{rev:R.rev,ct:R.ct,cw:R.cw,cn:R.cn,ex:R.ex,exW:R.exW,inc:R.inc,pass:R.pass},
       cour:s.cour,exp:s.exp.map(x=>({...x,dateRu:ruDate(x.date)})),inc:s.inc.map(x=>({...x,dateRu:ruDate(x.date)}))};
     try{const r=await api({action:'report',pin:USER.pin,report,fixOf:FIX?FIX.id:undefined});
       if(r.ok){const wasFix=!!FIX;dropDraft(false);setFix(null);loadFor(USER,null);draftMsg('');window.scrollTo({top:0});const t=new Date();$('#sent').textContent=`Отчёт за ${ruDate(s.date)} ${wasFix?'исправлен':'отправлен'} в ${pad(t.getHours())}:${pad(t.getMinutes())}, номер ${r.id}. Форма очищена — его можно открыть в «Мои смены».`;toast('Отчёт отправлен, форма очищена')}
@@ -923,6 +928,7 @@ body.boss .hist-head h2{font-size:26px}
     // sheet 1
     const s1=[['ФИЛИАЛ, АДРЕС',s.branch],['Дата:',ruDate(s.date)],['ФИО адм:',s.admin],[],['ВЫРУЧКА ВСЕГО:',R.rev]];
     REV.forEach(([id,name])=>s1.push([name,n(s.rev[id])]));
+    if(s.bfact)s1.push(['Безнал факт (по сверкам)',n(s.bfact)]);
     s1.push([],[],['РАСХОДЫ:',R.ct],['НЕ ДЕЛАЛИ ИЗЪЯТИЕ',R.cn||null],[],['ПЕРЕДАНА СУММА',R.pass]);
     if(R.exW)s1.push([],['в т.ч. вычтены прочие расходы',R.exW]);
     const w1=XLSX.utils.aoa_to_sheet(s1);w1['!cols']=[{wch:30},{wch:26}];XLSX.utils.book_append_sheet(wb,w1,'Сводка');

@@ -44,10 +44,10 @@ var SHEET_EXTRA = 'Доплаты курьерам';
 
 var HEADERS = {};
 HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен', 'Роль'];
-HEADERS[SHEET_REPORTS] = ['Отправлено', 'Дата смены', 'Филиал', 'Администратор', 'Выручка всего', 'Наличка',
-  'Б/Н расчет (картой)', 'Деливери/ЯЕ', 'МП (online)', 'Чиббис', 'Сбермаркет', 'Бонусы iiko (iikocard)',
+HEADERS[SHEET_REPORTS] = ['Отправлено', 'Дата смены', 'Филиал', 'Администратор', 'Выручка всего', 'Наличные',
+  'Карта', 'Яндекс/Деливери', 'Онлайн', 'Чиббис', 'Сбермаркет', 'Бонусы iiko (iikocard)',
   'Итого по 041', 'Курьерам всего', 'Делали изъятие', 'Не делали изъятие', 'Прочие расходы',
-  'из них вычтено', 'Приход', 'Передана сумма', 'Повторная отправка', 'ID отчёта', 'Заменён отчётом'];
+  'из них вычтено', 'Приход', 'Передана сумма', 'Повторная отправка', 'ID отчёта', 'Заменён отчётом', 'Безнал факт (по сверкам)'];
 HEADERS[SHEET_COURIERS] = ['ID отчёта', 'Дата смены', 'Филиал', 'Курьер', 'С', 'По', 'За часы', 'Заказов',
   'За заказы', 'Итого', 'Изъятие', 'Нет в справочнике', 'По зонам'];
 HEADERS[SHEET_MONEY] = ['ID отчёта', 'Дата смены', 'Филиал', 'Тип', 'Дата', 'Статья', 'Сумма', 'Вычтено из переданной'];
@@ -215,7 +215,7 @@ function fmtRub_(n) {
 
 function sendRevenue_(r, admin) {
   var rev = r.rev || {};
-  var names = [['r_cash', 'Наличка'], ['r_card', 'Б/Н картой'], ['r_ye', 'Деливери/ЯЕ'], ['r_mp', 'МП (online)'],
+  var names = [['r_mp', 'Онлайн'], ['r_cash', 'Наличные'], ['r_card', 'Карта'], ['r_ye', 'Яндекс/Деливери'],
     ['r_chib', 'Чиббис'], ['r_sber', 'Сбермаркет'], ['r_bon', 'Бонусы iiko']];
   var total = 0, lines = [];
   names.forEach(function (x) { var v = num_(rev[x[0]]); total += v; if (v) lines.push(x[1] + ': ' + fmtRub_(v)); });
@@ -299,6 +299,7 @@ function shift_(id, admin) {
     if (v === '' || v === null || (v === 0 && String(head[j]) !== 'Передана сумма')) continue;
     summary.push([String(head[j]), v instanceof Date ? d_(v) : v]);
   }
+  if (row[23] !== '' && row[23] !== null && row[23] !== undefined) summary.push(['Безнал факт (по сверкам)', row[23]]);
   var cour = ss.getSheetByName(SHEET_COURIERS).getDataRange().getDisplayValues().filter(function (r) { return r[0] === id; })
     .map(function (r) { return { name: r[3], from: r[4], to: r[5], hours: r[6], qty: r[7], orders: r[8], total: r[9], w: r[10], other: r[11], zones: r[12] || '', exSum: r[13] || '',
       extras: extraRows_().filter(function (x) { return String(x[0]) === id && String(x[4]) === String(r[3]); })
@@ -309,7 +310,8 @@ function shift_(id, admin) {
   var rev = {};
   ['r_cash', 'r_card', 'r_ye', 'r_mp', 'r_chib', 'r_sber', 'r_bon'].forEach(function (k, n) { rev[k] = row[5 + n] === 0 ? '' : String(row[5 + n]); });
   var dk = dkey_(row[1]);
-  var raw = { date: dk ? String(dk).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : '', branch: String(row[2]), r041: String(row[12] === '' ? '' : row[12]), rev: rev };
+  var raw = { date: dk ? String(dk).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : '', branch: String(row[2]), r041: String(row[12] === '' ? '' : row[12]),
+    bfact: row[23] === '' || row[23] === undefined || row[23] === null ? '' : String(row[23]), rev: rev };
   return { id: id, own: String(row[3]).trim() === admin.name, admin: String(row[3]), replaced: String(row[22] || ''),
     fix: f ? { status: f.status, rid: f.rid, reason: f.reason } : null, raw: raw, summary: summary, cour: cour, money: money };
 }
@@ -495,6 +497,13 @@ function num_(v) {
   return isFinite(n) ? n : 0;
 }
 
+// Новые названия видов оплаты и столбец «Безнал факт» в листе «Отчёты» (для уже работающей таблицы)
+function ensureReportHeaders_(rep) {
+  var h = rep.getRange('F1:I1').getValues()[0];
+  if (String(h[0]) === 'Наличка') rep.getRange('F1:I1').setValues([['Наличные', 'Карта', 'Яндекс/Деливери', 'Онлайн']]);
+  if (!String(rep.getRange('X1').getValue()).trim()) rep.getRange('X1').setValue('Безнал факт (по сверкам)').setFontWeight('bold');
+}
+
 function saveReport_(r, admin) {
   var ss = ss_();
   var id = Utilities.formatDate(new Date(), 'Europe/Moscow', 'yyMMdd-HHmmss') + '-' + Math.floor(Math.random() * 900 + 100);
@@ -508,7 +517,8 @@ function saveReport_(r, admin) {
   rep.appendRow([new Date(), r.dateRu, branch, admin.name, num_(t.rev), num_(rev.r_cash), num_(rev.r_card),
     num_(rev.r_ye), num_(rev.r_mp), num_(rev.r_chib), num_(rev.r_sber), num_(rev.r_bon),
     r.r041 ? num_(r.r041) : '', num_(t.ct), num_(t.cw), num_(t.cn), num_(t.ex), num_(t.exW), num_(t.inc),
-    num_(t.pass), repeat ? 'да' : '', id]);
+    num_(t.pass), repeat ? 'да' : '', id, '', r.bfact ? num_(r.bfact) : '']);
+  ensureReportHeaders_(rep);
   var cs = ss.getSheetByName(SHEET_COURIERS);
   if ((r.cour || []).some(function (c) { return c.zt || (c.ex && c.ex.length); })) ensureZonesHeader_();
   var xs = null;
