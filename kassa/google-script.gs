@@ -220,11 +220,14 @@ function sendRevenue_(r, admin) {
   var total = 0, lines = [];
   names.forEach(function (x) { var v = num_(rev[x[0]]); total += v; if (v) lines.push(x[1] + ': ' + fmtRub_(v)); });
   if (!total) return { ok: false, error: 'empty' };
-  var text = '💰 Выручка ' + (r.dateRu || '') + '\n' + (r.branch || admin.branch) + '\nАдминистратор: ' + admin.name +
-    '\n\n' + lines.join('\n') + '\n\nВСЕГО: ' + fmtRub_(total) + '\n\n' + redoText_(r.redo);
+  // филиал — первой строкой, жирным и заглавными, чтобы сразу было видно (формат HTML в MAX)
+  var h = function (s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var text = '📍 <b>' + h(r.branch || admin.branch).toUpperCase() + '</b>\n' +
+    '💰 Выручка ' + h(r.dateRu) + '\nАдминистратор: ' + h(admin.name) +
+    '\n\n' + h(lines.join('\n')) + '\n\n<b>ВСЕГО: ' + fmtRub_(total) + '</b>\n\n' + h(redoText_(r.redo));
   var chat = maxChatId_();
   if (!chat) return { ok: false, error: PropertiesService.getScriptProperties().getProperty('MAX_TOKEN') ? 'no_chat' : 'no_token' };
-  var res = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: text });
+  var res = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: text, format: 'html' });
   if (res.code >= 200 && res.code < 300) return { ok: true };
   return { ok: false, error: 'max_' + res.code };
 }
