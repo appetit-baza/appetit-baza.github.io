@@ -185,7 +185,9 @@ var MAX_CHAT_TITLE = 'АДМИНЫ АППЕТИТ';
 function maxFetch_(method, path, payload) {
   var token = PropertiesService.getScriptProperties().getProperty('MAX_TOKEN');
   if (!token) return { code: 0, error: 'no_token' };
-  var opt = { method: method, headers: { Authorization: token }, muteHttpExceptions: true };
+  // У MAX (platform-api2.max.ru) сертификат российского УЦ Минцифры, которому серверы Google не доверяют.
+  // Поэтому проверку сертификата отключаем ТОЛЬКО для запросов к MAX (решение согласовано с Алиной 19.10.2026).
+  var opt = { method: method, headers: { Authorization: token }, muteHttpExceptions: true, validateHttpsCertificates: false };
   if (payload) { opt.contentType = 'application/json'; opt.payload = JSON.stringify(payload); }
   var r = UrlFetchApp.fetch(MAX_API + path, opt);
   var body = {};
@@ -237,6 +239,15 @@ function redoText_(list) {
   var n = 0, parts = [];
   (list || []).forEach(function (x) { var k = num_(x[1]); if (!k) return; n += k; parts.push(String(x[0] || 'причина не указана') + ' ' + k); });
   return '🚚 Довозы: ' + n + (n ? ' — ' + parts.join(', ') : '');
+}
+
+// Пробное сообщение в чат — с пометкой «ТЕСТ». Запускать вручную из редактора.
+function testMaxSend() {
+  var chat = maxChatId_();
+  Logger.log('Чат: ' + chat);
+  if (!chat) return;
+  var r = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: '🔧 ТЕСТ: проверка связи сайта кассовых отчётов с чатом. Отвечать не нужно.' });
+  Logger.log('Ответ MAX: ' + r.code + ' ' + JSON.stringify(r.body).slice(0, 300));
 }
 
 // Запустите вручную после того, как добавите бота в чат: проверит ключ и найдёт чат.
