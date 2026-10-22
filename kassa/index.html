@@ -297,6 +297,7 @@ td.hm{background:color-mix(in srgb,var(--s1) var(--a),transparent)}
 .sv-chip{display:inline-block;background:var(--note);border-radius:7px;padding:1px 7px;margin:2px 2px 0 0;color:var(--ink)}
 .mk{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:var(--muted);white-space:nowrap;margin-left:10px;cursor:pointer}.mk input{width:16px;height:16px;accent-color:var(--accent)}
 .iiko-ok{color:var(--accent);font-weight:600}.iiko-no{color:var(--amber);font-weight:600}
+.toi-day td{background:var(--note);padding-top:10px}.toi-dayb{width:auto!important;padding:3px 10px!important;font-size:12.5px!important;margin-left:8px}
 .cash-card{border:1px solid var(--line);border-radius:14px;padding:14px;margin:14px 0;background:var(--surface)}
 .cash-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
 .cash-bal{font-size:22px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
@@ -486,7 +487,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='57';
+  const BUILD='58';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -602,7 +603,7 @@ body.boss .hist-head h2{font-size:26px}
     return h+t('Расход по статьям',A.exp)+t('Приход по статьям',A.inc);
   }
   // ================= статистика руководителя: вкладки =================
-  const STABS=[['sum','Итоги'],['cash','Касса'],['iiko','Сверка с iiko'],['disc','Сдача отчётов'],['rev','Выручка'],['pay','Оплаты'],['cour','Курьеры'],['redo','Довозы'],['bf','Сверка']];
+  const STABS=[['sum','Итоги'],['cash','Касса'],['toiiko','В iiko'],['iiko','Сверка с iiko'],['disc','Сдача отчётов'],['rev','Выручка'],['pay','Оплаты'],['cour','Курьеры'],['redo','Довозы'],['bf','Сверка']];
   let STAB=(LS.get('stab')||'sum'),ITOGI_HTML='',PREV={key:'',rows:null,busy:false};
   const LATE_HOUR=12; // отчёт вовремя, если отправлен до 12:00 (МСК) следующего дня
   const RR4=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'];
@@ -887,12 +888,44 @@ body.boss .hist-head h2{font-size:26px}
       <p class="h-sec">Расхождения</p>${dt}<p class="h-sec">Все дни</p>${all}<div style="margin-top:8px"><button type="button" class="btn ghost" data-act="iikoretry">Обновить данные iiko</button></div>`;
   }
   $('#hb_sum').addEventListener('click',e=>{if(e.target.closest('[data-act=iikoretry]')){IIKO={key:'',busy:false,data:null,err:''};renderBoss()}});
+
+  // ---------- 9. сводка «к занесению в iiko»: приходы/расходы по кассам, которые ещё не отмечены
+  const CASH_ACC={'Казань, Ильгама Шакирова 17':'Касса Казань Ильгама Шакирова · 1.01.01','Казань, проспект Ямашева 61к3':'Касса Казань Ямашева · 1.01.02','Казань, Академика Глушко 35':'Касса Казань Глушко · 1.01.03','Казань, Хади Такташа 121':'Касса Казань Хади Такташа · 1.01.04','Челябинск, Каслинская 101Б':'Касса Челябинск · 1.01.07','Уфа, Шафиева 50/1':'Касса Уфа · 1.01.09'};
+  let TOI_ALL=false;
+  function toiData(){
+    const rows=liveRows(),sel=$('#hb_branch').value,out=[];
+    rows.filter(x=>!sel||x.branch===sel).forEach(x=>(x.money||[]).forEach(m=>out.push({x,type:m[0],art:m[1],sum:m[2],done:!!m[3],idx:m[4]})));
+    out.sort((a,b)=>brIdx(a.x.branch)-brIdx(b.x.branch)||a.x.dk-b.x.dk||(a.type===b.type?0:a.type==='Приход'?-1:1));
+    return out;
+  }
+  function toiHtml(){
+    const all=toiData();if(all.some(r=>r.idx===undefined))return '<p class="hint">Сводка появится после обновления скрипта в Google-таблице.</p>';
+    const todo=all.filter(r=>!r.done),list=TOI_ALL?all:todo,canMk=!USER.viewer;
+    const sIn=todo.filter(r=>r.type==='Приход').reduce((a,r)=>a+r.sum,0),sEx=todo.filter(r=>r.type!=='Приход').reduce((a,r)=>a+r.sum,0);
+    const tiles=tile('Не занесено строк',todo.length,`из ${all.length}`,todo.length?'t-amber':'')+tile('Приходы к занесению',money(sIn))+tile('Расходы к занесению',money(sEx));
+    if(!list.length)return `<div class="hb-tiles">${tiles}</div><p class="hint">${all.length?'Всё за выбранный период занесено в iiko ✓':'За период нет приходов и расходов.'}</p>${all.length?`<button type="button" class="btn ghost" data-act="toiall">${TOI_ALL?'Только незанесённые':'Показать занесённые'}</button>`:''}`;
+    const by={};list.forEach(r=>{(by[r.x.branch]=by[r.x.branch]||[]).push(r)});
+    const cards=Object.keys(by).map(b=>{const L=by[b],days={};L.forEach(r=>{(days[r.x.dk]=days[r.x.dk]||[]).push(r)});
+      const body=Object.keys(days).sort().map(k=>{const D=days[k],x=D[0].x,und=D.filter(r=>!r.done).length;
+        return `<tr class="toi-day"><td colspan="4"><b>${esc(x.date)}</b> <span class="mut">· ${esc(x.admin)}</span> <a href="#" data-open="${esc(x.id)}" class="mut">смена</a>${canMk&&und?` <button type="button" class="btn ghost toi-dayb" data-toiday="${esc(x.id)}">✓ отметить день</button>`:''}</td></tr>`+
+          D.map(r=>`<tr${r.done?' class="mut"':''}><td>${r.type==='Приход'?'<span class="t-up">приход</span>':'<span class="t-warn">расход</span>'}</td><td>${esc(r.art||'—')}</td><td class="n"><b>${money(r.sum)}</b></td><td>${canMk?`<label class="mk"><input type="checkbox" data-toi="${esc(x.id)}|${r.idx}"${r.done?' checked':''}> в iiko</label>`:(r.done?'<span class="iiko-ok">✓ в iiko</span>':'<span class="mut">не в iiko</span>')}</td></tr>`).join('')}).join('');
+      const t=L.filter(r=>!r.done).reduce((a,r)=>a+(r.type==='Приход'?r.sum:-r.sum),0);
+      return `<div class="cash-card"><div class="cash-h"><p class="h-sec" style="margin:0">${esc(CASH_ACC[b]||b)}</p><span class="mut" style="font-size:13px">${esc(brShort(b))} · не занесено: ${L.filter(r=>!r.done).length}</span></div><div class="h-table" style="margin-top:8px"><table>${body}</table></div></div>`}).join('');
+    return `<div class="hb-tiles">${tiles}</div><p class="hint">Приходы и расходы из отчётов админов, сгруппированные по кассам iiko. Вносите в iiko по порядку и ставьте галочку — строка уйдёт из списка. Период и филиал — из фильтра сверху.</p>
+      <button type="button" class="btn ghost" data-act="toiall">${TOI_ALL?'Только незанесённые':'Показать и занесённые'}</button>${cards}`;
+  }
+  async function toiMark(id,idx,on){const r=await api({action:'iiko_mark',pin:USER.pin,id,idx,on});if(!r.ok)throw new Error(r.error);
+    const x=BOSS_ROWS.find(z=>z.id===id);if(x&&x.money)x.money.forEach(m=>{if(idx===-1||m[4]===idx)m[3]=on?1:0})}
+  $('#hb_sum').addEventListener('change',async e=>{const c=e.target.closest('[data-toi]');if(!c)return;const [id,i]=c.dataset.toi.split('|');c.disabled=true;
+    try{await toiMark(id,+i,c.checked);toast(c.checked?'Отмечено: занесено в iiko':'Отметка снята');setTimeout(()=>{if(STAB==='toiiko')renderBoss()},500)}catch(x){c.checked=!c.checked;toast('Не сохранилось')}c.disabled=false});
+  $('#hb_sum').addEventListener('click',async e=>{if(e.target.closest('[data-act=toiall]')){TOI_ALL=!TOI_ALL;renderBoss();return}
+    const d=e.target.closest('[data-toiday]');if(!d)return;d.disabled=true;try{await toiMark(d.dataset.toiday,-1,true);toast('День отмечен как занесённый');renderBoss()}catch(x){toast('Не сохранилось');d.disabled=false}});
   // ---------- вкладки
   function renderBoss(){
     const tabs=`<div class="hb-tabs" role="tablist">${STABS.map(([k,l])=>`<button type="button" role="tab" data-tab="${k}" aria-selected="${k===STAB}">${l}</button>`).join('')}</div>`;
     const xl=`<div style="display:flex;justify-content:flex-end;margin-top:14px"><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
     let body='';
-    try{body=STAB==='sum'?ITOGI_HTML:STAB==='disc'?discHtml():STAB==='rev'?revHtml():STAB==='pay'?payHtml():STAB==='cour'?courHtml():STAB==='redo'?redoHtml():STAB==='cash'?cashHtml():STAB==='iiko'?iikoHtml():bfHtml()}
+    try{body=STAB==='sum'?ITOGI_HTML:STAB==='disc'?discHtml():STAB==='rev'?revHtml():STAB==='pay'?payHtml():STAB==='cour'?courHtml():STAB==='redo'?redoHtml():STAB==='cash'?cashHtml():STAB==='iiko'?iikoHtml():STAB==='toiiko'?toiHtml():bfHtml()}
     catch(e){console.error(e);body='<p class="hint">Не удалось посчитать статистику. Обновите страницу.</p>'}
     $('#hb_sum').innerHTML=tabs+body+(STAB==='sum'?'':xl);
     $('#hist_list').hidden=STAB!=='sum';
@@ -923,6 +956,7 @@ body.boss .hist-head h2{font-size:26px}
     add('Структура оплат',[['Филиал',...PAY.map(p=>p[1]+', ₽'),...PAY.map(p=>p[1]+', %')]].concat([['Все филиалы',rows]].concat(brs.map(b=>[b,rows.filter(x=>x.branch===b)])).map(([n,rs])=>{const t=PAY.reduce((a,[k])=>a+sum(rs,k),0);return [n,...PAY.map(([k])=>sum(rs,k)),...PAY.map(([k])=>Math.round(pct(sum(rs,k),t)*10)/10)]})),[30]);
     const C=courData();add('Курьеры',[['Курьер','Филиал','Смен','Заказов','За часы','За заказы','Доплаты','Итого']].concat(C.C.map(c=>[c.nm,c.b,c.n,c.q,c.h,c.o,c.e,c.t])),[28,30]);
     if(CASH.loaded&&!CASH.err){const cs=[['Филиал','Дата','Начало дня','Наличные','Курьерам из кассы','Приход','Расход','Остаток','Отчёт']];cashData().filter(x=>!x.none).forEach(x=>x.days.forEach(o=>cs.push([x.b,dkRu(o.k)+'.'+Math.floor(o.k/1e4),Math.round(o.start*100)/100,o.cash||0,o.cw||0,o.inc||0,o.ex||0,Math.round(o.bal*100)/100,o.x?'есть':'нет'])));add('Касса',cs,[30,12,14,12,16,10,10,14,8])}
+    {const t=[['Касса iiko','Филиал','Дата','Администратор','Тип','Статья','Сумма','Занесено']];toiData().forEach(r=>t.push([CASH_ACC[r.x.branch]||r.x.branch,r.x.branch,r.x.date,r.x.admin,r.type,r.art,r.sum,r.done?'да':'']));add('К занесению в iiko',t,[34,30,12,22,9,30,12,10])}
     const Rd=redoData();add('Довозы',[['Администратор на смене','Смен','Довозов','Сумма',...Rd.rs]].concat(Object.entries(Rd.A).map(([n,a])=>[n,a.sh,a.n,a.s,...Rd.rs.map(r=>a.r[r]||0)])),[24]);
     add('Сверка',[['Дата','Филиал','Администратор','Карта','Безнал по сверкам','Разница']].concat(rows.filter(x=>x.bdiff).map(x=>[x.date,x.branch,x.admin,x.card,x.bfact,x.bdiff])),[12,30,22]);
   }

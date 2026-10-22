@@ -717,11 +717,14 @@ function courMap_() {
 function moneyMap_() {
   var m = {}, sh = ss_().getSheetByName(SHEET_MONEY);
   if (!sh) return m;
+  var cnt = {};
   sh.getDataRange().getValues().slice(1).forEach(function (r) {
     var id = String(r[0]), s = num_(r[6]);
-    if (!id || !s) return;
-    // 4-й элемент — отмечено ли «занесено в iiko» (столбец I)
-    (m[id] = m[id] || []).push([String(r[3]), String(r[5] || '').trim(), s, String(r[8] || '') ? 1 : 0]);
+    if (!id) return;
+    var idx = cnt[id] = (cnt[id] === undefined ? 0 : cnt[id] + 1); // номер строки внутри смены (как в карточке смены)
+    if (!s) return;
+    // 4-й элемент — отмечено ли «занесено в iiko» (столбец I), 5-й — номер строки для отметки
+    (m[id] = m[id] || []).push([String(r[3]), String(r[5] || '').trim(), s, String(r[8] || '') ? 1 : 0, idx]);
   });
   return m;
 }
