@@ -282,6 +282,8 @@ td.hm{background:color-mix(in srgb,var(--s1) var(--a),transparent)}
 .pb{display:flex;gap:2px;height:18px}
 .pb i{display:block;min-width:2px;height:100%}
 .pb i:first-child{border-radius:4px 0 0 4px}.pb i:last-child{border-radius:0 4px 4px 0}.pb i:only-child{border-radius:4px}
+.chip-d{display:inline-block;background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:2px 8px;margin:2px 0;font-size:13px;white-space:nowrap}
+.warn-box{background:var(--amber-soft);color:var(--amber);border-radius:12px;padding:10px 14px;margin:10px 0;font-size:14px}
 .cash-card{border:1px solid var(--line);border-radius:14px;padding:14px;margin:14px 0;background:var(--surface)}
 .cash-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
 .cash-bal{font-size:22px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
@@ -471,7 +473,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='54';
+  const BUILD='55';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -587,7 +589,7 @@ body.boss .hist-head h2{font-size:26px}
     return h+t('Расход по статьям',A.exp)+t('Приход по статьям',A.inc);
   }
   // ================= статистика руководителя: вкладки =================
-  const STABS=[['sum','Итоги'],['cash','Касса'],['disc','Сдача отчётов'],['rev','Выручка'],['pay','Оплаты'],['cour','Курьеры'],['redo','Довозы'],['bf','Сверка']];
+  const STABS=[['sum','Итоги'],['cash','Касса'],['iiko','Сверка с iiko'],['disc','Сдача отчётов'],['rev','Выручка'],['pay','Оплаты'],['cour','Курьеры'],['redo','Довозы'],['bf','Сверка']];
   let STAB=(LS.get('stab')||'sum'),ITOGI_HTML='',PREV={key:'',rows:null,busy:false};
   const LATE_HOUR=12; // отчёт вовремя, если отправлен до 12:00 (МСК) следующего дня
   const RR4=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'];
@@ -838,12 +840,46 @@ body.boss .hist-head h2{font-size:26px}
     b.disabled=true;try{const r=await api({action:'cash_start',pin:USER.pin,branch:f.dataset.branch,date:d.replace(/-/g,''),amount:a});
       if(r.ok){toast('Остаток сохранён');CASH.loaded=false;renderBoss()}else toast(r.error==='view_only'?'Только просмотр':'Не сохранилось')}catch(x){toast('Нет связи с сервером')}
     b.disabled=false});
+
+  // ---------- 8. сверка выручки с iiko по типам оплат
+  let IIKO={key:'',busy:false,data:null,err:''};
+  const IF=[['r_mp','mp','Онлайн'],['r_cash','cash','Наличные'],['r_card','card','Карта'],['r_ye','ye','Яндекс/Деливери'],['r_chib','chib','Чиббис'],['r_sber','sber','Сбермаркет'],['r_bon','bon','Бонусы iiko']];
+  async function loadIiko(f,t){const key=f+'|'+t;if(IIKO.key===key&&(IIKO.busy||IIKO.data||IIKO.err))return;IIKO={key,busy:true,data:null,err:''};
+    try{const r=await api({action:'iiko_check',pin:USER.pin,from:String(f),to:String(t)});if(IIKO.key!==key)return;if(r.ok)IIKO.data=r.iiko||{};else IIKO.err=r.error||'err'}catch(e){if(IIKO.key===key)IIKO.err='net'}
+    IIKO.busy=false;if(STAB==='iiko')renderBoss()}
+  function iikoHtml(){
+    const f=isoDk($('#hb_from').value),t=Math.min(isoDk($('#hb_to').value),todayDk());if(!f||!t||t<f)return '<p class="hint">Выберите период.</p>';
+    loadIiko(f,t);
+    if(IIKO.busy||(!IIKO.data&&!IIKO.err))return '<p class="hint">Запрашиваю выручку в iiko… Это может занять до минуты.</p>';
+    if(IIKO.err){const e=IIKO.err;
+      if(e==='no_iiko_key')return '<div class="fixbox"><p><b>iiko ещё не подключён.</b> Нужно внести ключи iiko в «Свойства скрипта» Google-таблицы: IIKO_API_KEY, IIKO_APP_ID, IIKO_CLIENT_SECRET. Как получить — в чате с Claude.</p></div>';
+      if(e==='unknown_action'||e==='not_boss')return '<p class="hint">Сверка появится после обновления скрипта в Google-таблице.</p>';
+      if(e==='period_too_long')return '<p class="hint">Для сверки выберите период не больше 3 месяцев.</p>';
+      return `<div class="fixbox"><p><b>iiko не ответил.</b> ${esc(e)}</p><button type="button" class="btn sec" data-act="iikoretry">Повторить</button></div>`}
+    const sel=$('#hb_branch').value,rows=liveRows(),by={};rows.forEach(x=>{if(x.dk>=f&&x.dk<=t)by[x.dk+'|'+x.branch]=x});
+    const keys=new Set(Object.keys(by));Object.keys(IIKO.data).forEach(k=>{const [d,b]=k.split('|');if(+d>=f&&+d<=t)keys.add(k)});
+    const list=[...keys].filter(k=>!sel||k.split('|')[1]===sel).map(k=>{const [d,b]=k.split('|'),x=by[k],io=IIKO.data[k]||null;
+      const diffs=[];let sSite=0,sIiko=0;IF.forEach(([rk,hk,l])=>{const a=x?(x[hk]||0):0,c=io?(io[rk]||0):0;sSite+=a;sIiko+=c;if(x&&io&&Math.abs(a-c)>=1)diffs.push({l,a,c})});
+      const other=io?Object.entries(io.other||{}):[];
+      const st=!x?'noreport':!io?'noiiko':diffs.length?'diff':'ok';
+      return {k,dk:+d,b,x,io,diffs,other,st,sSite,sIiko}}).sort((p,q)=>q.dk-p.dk||brIdx(p.b)-brIdx(q.b));
+    const cnt=s=>list.filter(o=>o.st===s).length,others={};list.forEach(o=>o.other.forEach(([n,v])=>others[n]=(others[n]||0)+v));
+    const tiles=tile('Совпало с iiko',cnt('ok'),'смен')+tile('Расхождения',cnt('diff'),'смен',cnt('diff')?'t-bad':'')+tile('Продажи в iiko есть, отчёта нет',cnt('noreport'),'дней',cnt('noreport')?'t-amber':'')+tile('Отчёт есть, в iiko продаж нет',cnt('noiiko'),'смен',cnt('noiiko')?'t-amber':'');
+    const ST={ok:'<span class="t-up">✓ совпадает</span>',diff:'<b class="t-warn">расхождение</b>',noreport:'<b class="t-warn">нет отчёта</b>',noiiko:'<span class="mut">нет данных iiko</span>'};
+    const bad=list.filter(o=>o.st==='diff');
+    const dt=bad.length?tbl(['Дата','Филиал','Администратор','Где не сходится (сайт → iiko)',['Итого сайт'],['Итого iiko']],bad.map(o=>`<tr class="clk" data-open="${esc(o.x.id)}"><td>${dkRu(o.dk)}</td><td>${esc(brShort(o.b))}</td><td>${esc(o.x.admin)}</td><td>${o.diffs.map(d=>`<span class="chip-d">${esc(d.l)}: ${money(d.a)} → ${money(d.c)} <b>${d.c-d.a>0?'+':''}${money(Math.round((d.c-d.a)*100)/100)}</b></span>`).join(' ')}</td><td class="n">${money(o.sSite)}</td><td class="n">${money(o.sIiko)}</td></tr>`)):'<p class="hint">Расхождений по типам оплат нет.</p>';
+    const all=list.length?tbl(['Дата','Филиал',['Выручка на сайте'],['Выручка в iiko'],['Разница'],'Статус'],list.map(o=>`<tr${o.x?` class="clk" data-open="${esc(o.x.id)}"`:''}><td>${dkRu(o.dk)}</td><td>${esc(brShort(o.b))}</td><td class="n">${o.x?money(o.sSite):'—'}</td><td class="n">${o.io?money(o.sIiko):'—'}</td><td class="n">${o.x&&o.io?money(Math.round((o.sIiko-o.sSite)*100)/100):'—'}</td><td>${ST[o.st]}</td></tr>`)):'<p class="hint">За период нет ни отчётов, ни продаж в iiko.</p>';
+    const ot=Object.keys(others).length?`<div class="warn-box">В iiko есть типы оплат, которые сайт не узнал: ${Object.entries(others).map(([n,v])=>`<b>${esc(n)}</b> (${money(Math.round(v))})`).join(', ')}. Укажите для них поле на листе «iiko: типы оплат» в таблице.</div>`:'';
+    return `<div class="hb-tiles">${tiles}</div>${ot}<p class="hint">Сайт сравнивает выручку из отчётов админов с продажами в iiko за тот же день по каждому типу оплаты. Расхождение — если разница по типу оплаты 1 ₽ и больше.</p>
+      <p class="h-sec">Расхождения</p>${dt}<p class="h-sec">Все дни</p>${all}<div style="margin-top:8px"><button type="button" class="btn ghost" data-act="iikoretry">Обновить данные iiko</button></div>`;
+  }
+  $('#hb_sum').addEventListener('click',e=>{if(e.target.closest('[data-act=iikoretry]')){IIKO={key:'',busy:false,data:null,err:''};renderBoss()}});
   // ---------- вкладки
   function renderBoss(){
     const tabs=`<div class="hb-tabs" role="tablist">${STABS.map(([k,l])=>`<button type="button" role="tab" data-tab="${k}" aria-selected="${k===STAB}">${l}</button>`).join('')}</div>`;
     const xl=`<div style="display:flex;justify-content:flex-end;margin-top:14px"><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
     let body='';
-    try{body=STAB==='sum'?ITOGI_HTML:STAB==='disc'?discHtml():STAB==='rev'?revHtml():STAB==='pay'?payHtml():STAB==='cour'?courHtml():STAB==='redo'?redoHtml():STAB==='cash'?cashHtml():bfHtml()}
+    try{body=STAB==='sum'?ITOGI_HTML:STAB==='disc'?discHtml():STAB==='rev'?revHtml():STAB==='pay'?payHtml():STAB==='cour'?courHtml():STAB==='redo'?redoHtml():STAB==='cash'?cashHtml():STAB==='iiko'?iikoHtml():bfHtml()}
     catch(e){console.error(e);body='<p class="hint">Не удалось посчитать статистику. Обновите страницу.</p>'}
     $('#hb_sum').innerHTML=tabs+body+(STAB==='sum'?'':xl);
     $('#hist_list').hidden=STAB!=='sum';

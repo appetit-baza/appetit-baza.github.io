@@ -119,6 +119,7 @@ function doPost(e) {
     }
     if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report|cash_start)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
     if (body.action === 'cash_get') return json_(admin.boss ? cashGet_(admin) : { ok: false, error: 'not_boss' });
+    if (body.action === 'iiko_check') return json_(admin.boss ? iikoCheck_(body) : { ok: false, error: 'not_boss' });
     if (body.action === 'cash_start') return json_(admin.boss ? cashStart_(body, admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'history') return json_({ ok: true, boss: admin.boss, viewer: !!admin.viewer, shifts: history_(admin, body),
       fixPending: admin.boss ? fixList_().length : 0 });
@@ -511,6 +512,130 @@ function ensureZonesHeader_() {
   if (cs && !String(cs.getRange('O1').getValue()).trim()) cs.getRange('O1').setValue('Доплаты подробно').setFontWeight('bold');
 }
 // ---------- Доплаты курьерам: довозы (зона + причина) и прочие доплаты
+// ---------- iiko: сверка выручки по типам оплат (iikoCloud / Transport API)
+// Ключи хранятся ТОЛЬКО в «Свойствах скрипта» (Настройки проекта → Свойства скрипта):
+//   IIKO_API_KEY       — ключ API из iikoWeb («Интеграции → Ключи API»)
+//   IIKO_APP_ID        — appId приложения из кабинета разработчика iiko (public-api.iikoweb.ru/portal)
+//   IIKO_CLIENT_SECRET — clientSecret этого приложения
+var IIKO_BASE = 'https://api-ru.iiko.services';
+var SHEET_IIKO_PAY = 'iiko: типы оплат';
+// Поля OLAP-отчёта (проверяются функцией iikoTest — если iiko назовёт иначе, меняем здесь)
+var IIKO_F = { date: 'OpenDate.Typed', dept: 'Department', pay: 'PayTypes', sum: 'DishDiscountSumInt' };
+
+function iikoProps_() {
+  var p = PropertiesService.getScriptProperties();
+  return { key: p.getProperty('IIKO_API_KEY'), app: p.getProperty('IIKO_APP_ID'), secret: p.getProperty('IIKO_CLIENT_SECRET') };
+}
+function iikoToken_() {
+  var cache = CacheService.getScriptCache(), t = cache.get('iiko_token');
+  if (t) return t;
+  var c = iikoProps_();
+  if (!c.key) throw new Error('no_iiko_key');
+  var r;
+  if (c.app && c.secret) r = iikoFetch_('/api/v2/access_token', { appId: c.app, clientSecret: c.secret, apiKey: c.key }, true);
+  else r = iikoFetch_('/api/1/access_token', { apiLogin: c.key }, true);
+  if (!r.body || !r.body.token) throw new Error('iiko_auth ' + r.code + ' ' + r.text.slice(0, 200));
+  cache.put('iiko_token', r.body.token, 50 * 60);
+  return r.body.token;
+}
+function iikoFetch_(path, payload, noAuth) {
+  var opt = { method: 'post', contentType: 'application/json', muteHttpExceptions: true, payload: JSON.stringify(payload || {}), headers: { Timeout: '60' } };
+  if (!noAuth) opt.headers.Authorization = 'Bearer ' + iikoToken_();
+  var r = UrlFetchApp.fetch(IIKO_BASE + path, opt), text = r.getContentText(), body = null;
+  try { body = JSON.parse(text); } catch (e) {}
+  return { code: r.getResponseCode(), body: body, text: text };
+}
+// Филиал сайта по названию подразделения iiko
+function iikoBranch_(dept) {
+  var d = String(dept || '').toLowerCase();
+  var map = [[/глушко/, 'Казань, Академика Глушко 35'], [/ямашев/, 'Казань, проспект Ямашева 61к3'], [/такташ/, 'Казань, Хади Такташа 121'],
+    [/шакиров/, 'Казань, Ильгама Шакирова 17'], [/челяб|каслинск/, 'Челябинск, Каслинская 101Б'], [/уфа|шафиев/, 'Уфа, Шафиева 50/1']];
+  for (var i = 0; i < map.length; i++) if (map[i][0].test(d)) return map[i][1];
+  return '';
+}
+// Тип оплаты iiko → поле сайта. Сначала лист «iiko: типы оплат» (его можно править), потом догадка по названию.
+function iikoPayGuess_(name) {
+  var n = String(name || '').toLowerCase();
+  if (/налич/.test(n)) return 'r_cash';
+  if (/iikocard|айкокард|бонус/.test(n)) return 'r_bon';
+  if (/чиббис|chibbis/.test(n)) return 'r_chib';
+  if (/сбермаркет|купер|kuper|sbermarket/.test(n)) return 'r_sber';
+  if (/яндекс|yandex|деливери|delivery club/.test(n)) return 'r_ye';
+  if (/онлайн|online|сайт|приложен|юкасс|yookassa|cloudpay|клаудпэй|интернет/.test(n)) return 'r_mp';
+  if (/карт|банк|безнал|терминал|visa|mastercard|мир/.test(n)) return 'r_card';
+  return '';
+}
+var IIKO_FIELDS = { r_mp: 'Онлайн', r_cash: 'Наличные', r_card: 'Карта', r_ye: 'Яндекс/Деливери', r_chib: 'Чиббис', r_sber: 'Сбермаркет', r_bon: 'Бонусы iiko' };
+function iikoPayMap_(names) {
+  var ss = ss_(), sh = ss.getSheetByName(SHEET_IIKO_PAY);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_IIKO_PAY);
+    sh.appendRow(['Тип оплаты в iiko', 'Поле на сайте', 'Подсказка: Онлайн, Наличные, Карта, Яндекс/Деливери, Чиббис, Сбермаркет, Бонусы iiko или «не считать»']);
+    sh.getRange(1, 1, 1, 3).setFontWeight('bold'); sh.setFrozenRows(1);
+  }
+  var rows = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues() : [], m = {}, byLabel = {};
+  Object.keys(IIKO_FIELDS).forEach(function (k) { byLabel[IIKO_FIELDS[k].toLowerCase()] = k; });
+  rows.forEach(function (r) { var l = String(r[1]).trim().toLowerCase(); m[String(r[0]).trim()] = byLabel[l] || (l ? 'skip' : ''); });
+  (names || []).forEach(function (n) {
+    if (n in m) return;
+    var g = iikoPayGuess_(n); m[n] = g;
+    sh.appendRow([n, g ? IIKO_FIELDS[g] : '', g ? '' : 'не узнала — впишите поле']);
+  });
+  return m;
+}
+// Выручка из iiko по дням/филиалам/полям сайта: { 'ГГГГММДД|Филиал': { r_cash: …, … , other: {тип: сумма} } }
+function iikoRevenue_(fromDk, toDk) {
+  var cache = CacheService.getScriptCache(), key = 'iiko_rev_' + fromDk + '_' + toDk, c = cache.get(key);
+  if (c) return JSON.parse(c);
+  var out = {}, rows = [], d = dkDate_(fromDk), end = dkDate_(toDk);
+  while (d <= end) { // не больше 31 дня за запрос
+    var e = new Date(d.getTime()); e.setDate(e.getDate() + 30); if (e > end) e = end;
+    var r = iikoFetch_('/api/reporting/v1/olap/get', {
+      reportType: 'SALES', groupByRowFields: [IIKO_F.date, IIKO_F.dept, IIKO_F.pay], aggregateFields: [IIKO_F.sum], buildSummary: false,
+      filters: [{ name: IIKO_F.date, filterType: 'DateRange', periodType: 'CUSTOM', from: isoD_(d), to: isoD_(e), includeLow: true, includeHigh: true },
+        { name: 'OrderDeleted', filterType: 'IncludeValues', values: ['NOT_DELETED'] },
+        { name: 'DeletedWithWriteoff', filterType: 'IncludeValues', values: ['NOT_DELETED'] }]
+    });
+    if (r.code !== 200 || !r.body) throw new Error('iiko_olap ' + r.code + ' ' + r.text.slice(0, 300));
+    rows = rows.concat(r.body.data || []);
+    d = new Date(e.getTime()); d.setDate(d.getDate() + 1);
+  }
+  var names = {}; rows.forEach(function (x) { names[String(x[IIKO_F.pay] || '')] = 1; });
+  var pm = iikoPayMap_(Object.keys(names));
+  rows.forEach(function (x) {
+    var b = iikoBranch_(x[IIKO_F.dept]), k = dkey_(String(x[IIKO_F.date] || '').slice(0, 10).split('-').reverse().join('.'));
+    if (!b || !k) return;
+    var o = out[k + '|' + b] = out[k + '|' + b] || { other: {} }, f = pm[String(x[IIKO_F.pay] || '')], v = Number(x[IIKO_F.sum]) || 0;
+    if (f === 'skip') return;
+    if (f) o[f] = Math.round(((o[f] || 0) + v) * 100) / 100; else o.other[String(x[IIKO_F.pay] || 'без типа')] = (o.other[String(x[IIKO_F.pay] || 'без типа')] || 0) + v;
+  });
+  try { cache.put(key, JSON.stringify(out), 20 * 60); } catch (e) {}
+  return out;
+}
+function dkDate_(k) { return new Date(Math.floor(k / 10000), Math.floor(k / 100) % 100 - 1, k % 100); }
+function isoD_(d) { var p = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+function iikoCheck_(b) {
+  var c = iikoProps_();
+  if (!c.key) return { ok: false, error: 'no_iiko_key' };
+  var from = Number(String(b.from || '').replace(/\D/g, '')) || 0, to = Number(String(b.to || '').replace(/\D/g, '')) || 0;
+  if (!from || !to || to < from) return { ok: false, error: 'bad_period' };
+  if ((dkDate_(to) - dkDate_(from)) / 864e5 > 92) return { ok: false, error: 'period_too_long' };
+  try { return { ok: true, iiko: iikoRevenue_(from, to), fields: IIKO_FIELDS }; }
+  catch (e) { return { ok: false, error: String(e.message || e).slice(0, 300) }; }
+}
+// Запустить вручную после того, как ключи внесены в «Свойства скрипта»: проверит вход, поля OLAP и типы оплат за вчера.
+function iikoTest() {
+  CacheService.getScriptCache().remove('iiko_token');
+  Logger.log('Токен: ' + (iikoToken_() ? 'получен' : 'нет'));
+  var cols = iikoFetch_('/api/reporting/v1/olap/columns/get', { reportType: 'SALES' });
+  var names = (cols.body || []).map(function (x) { return x.name; });
+  Logger.log('Колонок OLAP: ' + names.length + '. Нужные: ' + [IIKO_F.date, IIKO_F.dept, IIKO_F.pay, IIKO_F.sum, 'OrderDeleted', 'DeletedWithWriteoff'].map(function (n) { return n + (names.indexOf(n) >= 0 ? ' ✓' : ' ✗'); }).join(', '));
+  if (names.length) Logger.log('Похожие: ' + names.filter(function (n) { return /pay|depart|sum|date|deleted/i.test(n); }).slice(0, 60).join(', '));
+  var y = new Date(); y.setDate(y.getDate() - 1);
+  var k = Number(Utilities.formatDate(y, 'Europe/Moscow', 'yyyyMMdd'));
+  Logger.log('Вчера по iiko: ' + JSON.stringify(iikoRevenue_(k, k)).slice(0, 1500));
+}
+
 // ---------- Остатки касс: остаток на начало дня по филиалу (вносит руководитель), дальше сайт считает сам
 function cashSheet_() {
   var ss = ss_();
