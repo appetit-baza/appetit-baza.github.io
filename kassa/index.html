@@ -464,7 +464,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='52';
+  const BUILD='53';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1244,12 +1244,13 @@ body.boss .hist-head h2{font-size:26px}
     return L.join('\n');
   }
   // довозы за смену по причинам: [[причина, кол-во], …]
+  function otkCount(s){let n=0;s.cour.forEach(c=>(c.ex||[]).forEach(x=>{if(x.kind==='Отказ')n+=num(x.n)||1}));return n}
   function redoList(s){const m={};s.cour.forEach(c=>(c.ex||[]).forEach(x=>{if(x.kind==='Довоз'){const k=x.reason||'причина не указана';m[k]=(m[k]||0)+(num(x.n)||1)}}));return Object.entries(m)}
   // ---------- revenue to MAX chat
 
   // выручка в чат админов — автоматически после «Отправить в бухгалтерию»
   async function revToChat(s){
-    const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:s.rev,ord:s.ord,redo:redoList(s)}});
+    const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:s.rev,ord:s.ord,redo:redoList(s),otk:otkCount(s)}});
     return r;
   }
   const revErr=e=>({no_token:'бот MAX не подключён',no_chat:'бот не добавлен в чат «АДМИНЫ АППЕТИТ»',empty:'выручка пустая',bad_pin:'PIN больше не действует'}[e]||'ошибка отправки');

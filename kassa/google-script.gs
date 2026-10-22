@@ -249,7 +249,7 @@ function sendRevenue_(r, admin) {
   var h = function (s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
   var text = '📍 <b>' + h(r.branch || admin.branch).toUpperCase() + '</b>\n' +
     '💰 Выручка ' + h(r.dateRu) + '\nАдминистратор: ' + h(admin.name) +
-    '\n\n' + h(lines.join('\n')) + '\n\n<b>ВСЕГО: ' + fmtRub_(total) + '</b>\n\n' + (ordText_(r.ord) ? h(ordText_(r.ord)) + '\n\n' : '') + h(redoText_(r.redo));
+    '\n\n' + h(lines.join('\n')) + '\n\n<b>ВСЕГО: ' + fmtRub_(total) + '</b>\n\n' + (ordText_(r.ord) ? h(ordText_(r.ord)) + '\n\n' : '') + h(redoText_(r.redo)) + '\n❌ Отказы: ' + num_(r.otk);
   var chat = maxChatId_();
   if (!chat) return { ok: false, error: PropertiesService.getScriptProperties().getProperty('MAX_TOKEN') ? 'no_chat' : 'no_token' };
   var res = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: text, format: 'html' });
