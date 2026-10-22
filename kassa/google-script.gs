@@ -21,7 +21,7 @@
  *   Филиал пишите так же, как в списке на сайте.
  *
  * Как заводить администраторов: лист «Админы», одна строка на человека.
- *   ФИО | Филиал | PIN | Активен | Роль
+ *   ФИО | Филиал | PIN | Активен | Роль | Фамилия Имя (для чата)
  *   PIN — от 4 до 8 цифр, у каждого свой. Чтобы закрыть доступ, поставьте в «Активен» «нет».
  *   Роль: пусто — обычный администратор (видит только свои смены);
  *   «руководитель» — видит на сайте все отчёты всех филиалов.
@@ -45,7 +45,7 @@ var SHEET_EXTRA = 'Доплаты курьерам';
 var SHEET_CASH = 'Остатки касс';
 
 var HEADERS = {};
-HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен', 'Роль'];
+HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен', 'Роль', 'Фамилия Имя (для чата)'];
 HEADERS[SHEET_REPORTS] = ['Отправлено', 'Дата смены', 'Филиал', 'Администратор', 'Выручка всего', 'Наличные',
   'Карта', 'Яндекс/Деливери', 'Онлайн', 'Чиббис', 'Сбермаркет', 'Бонусы iiko (iikocard)',
   'Итого по 041', 'Курьерам всего', 'Делали изъятие', 'Не делали изъятие', 'Прочие расходы',
@@ -162,6 +162,7 @@ function findAdmin_(pin) {
     var active = String(r[3] || '').trim().toLowerCase();
     if (String(r[2]).replace(/\D/g, '') === pin && active !== 'нет' && active !== 'no' && r[0]) {
       return { name: String(r[0]).trim(), branch: String(r[1] || '').trim(),
+        full: String(r[5] || '').trim(), // столбец F «Фамилия Имя (для чата)» — полное имя для сообщений в чат
         boss: /руковод|владел|управля|просмотр|наблюд/i.test(String(r[4] || '')),
         // «просмотр» — видит всё, как руководитель, но ничего не меняет (не решает исправления, не отправляет отчёты)
         viewer: /просмотр|наблюд/i.test(String(r[4] || '')) };
@@ -239,12 +240,21 @@ function maxChatId_() {
   return '';
 }
 
+// Столбец F на листе «Админы»: «Фамилия Имя (для чата)». Если заполнен — в чат идёт он, иначе ФИО из столбца A.
+// Запустить один раз из редактора: добавляет на лист «Админы» столбец F «Фамилия Имя (для чата)»
+function addChatNameColumn() { adminFullHeader_(); }
+function adminFullHeader_() {
+  var sh = ss_().getSheetByName(SHEET_ADMINS);
+  if (sh && !String(sh.getRange('F1').getValue()).trim()) sh.getRange('F1').setValue('Фамилия Имя (для чата)').setFontWeight('bold');
+}
+
 function fmtRub_(n) {
   return Utilities.formatString('%s ₽', String(Math.round(n * 100) / 100).replace(/\B(?=(\d{3})+(?!\d))/g, ' ').replace('.', ','));
 }
 
 function sendRevenue_(r, admin) {
   var rev = r.rev || {};
+  adminFullHeader_();
   var names = [['r_mp', 'Онлайн'], ['r_cash', 'Наличные'], ['r_card', 'Карта'], ['r_ye', 'Яндекс/Деливери'],
     ['r_chib', 'Чиббис'], ['r_sber', 'Сбермаркет'], ['r_bon', 'Бонусы iiko']];
   var total = 0, lines = [];
@@ -255,7 +265,7 @@ function sendRevenue_(r, admin) {
   // филиал — первой строкой, жирным и заглавными, чтобы сразу было видно (формат HTML в MAX)
   var h = function (s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
   var text = '📍 <b>' + h(r.branch || admin.branch).toUpperCase() + '</b>\n' +
-    '💰 Выручка ' + h(r.dateRu) + '\nАдминистратор: ' + h(admin.name) +
+    '💰 Выручка ' + h(r.dateRu) + '\nАдминистратор: ' + h(admin.full || admin.name) +
     '\n\n' + h(lines.join('\n')) + '\n\n<b>ВСЕГО: ' + fmtRub_(total) + '</b>' + (bon ? '\nБонусы iiko (скидка): ' + fmtRub_(bon) : '') + '\n\n' + (ordText_(r.ord) ? h(ordText_(r.ord)) + '\n\n' : '') + h(redoText_(r.redo)) + '\n❌ Отказы: ' + num_(r.otk);
   var chat = maxChatId_();
   if (!chat) return { ok: false, error: PropertiesService.getScriptProperties().getProperty('MAX_TOKEN') ? 'no_chat' : 'no_token' };
