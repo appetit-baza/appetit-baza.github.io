@@ -243,6 +243,7 @@ input.mismatch{border-color:var(--warn)!important;background:var(--warn-soft)!im
 .hb-tabs button{font:inherit;font-size:14.5px;font-weight:600;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
 .hb-tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
 .hb-tile .sub{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.hb-tile.cashtile{border-color:var(--accent)}.hb-tile.cashtile b{color:var(--accent)}
 .hb-tile.t-bad{border-color:var(--warn)}.hb-tile.t-bad b{color:var(--warn)}
 .hb-tile.t-amber{border-color:var(--amber)}.hb-tile.t-amber b{color:var(--amber)}
 .t-warn{color:var(--warn)}.t-up{color:var(--accent);font-weight:600}.t-down{color:var(--warn);font-weight:600}
@@ -485,7 +486,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='56';
+  const BUILD='57';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -979,8 +980,12 @@ body.boss .hist-head h2{font-size:26px}
     let nav='';if(boss&&BOSS_ROWS.length){const same=BOSS_ROWS.filter(x=>x.branch===s.raw.branch&&!x.old).sort((a,b)=>a.dk-b.dk);const ix=same.findIndex(x=>x.id===s.id);
       const pv=ix>0?same[ix-1]:null,nx=ix>=0&&ix<same.length-1?same[ix+1]:null;
       nav=`<div class="sv-nav">${pv?`<button type="button" class="btn ghost" data-open="${esc(pv.id)}">← ${esc(pv.date)}</button>`:'<span></span>'}${nx?`<button type="button" class="btn ghost" data-open="${esc(nx.id)}">${esc(nx.date)} →</button>`:''}</div>`}
+    // остаток кассы на этот день (по вкладке «Касса»)
+    let cashT='';if(boss){if(!CASH.loaded){Promise.resolve(loadCash()).then(()=>{if(SHIFT===s&&!$('#hist_one').hidden)$('#hist_one').innerHTML=shiftView(s)})}
+      else if(!CASH.err){const cd=cashData().find(z=>z.b===s.raw.branch);const k=isoDk(s.raw.date);const o=cd&&!cd.none?cd.days.find(d=>d.k===k):null;
+        cashT=o?tile('Остаток кассы',money(Math.round(o.bal*100)/100),'на начало дня '+money(Math.round(o.start*100)/100),'cashtile'):tile('Остаток кассы','—',cd&&!cd.none?'день раньше стартового остатка':'впишите старт на вкладке «Касса»')}}
     const head=`<div class="sv-head"><div><h3>${esc(sm['Дата смены']||'')} · ${esc(brShort(s.raw.branch))}</h3><p>${esc(s.raw.branch)} · ${esc(sm['Администратор']||s.admin||'')}</p></div><div class="sv-meta">отчёт ${esc(s.id)}${sm['Отправлено']?'<br>отправлен '+esc(sm['Отправлено']):''}</div></div>`;
-    const tiles=`<div class="hb-tiles">${tile('Выручка всего',money(rv),'','main')}${tile('Наличные',money(cash))}${tile('Передана сумма',money(pass),'наличные − курьерам из кассы')}${tile('Курьерам',money(ct),N('Не делали изъятие')?'не из кассы: '+money(N('Не делали изъятие')):'')}${inc?tile('Приход',money(inc)):''}${ex?tile('Расход',money(ex)):''}</div>`;
+    const tiles=`<div class="hb-tiles">${tile('Выручка всего',money(rv),'','main')}${tile('Наличные',money(cash))}${tile('Передана сумма',money(pass),'наличные − курьерам из кассы')}${tile('Курьерам',money(ct),N('Не делали изъятие')?'не из кассы: '+money(N('Не делали изъятие')):'')}${inc?tile('Приход',money(inc)):''}${ex?tile('Расход',money(ex)):''}${cashT}</div>`;
     const PT=[['Онлайн','Онлайн'],['Наличные','Наличные'],['Карта','Карта'],['Яндекс/Деливери','Яндекс/Деливери'],['Чиббис','Чиббис'],['Сбермаркет','Сбермаркет'],['Бонусы iiko (iikocard)','Бонусы iiko']];
     const pay=PT.filter(([k])=>N(k)).map(([k,l],i)=>`<div class="sv-row"><span>${sw(`var(--s${i+1})`)}${l}</span><b>${money(N(k))}</b><small>${pf(pct(N(k),rv))}</small></div>`).join('')||'<p class="hint">Выручки нет.</p>';
     const chk=(l,a,b,okText)=>{const d=Math.round((b-a)*100)/100;return `<div class="sv-row"><span>${l}</span><b class="${Math.abs(d)<0.01?'t-up':'t-warn'}">${Math.abs(d)<0.01?'✓ '+okText:(d>0?'+':'')+money(d)}</b></div>`};
