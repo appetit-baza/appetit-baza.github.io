@@ -326,6 +326,7 @@ body.boss .hist-head h2{font-size:26px}
 <header class="top"><div class="top-in">
   <img class="logo" src="https://cdn.arora.pro/k/upload/c3a4fcd8-7bad-4b1a-bd05-d080143e1c44/file_manager/theme/logo%201200%D1%85350.png?png" alt="Аппетит" width="120" height="35" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://che.appetitfood.ru/upload/c3a4fcd8-7bad-4b1a-bd05-d080143e1c44/file_manager/theme/logo%201200%D1%85350.png'}else{this.hidden=true}"><span class="brand">Кассовый отчёт<small>«Аппетит» · смена филиала</small></span>
   <div class="user" id="user" hidden><span class="u-lbl">Вошли:</span><b id="u_name"></b><button type="button" id="b_hist">Мои смены</button><button type="button" id="b_logout">Выйти</button></div>
+  <a class="kb" href="help.html">📘 Инструкция</a>
   <a class="kb" href="../">База знаний →</a>
 </div></header>
 
@@ -458,6 +459,7 @@ body.boss .hist-head h2{font-size:26px}
     <button type="submit" class="btn primary" id="b_login">Войти</button>
     <p class="gate-err" id="gate_err" aria-live="polite"></p>
     <p>Нет PIN-кода или забыли — напишите в чат «АДМИНЫ АППЕТИТ».</p>
+    <p><a href="help.html">📘 Как заполнять отчёт — инструкция</a></p>
   </form>
 </div>
 <div class="toast" id="toast" role="status"></div>
@@ -466,7 +468,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='47';
+  const BUILD='48';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Как заполнять кассовый отчёт — «Аппетит»</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/kassa-32.png">
+<link rel="icon" href="/icons/kassa.ico">
+<link rel="apple-touch-icon" href="/icons/kassa-180.png">
+<style>
+:root{
+  --bg:#F2F4F1; --surface:#FFFFFF; --ink:#16201C; --muted:#5A6661; --line:#DCE2DE;
+  --accent:#1D6A57; --accent-soft:#E2EFE9; --warn:#B9412A; --warn-soft:#FBEAE5; --amber:#7A5600; --amber-soft:#FFF1C9; --note:#EEF1EF;
+  --c1:#1D6A57; --c1s:#E2EFE9; /* выручка */
+  --c2:#2F6FD6; --c2s:#E6EEFB; /* курьеры */
+  --c3:#B5641B; --c3s:#FBEEDF; /* приход-расход */
+  --c4:#7B4FC9; --c4s:#EFE8FA; /* отправка */
+  --c5:#C23B5A; --c5s:#FBE7EC; /* мои смены */
+  --font:-apple-system,BlinkMacSystemFont,Roboto,"Segoe UI",Tahoma,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0F1513; --surface:#161E1B; --ink:#E4EBE8; --muted:#97A39E; --line:#28332F;
+  --accent:#5EC2A4; --accent-soft:#18302A; --warn:#F08C72; --warn-soft:#38211B; --amber:#F1C55E; --amber-soft:#352B10; --note:#1C2522;
+  --c1:#5EC2A4; --c1s:#18302A; --c2:#7FA9F0; --c2s:#17233A; --c3:#E7A35E; --c3s:#33261A; --c4:#B394EE; --c4s:#261E38; --c5:#EE8AA2; --c5s:#3A1E26;
+  color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+a{color:var(--accent)}
+.top{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.top-in{max-width:960px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.top img{height:30px;width:auto}
+.top b{font-size:15px}
+.top .sp{flex:1}
+.top a.btn{font-size:14px;font-weight:600;text-decoration:none;padding:8px 14px;border-radius:10px;background:var(--accent);color:#fff}
+@media (prefers-color-scheme: dark){.top a.btn{color:#06231B}}
+.wrap{max-width:960px;margin:0 auto;padding:22px 16px 60px}
+.hero{border-radius:20px;padding:26px 24px;background:linear-gradient(135deg,#1D6A57 0%,#2F8F6F 55%,#E8B923 140%);color:#fff;position:relative;overflow:hidden}
+.hero h1{margin:0 0 6px;font-size:28px;line-height:1.2}
+.hero p{margin:0;max-width:560px;opacity:.95}
+.hero .em{position:absolute;right:18px;bottom:-10px;font-size:92px;opacity:.25;line-height:1}
+.toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:18px 0 6px}
+.toc a{display:flex;gap:8px;align-items:center;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-weight:600;font-size:14.5px}
+.toc a i{font-style:normal;font-size:20px}
+.toc a:hover{border-color:var(--accent)}
+section.step{background:var(--surface);border:1px solid var(--line);border-radius:18px;margin-top:18px;overflow:hidden;scroll-margin-top:70px}
+.step-h{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--cs);border-bottom:1px solid var(--line)}
+.step-h .n{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--cc);color:#fff;font-weight:800;font-size:17px}
+@media (prefers-color-scheme: dark){.step-h .n{color:#0F1513}}
+.step-h h2{margin:0;font-size:20px;line-height:1.25}
+.step-h small{display:block;color:var(--muted);font-weight:400;font-size:13.5px}
+.step-b{padding:16px 20px 20px}
+.step-b h3{font-size:16px;margin:18px 0 6px;color:var(--cc)}
+.step-b h3:first-child{margin-top:0}
+.step-b p{margin:6px 0}
+.step-b ul,.step-b ol{margin:6px 0;padding-left:22px}
+.step-b li{margin:3px 0}
+.s1{--cc:var(--c1);--cs:var(--c1s)} .s2{--cc:var(--c2);--cs:var(--c2s)} .s3{--cc:var(--c3);--cs:var(--c3s)}
+.s4{--cc:var(--c4);--cs:var(--c4s)} .s5{--cc:var(--c5);--cs:var(--c5s)} .s0{--cc:var(--muted);--cs:var(--note)}
+.k{display:inline-block;padding:1px 8px;border-radius:7px;background:var(--note);border:1px solid var(--line);font-weight:600;font-size:14px;white-space:nowrap}
+.k.g{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme: dark){.k.g{color:#06231B}}
+.tip,.warn,.bad,.ok{border-radius:12px;padding:10px 14px;margin:10px 0;font-size:15px;display:flex;gap:10px}
+.tip{background:var(--c2s)} .warn{background:var(--amber-soft);color:var(--amber)} .bad{background:var(--warn-soft);color:var(--warn)} .ok{background:var(--accent-soft)}
+.tip b,.ok b{color:var(--ink)}
+.tip>i,.warn>i,.bad>i,.ok>i{font-style:normal;flex:none}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+.mini{border:1px dashed var(--line);border-radius:12px;padding:12px;background:var(--bg)}
+.mini>b:first-child{display:block;margin-bottom:4px}
+.fld{display:flex;justify-content:space-between;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 10px;margin:5px 0;font-size:14.5px}
+.fld span{color:var(--muted)}
+.fld strong{font-variant-numeric:tabular-nums}
+.zones{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.zones span{border-radius:999px;padding:4px 10px;font-size:13.5px;font-weight:600;color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chips span{border-radius:999px;padding:4px 11px;font-size:13.5px;background:var(--cs);border:1px solid var(--line)}
+.formula{font-size:17px;font-weight:700;text-align:center;padding:14px;border-radius:14px;background:var(--accent);color:#fff;margin:10px 0}
+@media (prefers-color-scheme: dark){.formula{color:#06231B}}
+.chat{max-width:340px;background:#DCEBFF;color:#16201C;border-radius:16px 16px 16px 4px;padding:12px 14px;font-size:14px;line-height:1.45;white-space:pre-line;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+.flow span{background:var(--cs);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:600;font-size:14.5px}
+.flow em{font-style:normal;color:var(--muted);font-size:20px}
+details{border:1px solid var(--line);border-radius:12px;margin:8px 0;background:var(--surface)}
+summary{cursor:pointer;padding:12px 16px;font-weight:600;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'＋ ';color:var(--accent)}
+details[open] summary::before{content:'－ '}
+details div{padding:0 16px 14px}
+.foot{text-align:center;color:var(--muted);font-size:13.5px;margin-top:28px}
+@media print{.top,.toc{display:none}section.step{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <img src="https://cdn.arora.pro/k/upload/c3a4fcd8-7bad-4b1a-bd05-d080143e1c44/file_manager/theme/logo%201200%D1%85350.png?png" alt="Аппетит" onerror="this.hidden=true">
+  <b>Инструкция к кассовому отчёту</b><span class="sp"></span>
+  <a class="btn" href="./">Открыть кассовый отчёт →</a>
+</div></header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Как заполнить кассовый отчёт смены</h1>
+    <p>Пять шагов: войти → выручка и заказы → курьеры → приход и расход → отправить. Всё, что можно посчитать, сайт считает сам. Ваша задача — правильно вписать цифры.</p>
+    <span class="em" aria-hidden="true">🧾</span>
+  </div>
+
+  <nav class="toc" aria-label="Содержание">
+    <a href="#vhod"><i>🔑</i>Вход</a>
+    <a href="#vyruchka"><i>💰</i>Выручка и заказы</a>
+    <a href="#kurery"><i>🛵</i>Курьеры</a>
+    <a href="#prihod"><i>📥</i>Приход и расход</a>
+    <a href="#otpravka"><i>📤</i>Отправка</a>
+    <a href="#smeny"><i>📂</i>Мои смены</a>
+    <a href="#voprosy"><i>❓</i>Вопросы</a>
+  </nav>
+
+  <!-- 0. Вход -->
+  <section class="step s0" id="vhod">
+    <div class="step-h"><span class="n">🔑</span><h2>Вход по PIN-коду<small>У каждого администратора свой PIN</small></h2></div>
+    <div class="step-b">
+      <ol>
+        <li>Откройте сайт кассового отчёта и введите свой <b>PIN-код</b> (4–8 цифр), нажмите <span class="k g">Войти</span>.</li>
+        <li>Вверху появится «Вошли: <b>ваше ФИО</b>». ФИО в отчёт подставится само.</li>
+        <li>Закончили смену или садится другой администратор — нажмите <span class="k">Выйти</span>.</li>
+      </ol>
+      <div class="warn"><i>⚠️</i><span>Никому не сообщайте свой PIN и не работайте под чужим: отчёт уйдёт от имени того, чей PIN введён. После 5 неверных попыток вход на этом компьютере закрывается на 10 минут.</span></div>
+      <div class="tip"><i>💬</i><span><b>Нет PIN-кода или забыли?</b> Напишите в чат «АДМИНЫ АППЕТИТ».</span></div>
+    </div>
+  </section>
+
+  <!-- 1. Выручка -->
+  <section class="step s1" id="vyruchka">
+    <div class="step-h"><span class="n">1</span><h2>Сводка и выручка<small>Филиал, дата, выручка по видам оплаты, заказы, сверка</small></h2></div>
+    <div class="step-b">
+      <h3>Филиал и дата</h3>
+      <p>Филиал подставляется ваш. Если вы на подработке в другом филиале — выберите его в списке. <b>Дата</b> — день кассовой смены. Эта же дата будет у всех приходов и расходов.</p>
+
+      <h3>Выручка по видам оплаты</h3>
+      <div class="grid2">
+        <div class="mini"><b>Впишите суммы из iiko</b>
+          <div class="fld"><span>Онлайн</span><strong>10 999</strong></div>
+          <div class="fld"><span>Наличные</span><strong>5 858</strong></div>
+          <div class="fld"><span>Карта</span><strong>45 430</strong></div>
+          <div class="fld"><span>Яндекс/Деливери</span><strong>18 209</strong></div>
+          <div class="fld"><span>Чиббис</span><strong>4 672</strong></div>
+          <div class="fld"><span>Сбермаркет</span><strong>—</strong></div>
+        </div>
+        <div>
+          <p>Пишите только цифры, без пробелов и «₽». Пустые поля оставляйте пустыми.</p>
+          <p><b>«Выручка всего»</b> внизу блока считается сама.</p>
+          <div class="ok"><i>✅</i><span>Если в поле ошибка — просто исправьте цифру, итоги пересчитаются сразу.</span></div>
+        </div>
+      </div>
+
+      <h3>Заказы: самовывоз и доставка</h3>
+      <p>Впишите <b>количество</b> и <b>сумму</b> отдельно по самовывозу и по доставке. Строка «Общее» посчитается сама, например <b>51 / 85 168 ₽</b>.</p>
+      <div class="warn"><i>🟡</i><span>Самовывоз + доставка по сумме должны совпасть с «Выручкой всего». Если не совпадает — поля подсветятся и появится разница. Проверьте цифры в iiko.</span></div>
+
+      <h3>Сверка (в чат не отправляется)</h3>
+      <ul>
+        <li><b>Итого по отчёту 041</b> — сайт сравнит с выручкой и покажет расхождение.</li>
+        <li><b>Безнал факт (по сверкам)</b> — сумма по сверкам терминала.</li>
+      </ul>
+      <div class="bad"><i>🔴</i><span><b>«Карта» должна быть равна «Безналу по сверкам».</b> Если не сходится — оба поля станут красными. Такие смены бухгалтерия видит отдельно, поэтому перепроверьте сверки до отправки.</span></div>
+    </div>
+  </section>
+
+  <!-- 2. Курьеры -->
+  <section class="step s2" id="kurery">
+    <div class="step-h"><span class="n">2</span><h2>Курьеры<small>Кто работал, сколько часов и заказов, изъятие и доплаты</small></h2></div>
+    <div class="step-b">
+      <h3>Строка курьера</h3>
+      <ol>
+        <li>Одна строка уже есть. Ещё курьеры — кнопка <span class="k">+ Добавить курьера</span>.</li>
+        <li><b>ФИО</b> выберите из списка курьеров вашего филиала. Нет в списке — впишите вручную.</li>
+        <li><b>С / По</b> — время начала и конца смены курьера. <b>«За часы»</b> посчитается само (140 ₽ в час) — вручную его не исправить.</li>
+        <li><b>Заказов</b> и <b>За заказы</b> — по правилам вашего города (ниже).</li>
+        <li><b>Итого</b> курьеру считается само.</li>
+      </ol>
+
+      <h3>Заказы по городам</h3>
+      <div class="grid3">
+        <div class="mini"><b>🏙 Казань</b>Обычно количество и сумму берёте из iiko. Если iiko не работает — нажмите <span class="k">Посчитать по зонам ▾</span> и впишите заказы по зонам:
+          <div class="zones">
+            <span style="background:#C9A11E">Жёлтая 0–2,5 км · 165 ₽</span>
+            <span style="background:#3E9B4F">Зелёная 2,5–5 км · 205 ₽</span>
+            <span style="background:#2F6FD6">Синяя 5–8 км · 245 ₽</span>
+            <span style="background:#D64545">Красная 8–11 км · 265 ₽</span>
+            <span style="background:#8A4FD0">Фиолетовая 11–20 км · 285 ₽</span>
+          </div></div>
+        <div class="mini"><b>🏔 Челябинск</b>Часовую в отчёте <b>не считаем</b> — её выдают 2 раза в месяц. Впишите вручную количество заказов и сумму из курьерской программы. Если нужно, можно посчитать по километрам: <span class="k">Посчитать по километрам ▾</span>.</div>
+        <div class="mini"><b>🌉 Уфа</b>Заказы вписываются <b>по километражу</b> — количество в каждом диапазоне, сумма посчитается сама.</div>
+      </div>
+
+      <h3>Изъятие</h3>
+      <div class="chips">
+        <span>✅ Изъятие сделано</span><span>⛔ Изъятие не сделано</span><span>➗ Изъятие частично</span>
+      </div>
+      <ul>
+        <li><b>Сделано</b> — курьеру заплатили из кассы смены, эта сумма уменьшит «Переданную сумму».</li>
+        <li><b>Не сделано</b> — из кассы смены не платили.</li>
+        <li><b>Частично</b> — впишите, сколько ₽ выдали с изъятием, остальное сайт посчитает как «не сделано».</li>
+      </ul>
+
+      <h3>Доплаты курьеру</h3>
+      <p>Под строкой курьера — <span class="k">Доплата (довоз, шашка, листовки, наклейка…)</span>. Выберите вид:</p>
+      <div class="grid2">
+        <div class="mini"><b>🚚 Довоз</b>Обязательно укажите <b>зону</b> и <b>причину</b>:
+          <div class="chips"><span>Админ недокомплект</span><span>Кухня недокомплект</span><span>Курьер недокомплект</span><span>Ошибка КЦ</span></div></div>
+        <div class="mini"><b>Другие доплаты</b>
+          <div class="fld"><span>🏁 Шашка</span><strong>сумма — любая</strong></div>
+          <div class="fld"><span>📄 Листовки</span><strong>кол-во и сумма</strong></div>
+          <div class="fld"><span>🏷 Наклейка</span><strong>2 000 ₽</strong></div>
+          <div class="fld"><span>✏️ Другое</span><strong>сумма и комментарий</strong></div></div>
+      </div>
+      <div class="tip"><i>💡</i><span>Довозы за смену уходят в чат админов вместе с выручкой — с количеством и причинами. Если довозов не было, в чате будет «Довозы: 0».</span></div>
+    </div>
+  </section>
+
+  <!-- 3. Приход и расход -->
+  <section class="step s3" id="prihod">
+    <div class="step-h"><span class="n">3</span><h2>Приход и расход<small>Деньги, которые пришли в кассу или ушли из неё</small></h2></div>
+    <div class="step-b">
+      <div class="grid2">
+        <div class="mini"><b>📥 Приход</b>Напишите, откуда пришли деньги, и сумму. Например:
+          <div class="fld"><span>Внесение размена</span><strong>2 000</strong></div></div>
+        <div class="mini"><b>📤 Расход</b>Выберите статью из списка или <b>напишите свою</b>:
+          <div class="fld"><span>Такси сотрудникам</span><strong>450</strong></div>
+          <div class="fld"><span>Возврат ДС чек № 4512</span><strong>890</strong></div></div>
+      </div>
+      <ul>
+        <li>Ещё строка — <span class="k">+ Добавить приход</span> / <span class="k">+ Добавить расход</span>. Лишнюю строку убирает ✕.</li>
+        <li>Дату вписывать не нужно — берётся дата смены.</li>
+        <li>В возврате укажите номер чека прямо в статье.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 4. Отправка -->
+  <section class="step s4" id="otpravka">
+    <div class="step-h"><span class="n">4</span><h2>Итоги и отправка<small>Проверить → при необходимости скачать Excel → отправить</small></h2></div>
+    <div class="step-b">
+      <h3>Переданная сумма</h3>
+      <div class="formula">Передана сумма = Наличные − выплаты курьерам с изъятием</div>
+      <p>Справа в «Итогах смены» всё считается само. Ниже итогов — подсказки:</p>
+      <div class="warn"><i>🟡</i><span><b>Жёлтые</b> — проверьте и дополните (например, у довоза не указана зона, у курьера нет фамилии).</span></div>
+      <div class="bad"><i>🔴</i><span><b>Красные</b> — цифры не сходятся (041, карта и безнал, самовывоз + доставка). Исправьте до отправки.</span></div>
+
+      <h3>Порядок</h3>
+      <div class="flow"><span>Проверить подсказки</span><em>→</em><span>📊 Скачать Excel (если нужен)</span><em>→</em><span style="background:var(--accent);color:#fff">Отправить в бухгалтерию</span></div>
+      <div class="warn"><i>⚠️</i><span>После «Отправить в бухгалтерию» форма <b>очищается</b> для следующей смены. Нужен Excel — скачайте <b>до</b> отправки.</span></div>
+
+      <h3>Выручка в чат админов</h3>
+      <p>Кнопка <span class="k">Отправить выручку в чат админов</span> справа под «Скачать Excel» — бот сам пришлёт сообщение в «АДМИНЫ АППЕТИТ». Писать вручную не нужно:</p>
+      <div class="chat">📍 <b>КАЗАНЬ, ХАДИ ТАКТАША 121</b>
+💰 Выручка 21.10.2026 (ср)
+Администратор: …
+
+Онлайн: 10 999 ₽
+Наличные: 5 858 ₽
+Карта: 45 430 ₽
+Яндекс/Деливери: 18 209 ₽
+Чиббис: 4 672 ₽
+
+<b>ВСЕГО: 85 168 ₽</b>
+
+Самовывоз: 27 / 30 920 ₽
+Доставка: 24 / 54 248 ₽
+Общее: 51 / 85 168 ₽
+
+🚚 Довозы: 0</div>
+      <div class="tip"><i>💡</i><span>Нажали второй раз — сайт спросит «Уже отправлено. Отправить ещё раз?», чтобы не было дублей.</span></div>
+
+      <h3>Черновик сохраняется сам</h3>
+      <p>Всё, что вы вписали, сохраняется автоматически — в браузере и в таблице бухгалтерии. Выключился компьютер — войдите снова под своим PIN, черновик вернётся. Черновик видите только вы. Чтобы начать с чистого листа — <span class="k">Начать новый отчёт</span>.</p>
+    </div>
+  </section>
+
+  <!-- 5. Мои смены -->
+  <section class="step s5" id="smeny">
+    <div class="step-h"><span class="n">5</span><h2>Мои смены и исправления<small>Посмотреть отправленное и исправить ошибку</small></h2></div>
+    <div class="step-b">
+      <p>Кнопка <span class="k">Мои смены</span> вверху — список ваших отправленных отчётов. Нажмите на смену, чтобы открыть её.</p>
+      <h3>Нашли ошибку в отправленном отчёте?</h3>
+      <div class="flow"><span>Открыть смену</span><em>→</em><span>Описать ошибку</span><em>→</em><span>Запросить исправление</span><em>→</em><span>Ждать подтверждения</span><em>→</em><span>Исправить отчёт</span></div>
+      <ol>
+        <li>Откройте смену в «Мои смены», напишите, что не так, и нажмите <span class="k">Запросить исправление</span>.</li>
+        <li>Бухгалтерия подтвердит запрос — в смене появится кнопка <span class="k g">Исправить отчёт</span>.</li>
+        <li>Отчёт загрузится в форму — исправьте и отправьте. Старый отчёт сохранится у бухгалтерии на всякий случай.</li>
+      </ol>
+      <div class="warn"><i>⚠️</i><span>Не отправляйте ту же смену заново без запроса — сайт этого не даст и попросит запросить исправление.</span></div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="step s0" id="voprosy">
+    <div class="step-h"><span class="n">❓</span><h2>Частые вопросы</h2></div>
+    <div class="step-b">
+      <details><summary>Курьера нет в списке</summary><div>Впишите ФИО вручную — отчёт отправится. Чтобы курьер появился в списке, напишите в чат админов.</div></details>
+      <details><summary>Не получается вписать «За часы»</summary><div>Так и задумано: сумма за часы считается по времени «С» и «По». Проверьте время. В Челябинске часовая в отчёте не считается.</div></details>
+      <details><summary>Сайт выглядит по-старому</summary><div>Нажмите <span class="k">Ctrl</span> + <span class="k">F5</span> или закройте вкладку и откройте сайт заново. Обычно сайт обновляется сам.</div></details>
+      <details><summary>Пишет «Нет связи с сервером»</summary><div>Проверьте интернет и нажмите кнопку ещё раз. Черновик при этом не теряется.</div></details>
+      <details><summary>Ошиблась в цифре до отправки</summary><div>Просто исправьте поле — итоги пересчитаются. После отправки — только через «Мои смены» → «Запросить исправление».</div></details>
+      <details><summary>Пишет «PIN больше не действует»</summary><div>Войдите заново. Если не пускает — напишите в чат «АДМИНЫ АППЕТИТ».</div></details>
+    </div>
+  </section>
+
+  <p class="foot">Остались вопросы — пишите в чат «АДМИНЫ АППЕТИТ». · <a href="./">Открыть кассовый отчёт</a> · <a href="../">База знаний</a></p>
+</div>
+</body>
+</html>
