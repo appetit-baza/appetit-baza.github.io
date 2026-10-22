@@ -117,7 +117,8 @@ function doPost(e) {
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
     }
-    if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report|cash_start)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
+    if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report|cash_start|iiko_mark)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
+    if (body.action === 'iiko_mark') return json_(admin.boss ? iikoMark_(body, admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'cash_get') return json_(admin.boss ? cashGet_(admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'iiko_check') return json_(admin.boss ? iikoCheck_(body) : { ok: false, error: 'not_boss' });
     if (body.action === 'cash_start') return json_(admin.boss ? cashStart_(body, admin) : { ok: false, error: 'not_boss' });
@@ -351,7 +352,7 @@ function shift_(id, admin) {
       extras: extraRows_().filter(function (x) { return String(x[0]) === id && String(x[4]) === String(r[3]); })
         .map(function (x) { return { kind: String(x[5]), zone: String(x[6]), reason: String(x[7]), n: Number(x[8]) || 1, sum: Number(x[9]) || 0 }; }) }; });
   var money = ss.getSheetByName(SHEET_MONEY).getDataRange().getDisplayValues().filter(function (r) { return r[0] === id; })
-    .map(function (r) { return { type: r[3], date: r[4], art: r[5], sum: r[6], w: r[7] }; });
+    .map(function (r) { return { type: r[3], date: r[4], art: r[5], sum: r[6], w: r[7], iiko: r[8] || '' }; });
   var f = fixFind_(id);
   var rev = {};
   ['r_cash', 'r_card', 'r_ye', 'r_mp', 'r_chib', 'r_sber', 'r_bon'].forEach(function (k, n) { rev[k] = row[5 + n] === 0 ? '' : String(row[5 + n]); });
@@ -719,9 +720,25 @@ function moneyMap_() {
   sh.getDataRange().getValues().slice(1).forEach(function (r) {
     var id = String(r[0]), s = num_(r[6]);
     if (!id || !s) return;
-    (m[id] = m[id] || []).push([String(r[3]), String(r[5] || '').trim(), s]);
+    // 4-й элемент — отмечено ли «занесено в iiko» (столбец I)
+    (m[id] = m[id] || []).push([String(r[3]), String(r[5] || '').trim(), s, String(r[8] || '') ? 1 : 0]);
   });
   return m;
+}
+// Отметка «занесено в iiko» для строки прихода/расхода смены (idx — номер строки внутри смены; -1 — все строки)
+function iikoMark_(b, admin) {
+  var id = String(b.id || ''), idx = Number(b.idx), on = !!b.on;
+  var sh = ss_().getSheetByName(SHEET_MONEY);
+  if (!sh || !id) return { ok: false, error: 'not_found' };
+  if (!String(sh.getRange('I1').getValue()).trim()) sh.getRange('I1').setValue('Занесено в iiko').setFontWeight('bold');
+  var ids = sh.getRange(1, 1, sh.getLastRow(), 1).getValues(), k = -1, n = 0;
+  var mark = on ? 'да · ' + admin.name + ' · ' + Utilities.formatDate(new Date(), 'Europe/Moscow', 'dd.MM.yyyy HH:mm') : '';
+  for (var r = 1; r < ids.length; r++) {
+    if (String(ids[r][0]) !== id) continue;
+    k++;
+    if (idx === -1 || idx === k) { sh.getRange(r + 1, 9).setValue(mark); n++; }
+  }
+  return n ? { ok: true, n: n } : { ok: false, error: 'not_found' };
 }
 
 function num_(v) {

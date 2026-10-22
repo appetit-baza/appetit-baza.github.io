@@ -284,6 +284,18 @@ td.hm{background:color-mix(in srgb,var(--s1) var(--a),transparent)}
 .pb i:first-child{border-radius:4px 0 0 4px}.pb i:last-child{border-radius:0 4px 4px 0}.pb i:only-child{border-radius:4px}
 .chip-d{display:inline-block;background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:2px 8px;margin:2px 0;font-size:13px;white-space:nowrap}
 .warn-box{background:var(--amber-soft);color:var(--amber);border-radius:12px;padding:10px 14px;margin:10px 0;font-size:14px}
+.sv-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin:10px 0 12px}
+.sv-head h3{margin:0;font-size:22px}.sv-head p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.sv-meta{font-size:12.5px;color:var(--muted);text-align:right}
+.sv-nav{display:flex;justify-content:space-between;gap:8px;margin-top:8px}.sv-nav .btn{width:auto;padding:6px 12px;font-size:13.5px}
+.sv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}
+.sv-box{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface)}
+.sv-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:14.5px}
+.sv-row:last-child{border-bottom:0}.sv-row span{color:var(--ink)}.sv-row b{font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:auto}.sv-row small{color:var(--muted);width:46px;text-align:right}
+.sv-sub{font-size:12.5px;color:var(--muted);margin-top:3px;white-space:normal}
+.sv-chip{display:inline-block;background:var(--note);border-radius:7px;padding:1px 7px;margin:2px 2px 0 0;color:var(--ink)}
+.mk{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:var(--muted);white-space:nowrap;margin-left:10px;cursor:pointer}.mk input{width:16px;height:16px;accent-color:var(--accent)}
+.iiko-ok{color:var(--accent);font-weight:600}.iiko-no{color:var(--amber);font-weight:600}
 .cash-card{border:1px solid var(--line);border-radius:14px;padding:14px;margin:14px 0;background:var(--surface)}
 .cash-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
 .cash-bal{font-size:22px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
@@ -473,7 +485,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='55';
+  const BUILD='56';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -538,7 +550,7 @@ body.boss .hist-head h2{font-size:26px}
     else if(q==='week'){f=new Date(d);f.setDate(d.getDate()-6)}else if(q==='month')f=new Date(d.getFullYear(),d.getMonth(),1);
     else{f=new Date(d.getFullYear(),d.getMonth()-1,1);t=new Date(d.getFullYear(),d.getMonth(),0)}
     $('#hb_from').value=iso(f);$('#hb_to').value=iso(t);$$('#hb_quick button').forEach(x=>x.classList.toggle('on',x.dataset.q===q))}
-  function itemHtml(x,boss){return `<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b${x.old||x.replaced?' class="old"':''}>${esc(x.date)}</b>${boss?' · '+esc(x.admin):''}<br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.replaced?' · <span class="rep">заменён исправленным отчётом</span>'+(boss?', в итоги не входит':''):x.old?' · <span class="rep">заменён повторной отправкой, в итоги не входит</span>':x.fixed?' · <span class="rep">исправленный отчёт</span>':x.repeat?' · <span class="rep">повторная отправка</span>':''}${x.bdiff?` · <span class="bad">⚠ Карта ≠ безнал по сверкам на ${money(Math.abs(x.bdiff))}</span>`:''}${x.fix==='ожидает'?' · <span class="rep">ждёт разрешения на исправление</span>':x.fix==='разрешено'?' · <span class="rep">исправление разрешено</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`}
+  function itemHtml(x,boss){return `<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b${x.old||x.replaced?' class="old"':''}>${esc(x.date)}</b>${boss?' · '+esc(x.admin):''}<br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.replaced?' · <span class="rep">заменён исправленным отчётом</span>'+(boss?', в итоги не входит':''):x.old?' · <span class="rep">заменён повторной отправкой, в итоги не входит</span>':x.fixed?' · <span class="rep">исправленный отчёт</span>':x.repeat?' · <span class="rep">повторная отправка</span>':''}${x.bdiff?` · <span class="bad">⚠ Карта ≠ безнал по сверкам на ${money(Math.abs(x.bdiff))}</span>`:''}${boss&&x.money&&x.money.length?(()=>{const t=x.money.length,d=x.money.filter(m=>m[3]).length;return d===t?' · <span class="iiko-ok">✓ занесено в iiko</span>':` · <span class="iiko-no">в iiko занесено ${d} из ${t}</span>`})():''}${x.fix==='ожидает'?' · <span class="rep">ждёт разрешения на исправление</span>':x.fix==='разрешено'?' · <span class="rep">исправление разрешено</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`}
   async function loadHist(){
     const boss=!!(USER&&USER.boss);
     $('#hist_list').innerHTML='<p class="hint">Загружаю…</p>';if(boss)$('#hb_sum').innerHTML='';
@@ -957,16 +969,43 @@ body.boss .hist-head h2{font-size:26px}
     const rej=f&&f.status==='отклонено'?'<p class="fix-st no">Предыдущий запрос на исправление отклонён.</p>':'';
     return `<div class="fixbox">${rej}<p>Нашли ошибку? Опишите, что не так. Исправить можно после подтверждения руководителя.</p><textarea id="fx_reason" maxlength="500" placeholder="Например: ошиблась в наличке, должно быть 12 500"></textarea><div class="row"><button type="button" class="btn sec" data-fx="request">Запросить исправление</button></div></div>`;
   }
+
+  // ---------- карточка смены: компактно — итоги плитками, оплаты и сверка рядом, курьеры, приход/расход
+  function shiftView(s){
+    const sm={};s.summary.forEach(([k,v])=>sm[k]=v);const N=k=>typeof sm[k]==='number'?sm[k]:num(sm[k]);
+    const rv=N('Выручка всего'),cash=N('Наличные'),pass=N('Передана сумма'),ct=N('Курьерам всего'),inc=N('Приход'),ex=N('Прочие расходы');
+    const boss=!!(USER&&USER.boss);
+    // соседние смены этого филиала (для руководителя)
+    let nav='';if(boss&&BOSS_ROWS.length){const same=BOSS_ROWS.filter(x=>x.branch===s.raw.branch&&!x.old).sort((a,b)=>a.dk-b.dk);const ix=same.findIndex(x=>x.id===s.id);
+      const pv=ix>0?same[ix-1]:null,nx=ix>=0&&ix<same.length-1?same[ix+1]:null;
+      nav=`<div class="sv-nav">${pv?`<button type="button" class="btn ghost" data-open="${esc(pv.id)}">← ${esc(pv.date)}</button>`:'<span></span>'}${nx?`<button type="button" class="btn ghost" data-open="${esc(nx.id)}">${esc(nx.date)} →</button>`:''}</div>`}
+    const head=`<div class="sv-head"><div><h3>${esc(sm['Дата смены']||'')} · ${esc(brShort(s.raw.branch))}</h3><p>${esc(s.raw.branch)} · ${esc(sm['Администратор']||s.admin||'')}</p></div><div class="sv-meta">отчёт ${esc(s.id)}${sm['Отправлено']?'<br>отправлен '+esc(sm['Отправлено']):''}</div></div>`;
+    const tiles=`<div class="hb-tiles">${tile('Выручка всего',money(rv),'','main')}${tile('Наличные',money(cash))}${tile('Передана сумма',money(pass),'наличные − курьерам из кассы')}${tile('Курьерам',money(ct),N('Не делали изъятие')?'не из кассы: '+money(N('Не делали изъятие')):'')}${inc?tile('Приход',money(inc)):''}${ex?tile('Расход',money(ex)):''}</div>`;
+    const PT=[['Онлайн','Онлайн'],['Наличные','Наличные'],['Карта','Карта'],['Яндекс/Деливери','Яндекс/Деливери'],['Чиббис','Чиббис'],['Сбермаркет','Сбермаркет'],['Бонусы iiko (iikocard)','Бонусы iiko']];
+    const pay=PT.filter(([k])=>N(k)).map(([k,l],i)=>`<div class="sv-row"><span>${sw(`var(--s${i+1})`)}${l}</span><b>${money(N(k))}</b><small>${pf(pct(N(k),rv))}</small></div>`).join('')||'<p class="hint">Выручки нет.</p>';
+    const chk=(l,a,b,okText)=>{const d=Math.round((b-a)*100)/100;return `<div class="sv-row"><span>${l}</span><b class="${Math.abs(d)<0.01?'t-up':'t-warn'}">${Math.abs(d)<0.01?'✓ '+okText:(d>0?'+':'')+money(d)}</b></div>`};
+    const r041=s.raw.r041!==''&&s.raw.r041!=null?num(s.raw.r041):null,bf=s.raw.bfact!==''&&s.raw.bfact!=null?num(s.raw.bfact):null,o=s.raw.ord||{};
+    const ordSum=num(o.q_ps)+num(o.q_ds),hasOrd=[o.q_pn,o.q_ps,o.q_dn,o.q_ds].some(v=>v!==''&&v!=null);
+    let ver='';
+    if(r041!=null)ver+=chk(`Отчёт 041: ${money(r041)}`,rv,r041,'сходится');
+    if(bf!=null)ver+=chk(`Безнал по сверкам: ${money(bf)} (карта ${money(N('Карта'))})`,N('Карта'),bf,'сходится');
+    if(hasOrd){ver+=`<div class="sv-row"><span>Самовывоз</span><b>${num(o.q_pn)} / ${money(num(o.q_ps))}</b></div><div class="sv-row"><span>Доставка</span><b>${num(o.q_dn)} / ${money(num(o.q_ds))}</b></div>`;ver+=chk(`Общее: ${num(o.q_pn)+num(o.q_dn)} / ${money(ordSum)}`,rv,ordSum,'= выручке')}
+    if(!ver)ver='<p class="hint">Сверочные поля не заполнены.</p>';
+    const wTxt=w=>String(w||'').replace(/^да$/i,'сделано').replace(/^нет.*$/i,'не сделано');
+    const cr=s.cour.length?`<p class="h-sec">Курьеры · ${s.cour.length}</p><div class="h-table"><table><tr><th>Курьер</th><th>Время</th><th class="n">Заказов</th><th class="n">За часы</th><th class="n">За заказы</th><th class="n">Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td><b>${esc(c.name||'—')}</b>${c.zones?`<div class="sv-sub">по зонам: ${esc(c.zones)}</div>`:''}${(c.extras||[]).length?`<div class="sv-sub">${c.extras.map(x=>`<span class="sv-chip">${esc(x.kind+(x.zone?' · '+x.zone:'')+(x.kind==='Довоз'||x.kind==='Отказ'||x.kind==='Листовки'?' × '+x.n:'')+(x.reason?' · '+x.reason:''))} = ${money(x.sum)}</span>`).join(' ')}</div>`:''}</td><td>${c.from||c.to?esc(c.from)+'–'+esc(c.to):'—'}</td><td class="n">${esc(c.qty)||'—'}</td><td class="n">${esc(c.hours)||'—'}</td><td class="n">${esc(c.orders)||'—'}</td><td class="n"><b>${esc(c.total)}</b></td><td>${esc(wTxt(c.w))}</td></tr>`).join('')}</table></div>`:'';
+    const canMk=boss&&!USER.viewer;
+    const mk=(m,i)=>canMk?`<label class="mk" title="${esc(m.iiko||'Отметьте, когда занесёте в iiko')}"><input type="checkbox" data-mk="${i}"${m.iiko?' checked':''}> в iiko</label>`:(m.iiko?'<span class="iiko-ok" title="'+esc(m.iiko)+'">✓ в iiko</span>':'<span class="mut">не в iiko</span>');
+    const ml=t=>{const L=s.money.map((m,i)=>[m,i]).filter(([m])=>m.type===t);return L.length?`<div class="sv-box"><p class="h-sec" style="margin-top:0">${t==='Приход'?'Приход':'Расход'} · ${money(L.reduce((a,[m])=>a+num(m.sum),0))}</p>${L.map(([m,i])=>`<div class="sv-row"><span>${esc(m.art||'—')}</span><b>${money(num(m.sum))}</b>${mk(m,i)}</div>`).join('')}</div>`:''};
+    const allMk=s.money.length&&s.money.every(m=>m.iiko);
+    const mon=s.money.length?`<div class="sv-grid">${ml('Приход')}${ml('Расход')}</div>${canMk?`<div style="margin-top:8px"><button type="button" class="btn ${allMk?'ghost':'sec'}" data-mkall="${allMk?0:1}">${allMk?'Снять отметки «в iiko»':'✓ Всё занесено в iiko'}</button></div>`:''}`:'';
+    return `<button type="button" class="h-back">← Назад к списку</button>${nav}${head}${tiles}<div class="sv-grid"><div class="sv-box"><p class="h-sec" style="margin-top:0">Выручка по видам оплаты</p>${pay}</div><div class="sv-box"><p class="h-sec" style="margin-top:0">Сверка</p>${ver}</div></div>${cr}${mon}<div id="fx_box">${fixBox(s)}</div>`;
+  }
   async function openShift(id){
     const one=$('#hist_one');one.hidden=false;$('#hist_list').hidden=true;$('#hist_note').hidden=true;$('#hist_boss').hidden=true;one.innerHTML='<p class="hint">Загружаю…</p>';H.scrollTop=0;
     try{const r=await api({action:'shift',pin:USER.pin,id});
       if(!r.ok){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Отчёт не найден.</p>';return}
       const s=r.shift;SHIFT=s;
-      const kv=s.summary.filter(([k])=>!(USER&&USER.boss?/^(Повторная)/:/^(Отправлено|Администратор|Повторная)/).test(k)).map(([k,v])=>`<span>${esc(k)}</span><span>${typeof v==='number'?money(v):esc(v)}</span>`).join('');
-      const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>${c.zones?`<tr><td colspan="7"><small>По зонам: ${esc(c.zones)}</small></td></tr>`:''}${(c.extras||[]).length?`<tr><td colspan="7"><small>Доплаты: ${c.extras.map(x=>esc(x.kind+(x.zone?' '+x.zone:'')+(x.kind==='Довоз'||x.kind==='Отказ'||x.kind==='Листовки'?' × '+x.n:'')+(x.reason?' ('+x.reason+')':'')+' = '+money(x.sum))).join('; ')}</small></td></tr>`:''}`).join('')}</table></div>`:'';
-      const mt=s.money.length?`<p class="h-sec">Приход и расход</p><div class="h-table"><table><tr><th>Тип</th><th>Дата</th><th>Статья</th><th>Сумма</th></tr>${s.money.map(m=>`<tr><td>${esc(m.type)}</td><td>${esc(m.date)}</td><td>${esc(m.art)}</td><td>${esc(m.sum)}</td></tr>`).join('')}</table></div>`:'';
-      const bd=s.raw&&s.raw.bfact!==''&&s.raw.bfact!=null?num(s.raw.bfact)-num(s.raw.rev&&s.raw.rev.r_card):0;
-      one.innerHTML=`<button type="button" class="h-back">← Назад к списку</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${Math.abs(bd)>=0.01?`<p class="flag bad">⚠ Карта не сходится с безналом по сверкам: разница ${money(Math.abs(bd))}.</p>`:''}${ct}${mt}<div id="fx_box">${fixBox(s)}</div>`;
+      one.innerHTML=shiftView(s);
     }catch(x){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Нет связи с сервером.</p>'}
   }
   $('#hist_list').addEventListener('click',e=>{const b=e.target.closest('.h-item');if(b)openShift(b.dataset.id)});
@@ -1009,6 +1048,11 @@ body.boss .hist-head h2{font-size:26px}
     }catch(x){toast('Нет связи с сервером')}
     b.disabled=false;
   });
+  $('#hist_one').addEventListener('change',async e=>{const c=e.target.closest('[data-mk]');if(!c||!SHIFT)return;const i=+c.dataset.mk,on=c.checked;c.disabled=true;
+    try{const r=await api({action:'iiko_mark',pin:USER.pin,id:SHIFT.id,idx:i,on});if(r.ok){SHIFT.money[i].iiko=on?'да':'';const x=BOSS_ROWS.find(z=>z.id===SHIFT.id);if(x)x.money=null;toast(on?'Отмечено: занесено в iiko':'Отметка снята')}else{c.checked=!on;toast('Не сохранилось')}}catch(x){c.checked=!on;toast('Нет связи с сервером')}c.disabled=false});
+  $('#hist_one').addEventListener('click',async e=>{const o=e.target.closest('[data-open]');if(o){openShift(o.dataset.open);return}
+    const a=e.target.closest('[data-mkall]');if(a&&SHIFT){const on=a.dataset.mkall==='1';a.disabled=true;
+      try{const r=await api({action:'iiko_mark',pin:USER.pin,id:SHIFT.id,idx:-1,on});if(r.ok){SHIFT.money.forEach(m=>m.iiko=on?'да':'');$('#hist_one').innerHTML=shiftView(SHIFT);toast(on?'Всё отмечено как занесённое в iiko':'Отметки сняты')}else toast('Не сохранилось')}catch(x){toast('Нет связи с сервером')}a.disabled=false}});
   $('#hist_one').addEventListener('click',e=>{if(e.target.closest('.h-back')){$('#hist_one').hidden=true;$('#hist_list').hidden=false;$('#hist_note').hidden=false;$('#hist_boss').hidden=!(USER&&USER.boss);loadHist()}});
   const RATE=140; // ставка курьера за час, менять только здесь
   // филиалы, где почасовую выдают отдельно (по iiko) — в отчёте только оплата за заказы
