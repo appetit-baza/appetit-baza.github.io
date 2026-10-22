@@ -456,7 +456,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='41';
+  const BUILD='42';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -473,7 +473,7 @@ body.boss .hist-head h2{font-size:26px}
   // Ссылка на веб-приложение Google Apps Script. Пока пусто — вход по PIN выключен.
   const API_URL='https://script.google.com/macros/s/AKfycbxSXS6WoSei6vke43-jPTfSviFiteAWbnDiKLuB2LbbPoxnYjADNzVkhAvM4dWT9LYdaA/exec';
   const SESSION_HOURS=14;
-  const MAX_ON=false; // включить после подключения бота MAX
+  const MAX_ON=true; // бот MAX подключён 22.10.2026 (через посредника в Яндекс Облаке)
   let USER=null, FIX=null, FIX_PENDING=0;
   function histLabel(){const u=USER;const t=document.getElementById('hist_t');if(t&&u&&u.boss)t.textContent='Все смены'+(FIX_PENDING?` · запросов на исправление: ${FIX_PENDING}`:'');$('#b_hist').textContent=u&&u.boss?('Все отчёты'+(FIX_PENDING?` · запросов: ${FIX_PENDING}`:'')):'Мои смены'}
   const DEVICE=(()=>{let d=LS.get('device',null);if(!d){d=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));LS.set('device',d)}return d})();
