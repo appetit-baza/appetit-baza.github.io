@@ -402,7 +402,6 @@ body.boss .hist-head h2{font-size:26px}
     <div class="rows" id="exp"></div>
     <button type="button" class="add" id="add_exp">+ Добавить расход</button>
     <datalist id="articles"><option value="Такси сотрудникам"><option value="Возврат ДС чек №"><option value="Вахта"><option value="Продукты"><option value="Канцтовары"><option value="Хозтовары"></datalist>
-    <p class="hint">Приходы и расходы идут в отчёт отдельным списком и на «Переданную сумму» (выручку наличными) не влияют.</p>
   </section>
 </main>
 
@@ -467,7 +466,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='45';
+  const BUILD='46';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
