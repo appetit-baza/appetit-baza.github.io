@@ -185,9 +185,8 @@ var MAX_CHAT_TITLE = 'АДМИНЫ АППЕТИТ';
 function maxFetch_(method, path, payload) {
   var token = PropertiesService.getScriptProperties().getProperty('MAX_TOKEN');
   if (!token) return { code: 0, error: 'no_token' };
-  // У MAX (platform-api2.max.ru) сертификат российского УЦ Минцифры, которому серверы Google не доверяют.
-  // Поэтому проверку сертификата отключаем ТОЛЬКО для запросов к MAX (решение согласовано с Алиной 19.10.2026).
-  var opt = { method: method, headers: { Authorization: token }, muteHttpExceptions: true, validateHttpsCertificates: false };
+  // validateHttpsCertificates:false пробовали 22.10.2026 — не помогает (Google всё равно даёт «Ошибка SSL»), проверка оставлена включённой.
+  var opt = { method: method, headers: { Authorization: token }, muteHttpExceptions: true };
   if (payload) { opt.contentType = 'application/json'; opt.payload = JSON.stringify(payload); }
   var r = UrlFetchApp.fetch(MAX_API + path, opt);
   var body = {};
