@@ -372,7 +372,7 @@ body.boss .hist-head h2{font-size:26px}
       <div class="field"><label for="r_ye">Яндекс/Деливери</label><input id="r_ye" class="num" inputmode="decimal"></div>
       <div class="field"><label for="r_chib">Чиббис</label><input id="r_chib" class="num" inputmode="decimal"></div>
       <div class="field"><label for="r_sber">Сбермаркет</label><input id="r_sber" class="num" inputmode="decimal"></div>
-      <div class="field"><label for="r_bon">Бонусы iiko (iikocard)</label><input id="r_bon" class="num" inputmode="decimal"></div>
+      <div class="field"><label for="r_bon">Бонусы iiko (iikocard) <span class="lbl-note">— скидка, в выручку не входят</span></label><input id="r_bon" class="num" inputmode="decimal"></div>
     </div>
     <p class="h-sub">Заказы <span class="lbl-note">— количество и сумма</span></p>
     <div class="rev">
@@ -487,7 +487,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='58';
+  const BUILD='59';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -569,7 +569,7 @@ body.boss .hist-head h2{font-size:26px}
       $('#hist_list').innerHTML=r.shifts.map(x=>itemHtml(x,boss)).join('');
     }catch(e){$('#hist_list').innerHTML='<p class="hint">Нет связи с сервером. Попробуйте ещё раз.</p>'}
   }
-  const SUMF=[['rev','Выручка всего'],['mp','Онлайн'],['cash','Наличные'],['card','Карта'],['ye','Яндекс/Деливери'],['chib','Чиббис'],['sber','Сбермаркет'],['bon','Бонусы iiko'],['ct','Курьерам'],['ex','Прочие расходы'],['inc','Приход'],['pass','Передано']];
+  const SUMF=[['rev','Выручка всего'],['mp','Онлайн'],['cash','Наличные'],['card','Карта'],['ye','Яндекс/Деливери'],['chib','Чиббис'],['sber','Сбермаркет'],['bon','Бонусы iiko (скидка)'],['ct','Курьерам'],['ex','Прочие расходы'],['inc','Приход'],['pass','Передано']];
   function bossSum(){
     const rows=BOSS_ROWS.filter(x=>!x.old);const tot={};SUMF.forEach(([k])=>tot[k]=rows.reduce((a,x)=>a+(x[k]||0),0));
     const by={};rows.forEach(x=>{const b=by[x.branch]=by[x.branch]||{n:0,rev:0,cash:0,ct:0,ex:0,pass:0};b.n++;['rev','cash','ct','ex','pass'].forEach(k=>b[k]+=x[k]||0)});
@@ -607,7 +607,7 @@ body.boss .hist-head h2{font-size:26px}
   let STAB=(LS.get('stab')||'sum'),ITOGI_HTML='',PREV={key:'',rows:null,busy:false};
   const LATE_HOUR=12; // отчёт вовремя, если отправлен до 12:00 (МСК) следующего дня
   const RR4=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'];
-  const PAY=[['mp','Онлайн'],['cash','Наличные'],['card','Карта'],['ye','Яндекс/Деливери'],['chib','Чиббис'],['sber','Сбермаркет'],['bon','Бонусы iiko']];
+  const PAY=[['mp','Онлайн'],['cash','Наличные'],['card','Карта'],['ye','Яндекс/Деливери'],['chib','Чиббис'],['sber','Сбермаркет']]; // бонусы iiko — скидка, в структуру оплат не входят
   const BR_ALL=()=>[...$('#branch').options].filter(o=>o.value).map(o=>o.value);
   const brIdx=b=>{const i=BR_ALL().indexOf(b);return i<0?6:i};
   const brCol=b=>`var(--s${brIdx(b)%7+1})`;
@@ -1020,8 +1020,8 @@ body.boss .hist-head h2{font-size:26px}
         cashT=o?tile('Остаток кассы',money(Math.round(o.bal*100)/100),'на начало дня '+money(Math.round(o.start*100)/100),'cashtile'):tile('Остаток кассы','—',cd&&!cd.none?'день раньше стартового остатка':'впишите старт на вкладке «Касса»')}}
     const head=`<div class="sv-head"><div><h3>${esc(sm['Дата смены']||'')} · ${esc(brShort(s.raw.branch))}</h3><p>${esc(s.raw.branch)} · ${esc(sm['Администратор']||s.admin||'')}</p></div><div class="sv-meta">отчёт ${esc(s.id)}${sm['Отправлено']?'<br>отправлен '+esc(sm['Отправлено']):''}</div></div>`;
     const tiles=`<div class="hb-tiles">${tile('Выручка всего',money(rv),'','main')}${tile('Наличные',money(cash))}${tile('Передана сумма',money(pass),'наличные − курьерам из кассы')}${tile('Курьерам',money(ct),N('Не делали изъятие')?'не из кассы: '+money(N('Не делали изъятие')):'')}${inc?tile('Приход',money(inc)):''}${ex?tile('Расход',money(ex)):''}${cashT}</div>`;
-    const PT=[['Онлайн','Онлайн'],['Наличные','Наличные'],['Карта','Карта'],['Яндекс/Деливери','Яндекс/Деливери'],['Чиббис','Чиббис'],['Сбермаркет','Сбермаркет'],['Бонусы iiko (iikocard)','Бонусы iiko']];
-    const pay=PT.filter(([k])=>N(k)).map(([k,l],i)=>`<div class="sv-row"><span>${sw(`var(--s${i+1})`)}${l}</span><b>${money(N(k))}</b><small>${pf(pct(N(k),rv))}</small></div>`).join('')||'<p class="hint">Выручки нет.</p>';
+    const PT=[['Онлайн','Онлайн'],['Наличные','Наличные'],['Карта','Карта'],['Яндекс/Деливери','Яндекс/Деливери'],['Чиббис','Чиббис'],['Сбермаркет','Сбермаркет']];
+    const pay=(PT.filter(([k])=>N(k)).map(([k,l],i)=>`<div class="sv-row"><span>${sw(`var(--s${i+1})`)}${l}</span><b>${money(N(k))}</b><small>${pf(pct(N(k),rv))}</small></div>`).join('')||'<p class="hint">Выручки нет.</p>')+(N('Бонусы iiko (iikocard)')?`<div class="sv-row"><span>Бонусы iiko — скидка</span><b>${money(N('Бонусы iiko (iikocard)'))}</b><small>не в выручке</small></div>`:'');
     const chk=(l,a,b,okText)=>{const d=Math.round((b-a)*100)/100;return `<div class="sv-row"><span>${l}</span><b class="${Math.abs(d)<0.01?'t-up':'t-warn'}">${Math.abs(d)<0.01?'✓ '+okText:(d>0?'+':'')+money(d)}</b></div>`};
     const r041=s.raw.r041!==''&&s.raw.r041!=null?num(s.raw.r041):null,bf=s.raw.bfact!==''&&s.raw.bfact!=null?num(s.raw.bfact):null,o=s.raw.ord||{};
     const ordSum=num(o.q_ps)+num(o.q_ds),hasOrd=[o.q_pn,o.q_ps,o.q_dn,o.q_ds].some(v=>v!==''&&v!=null);
@@ -1281,7 +1281,7 @@ body.boss .hist-head h2{font-size:26px}
     });
     const ct=ch+co+cx;
     // revenue
-    const rv={};let rev=0;REV.forEach(([id])=>{rv[id]=num($('#'+id).value);rev+=rv[id]});
+    const rv={};let rev=0;REV.forEach(([id])=>{rv[id]=num($('#'+id).value);if(id!=='r_bon')rev+=rv[id]}); // бонусы iiko — это скидка, в выручку не входят (как в 041)
     // expenses
     let ex=0,exW=0,inc=0;
     $$('#exp .erow').forEach(r=>{const v=num(r.querySelector('[data-k=sum]').value);ex+=v});
@@ -1401,7 +1401,7 @@ body.boss .hist-head h2{font-size:26px}
   function chatText(){
     const s=state();const L=[];
     L.push(`Кассовый отчёт ${ruDate(s.date)}`,`Филиал: ${s.branch||'—'}`,`Администратор: ${s.admin||'—'}`,'');
-    L.push(`Выручка всего: ${rub(R.rev)}`);REV.forEach(([id,n])=>{if(R.rv[id])L.push(`  ${n}: ${rub(R.rv[id])}`)});
+    L.push(`Выручка всего: ${rub(R.rev)}`);REV.forEach(([id,n])=>{if(R.rv[id]&&id!=='r_bon')L.push(`  ${n}: ${rub(R.rv[id])}`)});if(R.rv.r_bon)L.push(`Бонусы iiko (скидка, не в выручке): ${rub(R.rv.r_bon)}`);
     L.push('',`Расходы (курьеры): ${rub(R.ct)}`);
     s.cour.forEach(c=>{const t=num(c.hours)+num(c.orders);if(!t&&!c.name)return;L.push(`  ${c.name||'—'}${c.from&&c.to?` ${c.from}–${c.to}`:''}: часы ${fmt(num(c.hours))} + заказы ${fmt(num(c.orders))}${c.qty?` (${c.qty} шт.)`:''} = ${fmt(t)}${c.w?'':' — из сейфа'}`)});
     if(R.cn)L.push(`  Не делали изъятие: ${rub(R.cn)}`);
@@ -1417,7 +1417,7 @@ body.boss .hist-head h2{font-size:26px}
 
   // выручка в чат админов — автоматически после «Отправить в бухгалтерию»
   async function revToChat(s){
-    const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:s.rev,ord:s.ord,redo:redoList(s),otk:otkCount(s)}});
+    const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:Object.fromEntries(Object.entries(s.rev||{}).filter(([k])=>k!=='r_bon')),bon:(s.rev||{}).r_bon||'',ord:s.ord,redo:redoList(s),otk:otkCount(s)}});
     return r;
   }
   const revErr=e=>({no_token:'бот MAX не подключён',no_chat:'бот не добавлен в чат «АДМИНЫ АППЕТИТ»',empty:'выручка пустая',bad_pin:'PIN больше не действует'}[e]||'ошибка отправки');
@@ -1458,7 +1458,7 @@ body.boss .hist-head h2{font-size:26px}
     const n=v=>{const x=num(v);return x?x:null};
     // sheet 1
     const s1=[['ФИЛИАЛ, АДРЕС',s.branch],['Дата:',ruDate(s.date)],['ФИО адм:',s.admin],[],['ВЫРУЧКА ВСЕГО:',R.rev]];
-    REV.forEach(([id,name])=>s1.push([name,n(s.rev[id])]));
+    REV.forEach(([id,name])=>s1.push([id==='r_bon'?name+' — скидка, не в выручке':name,n(s.rev[id])]));
     if(s.bfact)s1.push(['Безнал факт (по сверкам)',n(s.bfact)]);
     if(s.ord&&ORD.some(id=>s.ord[id])){const o=s.ord;s1.push([],['Самовывоз (заказов / ₽)',`${num(o.q_pn)} / ${num(o.q_ps)}`],['Доставка (заказов / ₽)',`${num(o.q_dn)} / ${num(o.q_ds)}`],['Общее (заказов / ₽)',`${num(o.q_pn)+num(o.q_dn)} / ${num(o.q_ps)+num(o.q_ds)}`])}
     s1.push([],[],['РАСХОДЫ:',R.ct],['НЕ ДЕЛАЛИ ИЗЪЯТИЕ',R.cn||null],[],['ПЕРЕДАНА СУММА',R.pass]);

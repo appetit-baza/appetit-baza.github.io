@@ -248,13 +248,15 @@ function sendRevenue_(r, admin) {
   var names = [['r_mp', 'Онлайн'], ['r_cash', 'Наличные'], ['r_card', 'Карта'], ['r_ye', 'Яндекс/Деливери'],
     ['r_chib', 'Чиббис'], ['r_sber', 'Сбермаркет'], ['r_bon', 'Бонусы iiko']];
   var total = 0, lines = [];
-  names.forEach(function (x) { var v = num_(rev[x[0]]); total += v; if (v) lines.push(x[1] + ': ' + fmtRub_(v)); });
+  names.forEach(function (x) { var v = num_(rev[x[0]]); if (x[0] !== 'r_bon') total += v; if (v && x[0] !== 'r_bon') lines.push(x[1] + ': ' + fmtRub_(v)); });
+  // бонусы iiko — скидка: в выручку не входят (как в отчёте 041), показываем отдельной строкой
+  var bon = num_(rev.r_bon) || num_(r.bon); // сайт присылает бонусы отдельным полем «bon»
   if (!total) return { ok: false, error: 'empty' };
   // филиал — первой строкой, жирным и заглавными, чтобы сразу было видно (формат HTML в MAX)
   var h = function (s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
   var text = '📍 <b>' + h(r.branch || admin.branch).toUpperCase() + '</b>\n' +
     '💰 Выручка ' + h(r.dateRu) + '\nАдминистратор: ' + h(admin.name) +
-    '\n\n' + h(lines.join('\n')) + '\n\n<b>ВСЕГО: ' + fmtRub_(total) + '</b>\n\n' + (ordText_(r.ord) ? h(ordText_(r.ord)) + '\n\n' : '') + h(redoText_(r.redo)) + '\n❌ Отказы: ' + num_(r.otk);
+    '\n\n' + h(lines.join('\n')) + '\n\n<b>ВСЕГО: ' + fmtRub_(total) + '</b>' + (bon ? '\nБонусы iiko (скидка): ' + fmtRub_(bon) : '') + '\n\n' + (ordText_(r.ord) ? h(ordText_(r.ord)) + '\n\n' : '') + h(redoText_(r.redo)) + '\n❌ Отказы: ' + num_(r.otk);
   var chat = maxChatId_();
   if (!chat) return { ok: false, error: PropertiesService.getScriptProperties().getProperty('MAX_TOKEN') ? 'no_chat' : 'no_token' };
   var res = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: text, format: 'html' });
