@@ -393,13 +393,14 @@ body.boss .hist-head h2{font-size:26px}
   <!-- 3 -->
   <section class="card" id="sec-exp">
     <div class="card-h"><span class="no">3</span><h2>Приход и расход</h2><span class="sub" id="o_exp_sub"></span></div>
+    <p class="subhead">Приход</p>
+    <div class="row-h e"><span class="th">Статья</span><span class="th" style="text-align:right">Сумма</span><span></span></div>
+    <div class="rows" id="inc"></div>
+    <button type="button" class="add" id="add_inc">+ Добавить приход</button>
     <p class="subhead">Расход</p>
     <div class="row-h e"><span class="th">Статья</span><span class="th" style="text-align:right">Сумма</span><span></span></div>
     <div class="rows" id="exp"></div>
     <button type="button" class="add" id="add_exp">+ Добавить расход</button>
-    <p class="subhead">Приход</p>
-    <div class="rows" id="inc"></div>
-    <button type="button" class="add" id="add_inc">+ Добавить приход</button>
     <datalist id="articles"><option value="Такси сотрудникам"><option value="Возврат ДС чек №"><option value="Вахта"><option value="Продукты"><option value="Канцтовары"><option value="Хозтовары"></datalist>
     <p class="hint">Приходы и расходы идут в отчёт отдельным списком и на «Переданную сумму» (выручку наличными) не влияют.</p>
   </section>
@@ -466,7 +467,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='44';
+  const BUILD='45';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1139,7 +1140,7 @@ body.boss .hist-head h2{font-size:26px}
       $('#r_card').classList.toggle('mismatch',bad);$('#r_bfact').classList.toggle('mismatch',bad)}
     $('#o_c_h').textContent=fmt(ch);$('#o_c_o').textContent=fmt(co);$('#o_c_x').textContent=fmt(cx);$('#o_c_x_box').hidden=!cx;$('#o_c_t').textContent=fmt(ct);$('#o_c_w').textContent=fmt(cw);$('#o_c_n').textContent=fmt(cn);$('#o_c_q').textContent=fmt(cq);
     $('#o_cour_sub').textContent=$$('.crow').length+' чел. · '+rub(ct);
-    $('#o_exp_sub').textContent='расход '+rub(ex)+(inc?' · приход '+rub(inc):'');
+    $('#o_exp_sub').textContent=(inc?'приход '+rub(inc)+' · ':'')+'расход '+rub(ex);
     $('#s_rev').textContent=rub(rev);$('#s_cash').textContent=rub(rv.r_cash);$('#s_cour').textContent=rub(ct);$('#s_noW').textContent=rub(cn);$('#s_exp').textContent=rub(ex)+(exW?` (вычтено ${fmt(exW)})`:'');$('#s_inc').textContent=rub(inc);
     $('#s_pass').textContent=rub(pass);$('#m_pass').textContent=rub(pass);
     $('#s_big').classList.toggle('neg',pass<0);
