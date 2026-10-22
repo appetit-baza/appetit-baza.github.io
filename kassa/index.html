@@ -398,7 +398,7 @@ body.boss .hist-head h2{font-size:26px}
     <div class="rows" id="inc"></div>
     <button type="button" class="add" id="add_inc">+ Добавить приход</button>
     <p class="subhead">Расход</p>
-    <div class="row-h e"><span class="th">Статья</span><span class="th" style="text-align:right">Сумма</span><span></span></div>
+    <div class="row-h e"><span class="th">Статья — можно написать свою</span><span class="th" style="text-align:right">Сумма</span><span></span></div>
     <div class="rows" id="exp"></div>
     <button type="button" class="add" id="add_exp">+ Добавить расход</button>
     <datalist id="articles"><option value="Такси сотрудникам"><option value="Возврат ДС чек №"><option value="Вахта"><option value="Продукты"><option value="Канцтовары"><option value="Хозтовары"></datalist>
@@ -466,7 +466,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='46';
+  const BUILD='47';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1033,7 +1033,7 @@ body.boss .hist-head h2{font-size:26px}
     const r=document.createElement('div');r.className='erow';
     const inc=box==='inc';
     // дата прихода/расхода = дата кассовой смены (поле «Дата» в первом блоке)
-    r.innerHTML=`<div class="e-art"><span class="lbl-m">Статья</span><input data-k="art" ${inc?'':'list="articles" placeholder="Такси сотрудникам"'} value="${esc(d.art)}" aria-label="Статья"></div>
+    r.innerHTML=`<div class="e-art"><span class="lbl-m">Статья</span><input data-k="art" ${inc?'placeholder="Напишите, откуда приход"':'list="articles" placeholder="Напишите статью или выберите из списка"'} value="${esc(d.art)}" aria-label="Статья"></div>
       <div><span class="lbl-m">Сумма</span><input data-k="sum" class="num" inputmode="decimal" value="${esc(d.sum)}" aria-label="Сумма"></div>
       <button type="button" class="del" aria-label="Удалить строку">×</button>`;
     $('#'+box).appendChild(r);
