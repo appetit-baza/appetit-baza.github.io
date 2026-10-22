@@ -63,9 +63,9 @@ input.mismatch{border-color:var(--warn)!important;background:var(--warn-soft)!im
 .h-item .bad{color:var(--warn);font-weight:700}
 /* table-like rows */
 .rows{display:grid;gap:8px}
-.to-chat{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:12px}
-.to-chat .btn{width:auto;padding:10px 16px;font-size:14.5px}
-.to-chat .hint{margin:0}
+.to-chat{display:grid;gap:6px}
+.to-chat .btn{width:100%}
+.to-chat .hint{margin:0;text-align:center}
 .rate-fixed{margin:0 0 14px;font-size:14px;color:var(--muted)}
 .rate-fixed b{color:var(--ink)}
 .row-h,.crow,.erow{display:grid;gap:8px;align-items:center}
@@ -358,7 +358,6 @@ body.boss .hist-head h2{font-size:26px}
       <div class="field"><label for="r_bfact">Безнал факт (по сверкам)</label><input id="r_bfact" class="num" inputmode="decimal" placeholder="по сверкам"></div>
     </div>
     <div class="total-line"><span>Выручка всего</span><strong id="o_rev">0 ₽</strong></div>
-    <div class="to-chat" id="to_chat" hidden><button type="button" class="btn sec" id="b_rev">Отправить выручку в чат «АДМИНЫ АППЕТИТ»</button><span class="hint" id="rev_sent"></span></div>
     <p class="flag" id="f_041"></p>
     <p class="flag" id="f_bfact"></p>
   </section>
@@ -414,6 +413,7 @@ body.boss .hist-head h2{font-size:26px}
   <p class="sent" id="sent"></p>
   <p class="send-err" id="send_err" hidden></p>
   <button type="button" class="btn primary" id="b_xlsx">Скачать Excel</button>
+  <div class="to-chat" id="to_chat" hidden><button type="button" class="btn sec" id="b_rev">Отправить выручку в чат админов</button><span class="hint" id="rev_sent"></span></div>
   <button type="button" class="btn ghost" id="b_new">Начать новый отчёт</button>
 </aside>
 </div>
@@ -456,7 +456,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='42';
+  const BUILD='43';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1229,14 +1229,14 @@ body.boss .hist-head h2{font-size:26px}
     if(!s.branch){toast('Выберите филиал');$('#branch').focus();return}
     if(!R.rev){toast('Заполните выручку');return}
     const b=$('#b_rev'),key=JSON.stringify([s.branch,s.date,s.rev]);
-    if(b.dataset.sentFor===key&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлено. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить выручку в чат «АДМИНЫ АППЕТИТ»'},4000);return}
+    if(b.dataset.sentFor===key&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлено. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить выручку в чат админов'},4000);return}
     b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';
     try{const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:s.rev,redo:redoList(s)}});
       if(r.ok){b.dataset.sentFor=key;const t=new Date();$('#rev_sent').textContent=`Отправлено в ${pad(t.getHours())}:${pad(t.getMinutes())}`;toast('Выручка отправлена в чат')}
       else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}
       else toast({no_token:'Бот MAX ещё не подключён',no_chat:'Бот не добавлен в чат «АДМИНЫ АППЕТИТ»',empty:'Выручка пустая'}[r.error]||'Не отправилось, попробуйте ещё раз');
     }catch(x){toast('Нет связи с сервером, попробуйте ещё раз')}
-    b.disabled=false;b.textContent='Отправить выручку в чат «АДМИНЫ АППЕТИТ»';
+    b.disabled=false;b.textContent='Отправить выручку в чат админов';
   });
 
   function showErr(t){const el=$('#send_err');el.textContent=t;el.hidden=false}
