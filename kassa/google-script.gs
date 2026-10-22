@@ -795,7 +795,7 @@ function saveReport_(r, admin) {
     (c.ex || []).forEach(function (x) {
       var s = num_(x.sum); if (!s) return; ex += s;
       var k = x.kind || 'Другое', n = num_(x.n) || 1;
-      exTxt.push(k + (x.zone ? ' ' + x.zone : '') + (k === 'Довоз' || k === 'Отказ' || k === 'Листовки' ? ' × ' + n : '') + (x.reason ? ' (' + x.reason + ')' : '') + ' = ' + s);
+      exTxt.push(k + (x.zone ? ' ' + x.zone : '') + (k === 'Довоз' || k === 'Отказ' || k === 'Листовки' || k === 'Другое по зонам' ? ' × ' + n : '') + (x.reason ? ' (' + x.reason + ')' : '') + ' = ' + s);
       if (!xs) xs = extraSheet_();
       xs.appendRow([id, r.dateRu, branch, admin.name, c.name, k, x.zone || '', String(x.reason || '').slice(0, 200), n, s]);
     });
