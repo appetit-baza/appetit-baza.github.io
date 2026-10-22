@@ -245,7 +245,7 @@ function sendRevenue_(r, admin) {
   var h = function (s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
   var text = '📍 <b>' + h(r.branch || admin.branch).toUpperCase() + '</b>\n' +
     '💰 Выручка ' + h(r.dateRu) + '\nАдминистратор: ' + h(admin.name) +
-    '\n\n' + h(lines.join('\n')) + '\n\n<b>ВСЕГО: ' + fmtRub_(total) + '</b>\n\n' + h(redoText_(r.redo));
+    '\n\n' + h(lines.join('\n')) + '\n\n<b>ВСЕГО: ' + fmtRub_(total) + '</b>\n\n' + (ordText_(r.ord) ? h(ordText_(r.ord)) + '\n\n' : '') + h(redoText_(r.redo));
   var chat = maxChatId_();
   if (!chat) return { ok: false, error: PropertiesService.getScriptProperties().getProperty('MAX_TOKEN') ? 'no_chat' : 'no_token' };
   var res = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: text, format: 'html' });
@@ -333,6 +333,11 @@ function shift_(id, admin) {
     summary.push([String(head[j]), v instanceof Date ? d_(v) : v]);
   }
   if (row[23] !== '' && row[23] !== null && row[23] !== undefined) summary.push(['Безнал факт (по сверкам)', row[23]]);
+  var oq = function (i) { return row[i] === '' || row[i] === undefined || row[i] === null ? '' : String(row[i]); };
+  if (oq(24) !== '' || oq(26) !== '') {
+    summary.push(['Самовывоз', (oq(24) || 0) + ' / ' + fmtRub_(num_(row[25]))]);
+    summary.push(['Доставка', (oq(26) || 0) + ' / ' + fmtRub_(num_(row[27]))]);
+  }
   var cour = ss.getSheetByName(SHEET_COURIERS).getDataRange().getDisplayValues().filter(function (r) { return r[0] === id; })
     .map(function (r) { return { name: r[3], from: r[4], to: r[5], hours: r[6], qty: r[7], orders: r[8], total: r[9], w: r[10], other: r[11], zones: r[12] || '', exSum: r[13] || '',
       extras: extraRows_().filter(function (x) { return String(x[0]) === id && String(x[4]) === String(r[3]); })
@@ -344,7 +349,8 @@ function shift_(id, admin) {
   ['r_cash', 'r_card', 'r_ye', 'r_mp', 'r_chib', 'r_sber', 'r_bon'].forEach(function (k, n) { rev[k] = row[5 + n] === 0 ? '' : String(row[5 + n]); });
   var dk = dkey_(row[1]);
   var raw = { date: dk ? String(dk).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : '', branch: String(row[2]), r041: String(row[12] === '' ? '' : row[12]),
-    bfact: row[23] === '' || row[23] === undefined || row[23] === null ? '' : String(row[23]), rev: rev };
+    bfact: row[23] === '' || row[23] === undefined || row[23] === null ? '' : String(row[23]), rev: rev,
+    ord: { q_pn: oq(24), q_ps: oq(25), q_dn: oq(26), q_ds: oq(27) } };
   return { id: id, own: String(row[3]).trim() === admin.name, admin: String(row[3]), replaced: String(row[22] || ''),
     fix: f ? { status: f.status, rid: f.rid, reason: f.reason } : null, raw: raw, summary: summary, cour: cour, money: money };
 }
@@ -557,6 +563,19 @@ function ensureReportHeaders_(rep) {
   var h = rep.getRange('F1:I1').getValues()[0];
   if (String(h[0]) === 'Наличка') rep.getRange('F1:I1').setValues([['Наличные', 'Карта', 'Яндекс/Деливери', 'Онлайн']]);
   if (!String(rep.getRange('X1').getValue()).trim()) rep.getRange('X1').setValue('Безнал факт (по сверкам)').setFontWeight('bold');
+  if (!String(rep.getRange('Y1').getValue()).trim()) rep.getRange('Y1:AB1').setValues([['Самовывоз, заказов', 'Самовывоз, ₽', 'Доставка, заказов', 'Доставка, ₽']]).setFontWeight('bold');
+}
+// Самовывоз / доставка: количество и сумма заказов (пусто — если не заполнили)
+function ordVal_(r, k) {
+  var v = r.ord && r.ord[k];
+  return v === undefined || v === null || String(v).trim() === '' ? '' : num_(v);
+}
+function ordText_(o) {
+  o = o || {};
+  var has = function (k) { return o[k] !== undefined && o[k] !== null && String(o[k]).trim() !== ''; };
+  if (!has('q_pn') && !has('q_ps') && !has('q_dn') && !has('q_ds')) return '';
+  var pn = num_(o.q_pn), ps = num_(o.q_ps), dn = num_(o.q_dn), ds = num_(o.q_ds);
+  return 'Самовывоз: ' + pn + ' / ' + fmtRub_(ps) + '\nДоставка: ' + dn + ' / ' + fmtRub_(ds) + '\nОбщее: ' + (pn + dn) + ' / ' + fmtRub_(ps + ds);
 }
 
 function saveReport_(r, admin) {
@@ -572,7 +591,8 @@ function saveReport_(r, admin) {
   rep.appendRow([new Date(), r.dateRu, branch, admin.name, num_(t.rev), num_(rev.r_cash), num_(rev.r_card),
     num_(rev.r_ye), num_(rev.r_mp), num_(rev.r_chib), num_(rev.r_sber), num_(rev.r_bon),
     r.r041 ? num_(r.r041) : '', num_(t.ct), num_(t.cw), num_(t.cn), num_(t.ex), num_(t.exW), num_(t.inc),
-    num_(t.pass), repeat ? 'да' : '', id, '', r.bfact ? num_(r.bfact) : '']);
+    num_(t.pass), repeat ? 'да' : '', id, '', r.bfact ? num_(r.bfact) : '',
+    ordVal_(r, 'q_pn'), ordVal_(r, 'q_ps'), ordVal_(r, 'q_dn'), ordVal_(r, 'q_ds')]);
   ensureReportHeaders_(rep);
   var cs = ss.getSheetByName(SHEET_COURIERS);
   if ((r.cour || []).some(function (c) { return c.zt || (c.ex && c.ex.length); })) ensureZonesHeader_();

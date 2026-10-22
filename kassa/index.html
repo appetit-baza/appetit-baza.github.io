@@ -55,6 +55,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border
 .total-line{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding:12px 14px;border-radius:10px;background:var(--accent-soft)}
 .total-line span{font-weight:600}
 .total-line strong{font-family:var(--f-display);font-size:22px;color:var(--accent);font-variant-numeric:tabular-nums}
+.total-line.sm{background:var(--note);padding:9px 14px;margin-top:10px}.total-line.sm span{font-weight:500;color:var(--muted)}.total-line.sm strong{font-size:17px;color:var(--ink)}
 .check041{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;margin-top:12px}
 .flag{font-size:13.5px;font-weight:600;margin:8px 0 0}
 .flag:empty{display:none}
@@ -352,6 +353,15 @@ body.boss .hist-head h2{font-size:26px}
       <div class="field"><label for="r_sber">Сбермаркет</label><input id="r_sber" class="num" inputmode="decimal"></div>
       <div class="field"><label for="r_bon">Бонусы iiko (iikocard)</label><input id="r_bon" class="num" inputmode="decimal"></div>
     </div>
+    <p class="h-sub">Заказы <span class="lbl-note">— количество и сумма</span></p>
+    <div class="rev">
+      <div class="field"><label for="q_pn">Самовывоз, заказов</label><input id="q_pn" class="num" inputmode="numeric"></div>
+      <div class="field"><label for="q_ps">Самовывоз, ₽</label><input id="q_ps" class="num" inputmode="decimal"></div>
+      <div class="field"><label for="q_dn">Доставка, заказов</label><input id="q_dn" class="num" inputmode="numeric"></div>
+      <div class="field"><label for="q_ds">Доставка, ₽</label><input id="q_ds" class="num" inputmode="decimal"></div>
+    </div>
+    <div class="total-line sm"><span>Общее (самовывоз + доставка)</span><strong id="q_tot">—</strong></div>
+    <p class="flag" id="f_ord"></p>
     <p class="h-sub">Сверка <span class="lbl-note">— в чат не отправляется</span></p>
     <div class="rev">
       <div class="field"><label for="r_041">Итого по отчёту 041</label><input id="r_041" class="num" inputmode="decimal" placeholder="для сверки"></div>
@@ -456,7 +466,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='43';
+  const BUILD='44';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -895,7 +905,7 @@ body.boss .hist-head h2{font-size:26px}
       const ex=(c.extras||[]).map(x=>({kind:x.kind,zone:x.zone,reason:x.reason,n:x.n,sum:x.kind==='Довоз'?'':x.sum}));
       return {z,ex,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),...(/частично/i.test(c.w)?{w:'p',ws:String((String(c.w).match(/([\d\s.,]+)\s*₽?\s*с изъятием/)||[])[1]||'').replace(/\s/g,'')}:{w:!/нет/i.test(c.w)}),manual:auto!==null&&auto!==num(c.hours)}});
     const mon=t=>s.money.filter(m=>m.type===t).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
-    return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,bfact:s.raw.bfact||'',rev:s.raw.rev,cour,exp:mon('Расход'),inc:mon('Приход')};
+    return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,bfact:s.raw.bfact||'',rev:s.raw.rev,ord:s.raw.ord||{},cour,exp:mon('Расход'),inc:mon('Приход')};
   }
   function setFix(f){FIX=f;if(USER){if(f)LS.set('fix:'+USER.name,f);else LS.del('fix:'+USER.name)}$('#fixbar').hidden=!f;if(f)$('#fix_date').textContent=f.date}
   $('#fix_cancel').addEventListener('click',()=>{setFix(null);dropDraft(true);loadFor(USER,null);toast('Исправление отменено')});
@@ -941,6 +951,7 @@ body.boss .hist-head h2{font-size:26px}
   }
   document.addEventListener('click',e=>{const t=e.target.closest('.z-tog');if(!t)return;const ch=t.parentElement.querySelector('.zchips');ch.hidden=!ch.hidden;t.textContent=zTogText(!ch.hidden,t.closest('.crow').dataset.zid);if(!ch.hidden){const i=ch.querySelector('input');if(i)i.focus()}});
   const REV=[['r_mp','Онлайн'],['r_cash','Наличные'],['r_card','Карта'],['r_ye','Яндекс/Деливери'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
+  const ORD=['q_pn','q_ps','q_dn','q_ds']; // самовывоз и доставка: кол-во и сумма
 
   // ---------- rows
   function minutes(t){t=String(t||'').trim().replace(/[.,;\-]/g,':');if(/^\d{3,4}$/.test(t))t=t.slice(0,-2)+':'+t.slice(-2);if(!/^\d{1,2}:\d{2}$/.test(t))return null;const [h,m]=t.split(':').map(Number);if(h>24||m>59)return null;return h*60+m}
@@ -1050,6 +1061,7 @@ body.boss .hist-head h2{font-size:26px}
   function state(){
     const s={branch:$('#branch').value.trim(),date:$('#date').value,admin:$('#admin').value.trim(),rate:RATE,r041:$('#r_041').value.trim(),bfact:$('#r_bfact').value.trim(),rev:{},cour:[],exp:[],inc:[]};
     REV.forEach(([id])=>s.rev[id]=$('#'+id).value.trim());
+    s.ord={};ORD.forEach(id=>s.ord[id]=$('#'+id).value.trim());
     $$('.crow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s.cour.push({name:g('name').value.trim(),other:!!(listFor()&&g('name').value.trim()&&!listFor().includes(g('name').value.trim())),from:noHours()?'':g('from').value,to:noHours()?'':g('to').value,hours:noHours()?'':g('hours').value.trim(),qty:g('qty').value.trim(),orders:g('orders').value.trim(),w:{y:true,n:false,p:'p'}[wGet(r)],ws:wGet(r)==='p'?g('ws').value.trim():'',manual:!!r.dataset.manual,...zoneState(r),ex:[...r.querySelectorAll('.xrow')].map(extraState).filter(x=>x.sum||x.kind==='Довоз'),exSum:num(r.dataset.ex)})});
     ['exp','inc'].forEach(b=>$$('#'+b+' .erow').forEach(r=>{const g=k=>r.querySelector(`[data-k=${k}]`);s[b].push({date:$('#date').value,art:g('art').value.trim(),sum:g('sum').value.trim(),w:false})}));
     return s;
@@ -1111,6 +1123,14 @@ body.boss .hist-head h2{font-size:26px}
     $('#o_rev').textContent=rub(rev);
     const f=$('#f_041');const r041=$('#r_041').value.trim();
     if(r041&&rev>0){const d=num(r041)-rev;f.className='flag '+(Math.abs(d)<0.01?'ok':'bad');f.textContent=Math.abs(d)<0.01?'Выручка сходится с отчётом 041.':`Расхождение с отчётом 041: ${rub(Math.abs(d))} (${d>0?'в 041 больше':'в отчёте больше'}).`;if(Math.abs(d)>=0.01)warns.push(['err','Выручка не сходится с отчётом 041 на '+rub(Math.abs(d))+'.'])}else{f.textContent=''}
+    // самовывоз + доставка: общее и сверка с выручкой
+    {const q=ORD.map(id=>$('#'+id).value.trim()),any=q.some(v=>v!==''),fo=$('#f_ord');
+      const n=num(q[0])+num(q[2]),sm=num(q[1])+num(q[3]);$('#q_tot').textContent=any?`${n} / ${rub(sm)}`:'—';
+      const bad=any&&(q[1]!==''||q[3]!=='')&&rev>0&&Math.abs(sm-rev)>=0.01;
+      fo.className='flag'+(any&&rev>0&&(q[1]!==''||q[3]!=='')?(bad?' bad':' ok'):'');
+      fo.textContent=!any||!rev||(q[1]===''&&q[3]==='')?'':bad?`Самовывоз + доставка (${rub(sm)}) не сходится с выручкой всего (${rub(rev)}) — разница ${rub(Math.abs(sm-rev))}.`:'Самовывоз + доставка сходится с выручкой.';
+      if(bad)warns.push(['warn',`Самовывоз + доставка (${rub(sm)}) не сходится с выручкой (${rub(rev)}).`]);
+      ['q_ps','q_ds'].forEach(id=>$('#'+id).classList.toggle('mismatch',bad))}
     // Карта должна совпадать с безналом по сверкам
     {const fb=$('#f_bfact'),bf=$('#r_bfact').value.trim(),card=$('#r_card').value.trim();let bad=false;
       if(bf!==''||card!==''){const d=num(bf)-num(card);bad=bf!==''&&Math.abs(d)>=0.01;
@@ -1164,6 +1184,7 @@ body.boss .hist-head h2{font-size:26px}
     loading=true;
     $('#branch').value=s.branch||'';$('#date').value=s.date||today();$('#admin').value=s.admin||'';$('#r_041').value=s.r041||'';$('#r_bfact').value=s.bfact||'';
     REV.forEach(([id])=>$('#'+id).value=(s.rev&&s.rev[id])||'');
+    ORD.forEach(id=>$('#'+id).value=(s.ord&&s.ord[id])||'');
     $('#cour').innerHTML='';$('#exp').innerHTML='';$('#inc').innerHTML='';
     (s.cour&&s.cour.length?s.cour:[{}]).forEach(addCour);
     (s.exp&&s.exp.length?s.exp:[{}]).forEach(d=>addExp('exp',d));
@@ -1231,7 +1252,7 @@ body.boss .hist-head h2{font-size:26px}
     const b=$('#b_rev'),key=JSON.stringify([s.branch,s.date,s.rev]);
     if(b.dataset.sentFor===key&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлено. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить выручку в чат админов'},4000);return}
     b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';
-    try{const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:s.rev,redo:redoList(s)}});
+    try{const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:s.rev,ord:s.ord,redo:redoList(s)}});
       if(r.ok){b.dataset.sentFor=key;const t=new Date();$('#rev_sent').textContent=`Отправлено в ${pad(t.getHours())}:${pad(t.getMinutes())}`;toast('Выручка отправлена в чат')}
       else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}
       else toast({no_token:'Бот MAX ещё не подключён',no_chat:'Бот не добавлен в чат «АДМИНЫ АППЕТИТ»',empty:'Выручка пустая'}[r.error]||'Не отправилось, попробуйте ещё раз');
@@ -1249,7 +1270,7 @@ body.boss .hist-head h2{font-size:26px}
     const b=$('#b_send');
     if(b.dataset.sentFor===JSON.stringify(s)&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлен. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить в бухгалтерию'},4000);return}
     b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';$('#send_err').hidden=true;
-    const report={branch:s.branch,dateRu:ruDate(s.date),r041:s.r041,bfact:s.bfact,rev:s.rev,totals:{rev:R.rev,ct:R.ct,cw:R.cw,cn:R.cn,ex:R.ex,exW:R.exW,inc:R.inc,pass:R.pass},
+    const report={branch:s.branch,dateRu:ruDate(s.date),r041:s.r041,bfact:s.bfact,rev:s.rev,ord:s.ord,totals:{rev:R.rev,ct:R.ct,cw:R.cw,cn:R.cn,ex:R.ex,exW:R.exW,inc:R.inc,pass:R.pass},
       cour:s.cour,exp:s.exp.map(x=>({...x,dateRu:ruDate(x.date)})),inc:s.inc.map(x=>({...x,dateRu:ruDate(x.date)}))};
     try{const r=await api({action:'report',pin:USER.pin,report,fixOf:FIX?FIX.id:undefined});
       if(r.ok){const wasFix=!!FIX;dropDraft(false);setFix(null);loadFor(USER,null);draftMsg('');window.scrollTo({top:0});const t=new Date();$('#sent').textContent=`Отчёт за ${ruDate(s.date)} ${wasFix?'исправлен':'отправлен'} в ${pad(t.getHours())}:${pad(t.getMinutes())}, номер ${r.id}. Форма очищена — его можно открыть в «Мои смены».`;toast('Отчёт отправлен, форма очищена')}
@@ -1270,6 +1291,7 @@ body.boss .hist-head h2{font-size:26px}
     const s1=[['ФИЛИАЛ, АДРЕС',s.branch],['Дата:',ruDate(s.date)],['ФИО адм:',s.admin],[],['ВЫРУЧКА ВСЕГО:',R.rev]];
     REV.forEach(([id,name])=>s1.push([name,n(s.rev[id])]));
     if(s.bfact)s1.push(['Безнал факт (по сверкам)',n(s.bfact)]);
+    if(s.ord&&ORD.some(id=>s.ord[id])){const o=s.ord;s1.push([],['Самовывоз (заказов / ₽)',`${num(o.q_pn)} / ${num(o.q_ps)}`],['Доставка (заказов / ₽)',`${num(o.q_dn)} / ${num(o.q_ds)}`],['Общее (заказов / ₽)',`${num(o.q_pn)+num(o.q_dn)} / ${num(o.q_ps)+num(o.q_ds)}`])}
     s1.push([],[],['РАСХОДЫ:',R.ct],['НЕ ДЕЛАЛИ ИЗЪЯТИЕ',R.cn||null],[],['ПЕРЕДАНА СУММА',R.pass]);
     if(R.exW)s1.push([],['в т.ч. вычтены прочие расходы',R.exW]);
     const w1=XLSX.utils.aoa_to_sheet(s1);w1['!cols']=[{wch:30},{wch:26}];XLSX.utils.book_append_sheet(wb,w1,'Сводка');
