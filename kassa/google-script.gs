@@ -42,6 +42,7 @@ var SHEET_STAFF = 'Справочник курьеров';
 var SHEET_FIX = 'Исправления';
 var SHEET_DRAFTS = 'Черновики';
 var SHEET_EXTRA = 'Доплаты курьерам';
+var SHEET_CASH = 'Остатки касс';
 
 var HEADERS = {};
 HEADERS[SHEET_ADMINS] = ['ФИО', 'Филиал', 'PIN', 'Активен', 'Роль'];
@@ -116,7 +117,9 @@ function doPost(e) {
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
     }
-    if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
+    if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report|cash_start)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
+    if (body.action === 'cash_get') return json_(admin.boss ? cashGet_(admin) : { ok: false, error: 'not_boss' });
+    if (body.action === 'cash_start') return json_(admin.boss ? cashStart_(body, admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'history') return json_({ ok: true, boss: admin.boss, viewer: !!admin.viewer, shifts: history_(admin, body),
       fixPending: admin.boss ? fixList_().length : 0 });
     if (body.action === 'draft_save') return json_(draftSave_(admin, body.draft || null));
@@ -508,6 +511,45 @@ function ensureZonesHeader_() {
   if (cs && !String(cs.getRange('O1').getValue()).trim()) cs.getRange('O1').setValue('Доплаты подробно').setFontWeight('bold');
 }
 // ---------- Доплаты курьерам: довозы (зона + причина) и прочие доплаты
+// ---------- Остатки касс: остаток на начало дня по филиалу (вносит руководитель), дальше сайт считает сам
+function cashSheet_() {
+  var ss = ss_();
+  var sh = ss.getSheetByName(SHEET_CASH);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_CASH);
+    sh.appendRow(['Филиал', 'Дата', 'Остаток на начало дня', 'Кто внёс', 'Когда']);
+    sh.getRange(1, 1, 1, 5).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function cashStarts_() {
+  var sh = ss_().getSheetByName(SHEET_CASH), m = {};
+  if (!sh || sh.getLastRow() < 2) return [];
+  sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().forEach(function (r) {
+    var b = String(r[0]).trim(), k = dkey_(r[1]);
+    if (b && k) m[b] = { branch: b, dk: k, amount: num_(r[2]) }; // последняя запись по филиалу главнее
+  });
+  return Object.keys(m).map(function (b) { return m[b]; });
+}
+function cashGet_(admin) {
+  var starts = cashStarts_();
+  var from = starts.reduce(function (a, x) { return Math.min(a, x.dk); }, 99999999);
+  var shifts = starts.length ? history_(admin, { from: String(from), to: '99999999', branch: '' }) : [];
+  return { ok: true, starts: starts, shifts: shifts };
+}
+function cashStart_(b, admin) {
+  var branch = String(b.branch || '').trim(), k = Number(String(b.date || '').replace(/\D/g, '')) || 0, amt = num_(b.amount);
+  if (!branch || k < 20200101) return { ok: false, error: 'bad_input' };
+  var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+  var ds = p2(k % 100) + '.' + p2(Math.floor(k / 100) % 100) + '.' + Math.floor(k / 10000);
+  var sh = cashSheet_();
+  sh.getRange('B:B').setNumberFormat('@');
+  sh.appendRow([branch, ds, amt, admin.name, new Date()]);
+  log_('Остаток кассы на ' + ds + ': ' + amt, admin.name, branch);
+  return { ok: true };
+}
+
 function extraSheet_() {
   var ss = ss_();
   var sh = ss.getSheetByName(SHEET_EXTRA);
