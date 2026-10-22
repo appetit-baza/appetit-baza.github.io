@@ -464,7 +464,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='50';
+  const BUILD='51';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -498,7 +498,7 @@ body.boss .hist-head h2{font-size:26px}
     refreshNames();
     // руководитель: вместо формы кассира — своя страница со всеми сменами
     const boss=!!(u&&u.boss);document.body.classList.toggle('boss',boss);
-    $('.brand small').textContent=boss?'«Аппетит» · кабинет руководителя':'«Аппетит» · смена филиала';
+    $('.brand small').textContent=boss?(u.viewer?'«Аппетит» · просмотр всех смен':'«Аппетит» · кабинет руководителя'):'«Аппетит» · смена филиала';
     document.title=boss?'Все смены — «Аппетит»':'Кассовый отчёт «Аппетит»';
     if(boss)openHist();else if(!u)H.hidden=true;
   }
@@ -508,7 +508,7 @@ body.boss .hist-head h2{font-size:26px}
     if(pin.length<4){err.textContent='PIN — от 4 до 8 цифр.';return}
     const b=$('#b_login');b.disabled=true;b.textContent='Проверяю…';err.textContent='';
     try{const r=await api({action:'login',pin});
-      if(r.ok){FIX_PENDING=r.fixPending||0;const u={name:r.name,branch:r.branch,boss:!!r.boss,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);loadFor(u,r.draft||null);toast('Здравствуйте, '+r.name)}
+      if(r.ok){FIX_PENDING=r.fixPending||0;const u={name:r.name,branch:r.branch,boss:!!r.boss,viewer:!!r.viewer,pin,exp:Date.now()+SESSION_HOURS*3600e3};LS.set('session',u);COURIERS=r.couriers||null;LS.set('couriers',COURIERS);$('#gate').hidden=true;setUser(u);loadFor(u,r.draft||null);toast('Здравствуйте, '+r.name)}
       else err.textContent=r.error==='locked'?'5 неверных попыток на этом устройстве. Вход заблокирован на 10 минут.':r.error==='locked_all'?'Вход временно закрыт для всех из-за подбора PIN. Подождите 10 минут.':'Неверный PIN-код.';
     }catch(x){err.textContent='Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.'}
     b.disabled=false;b.textContent='Войти';
@@ -538,6 +538,7 @@ body.boss .hist-head h2{font-size:26px}
     try{const r=await api(q);
       if(!r.ok){if(r.error==='bad_pin'){closeHist();LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова.')}else $('#hist_list').innerHTML='<p class="hint">Не удалось загрузить. Попробуйте ещё раз.</p>';return}
       if(r.boss&&!boss){USER.boss=true;LS.set('session',USER);setUser(USER);openHist();return}
+      if(r.viewer!==undefined&&!!r.viewer!==!!USER.viewer){USER.viewer=!!r.viewer;LS.set('session',USER);setUser(USER)}
       if(boss)loadFixList();
       if(!r.shifts.length&&boss){FIX_PENDING=r.fixPending||0;histLabel();BOSS_ROWS=[];ITOGI_HTML='';renderBoss()}
       if(!r.shifts.length){$('#hist_list').innerHTML=boss?'<p class="hint">За этот период отчётов нет.</p>':'<p class="hint">Отправленных отчётов пока нет. Они появятся здесь после кнопки «Отправить в бухгалтерию».</p>';return}
@@ -864,7 +865,8 @@ body.boss .hist-head h2{font-size:26px}
   function fixBox(s){
     const boss=USER&&USER.boss,f=s.fix;
     if(s.replaced)return `<div class="fixbox"><p class="fix-st ok">Отчёт исправлен — действует отчёт ${esc(s.replaced)}.</p></div>`;
-    if(boss&&f&&f.status==='ожидает')return `<div class="fixbox"><p><span class="fix-st wait">Запрос на исправление</span> от ${esc(s.admin)}${f.reason?': «'+esc(f.reason)+'»':''}</p><div class="row"><button type="button" class="btn primary" data-fx="approve" data-rid="${esc(f.rid)}">Разрешить</button><button type="button" class="btn sec" data-fx="reject" data-rid="${esc(f.rid)}">Отклонить</button></div></div>`;
+    if(boss&&USER.viewer&&f&&f.status==='ожидает')return `<div class="fixbox"><p><span class="fix-st wait">Запрос на исправление</span> от ${esc(s.admin)}${f.reason?': «'+esc(f.reason)+'»':''}. Решает руководитель.</p></div>`;
+    if(boss&&f&&f.status==='ожидает')return `<div class="fixbox"><p><span class="fix-st wait">Запрос на исправление</span> от ${esc(s.admin)}${f.reason?': «'+esc(f.reason)+'»':''}</p><div class="row">${USER.viewer?'':`<button type="button" class="btn primary" data-fx="approve" data-rid="${esc(f.rid)}">Разрешить</button><button type="button" class="btn sec" data-fx="reject" data-rid="${esc(f.rid)}">Отклонить</button>`}</div></div>`;
     if(!s.own)return f&&f.status==='разрешено'?`<div class="fixbox"><p class="fix-st ok">Исправление разрешено — ждём исправленный отчёт от администратора.</p></div>`:'';
     if(f&&f.status==='ожидает')return `<div class="fixbox"><p class="fix-st wait">Запрос на исправление отправлен. Ждёт подтверждения руководителя.</p>${f.reason?`<p>Причина: ${esc(f.reason)}</p>`:''}</div>`;
     if(f&&f.status==='разрешено')return `<div class="fixbox"><p class="fix-st ok">Руководитель разрешил исправление.</p><div class="row"><button type="button" class="btn primary" data-fx="edit">Исправить отчёт</button></div></div>`;
@@ -889,7 +891,7 @@ body.boss .hist-head h2{font-size:26px}
     const box=$('#hb_fix');
     try{const r=await api({action:'fix_list',pin:USER.pin});if(!r.ok){box.innerHTML='';return}
       FIX_PENDING=r.list.length;histLabel();
-      box.innerHTML=r.list.length?`<p class="h-sec" style="margin:0">Запросы на исправление · ${r.list.length}</p>`+r.list.map(f=>`<div class="fixbox"><p><b>${esc(f.date)}</b> · ${esc(f.branch)} · ${esc(f.admin)}</p>${f.reason?`<p>«${esc(f.reason)}»</p>`:''}<div class="row"><button type="button" class="btn primary" data-fx="approve" data-rid="${esc(f.rid)}">Разрешить</button><button type="button" class="btn sec" data-fx="reject" data-rid="${esc(f.rid)}">Отклонить</button><button type="button" class="btn ghost" data-fx="open" data-id="${esc(f.id)}">Открыть смену</button></div></div>`).join(''):'';
+      box.innerHTML=r.list.length?`<p class="h-sec" style="margin:0">Запросы на исправление · ${r.list.length}</p>`+r.list.map(f=>`<div class="fixbox"><p><b>${esc(f.date)}</b> · ${esc(f.branch)} · ${esc(f.admin)}</p>${f.reason?`<p>«${esc(f.reason)}»</p>`:''}<div class="row">${USER.viewer?'':`<button type="button" class="btn primary" data-fx="approve" data-rid="${esc(f.rid)}">Разрешить</button><button type="button" class="btn sec" data-fx="reject" data-rid="${esc(f.rid)}">Отклонить</button>`}<button type="button" class="btn ghost" data-fx="open" data-id="${esc(f.id)}">Открыть смену</button></div></div>`).join(''):'';
     }catch(e){box.innerHTML=''}
   }
   function toForm(s){

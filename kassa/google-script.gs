@@ -25,6 +25,7 @@
  *   PIN — от 4 до 8 цифр, у каждого свой. Чтобы закрыть доступ, поставьте в «Активен» «нет».
  *   Роль: пусто — обычный администратор (видит только свои смены);
  *   «руководитель» — видит на сайте все отчёты всех филиалов.
+ *   «просмотр» — видит всё то же, что руководитель, но ничего не может менять.
  *   Филиал пишите так же, как в списке на сайте (например: Казань, Академика Глушко 35).
  */
 
@@ -84,7 +85,7 @@ function setup() {
 function addRoleColumn() {
   var sh = ss_().getSheetByName(SHEET_ADMINS);
   if (!String(sh.getRange('E1').getValue()).trim()) sh.getRange('E1').setValue('Роль').setFontWeight('bold');
-  var rule = SpreadsheetApp.newDataValidation().requireValueInList(['руководитель'], true).setAllowInvalid(true).build();
+  var rule = SpreadsheetApp.newDataValidation().requireValueInList(['руководитель', 'просмотр'], true).setAllowInvalid(true).build();
   sh.getRange('E2:E').setDataValidation(rule);
 }
 
@@ -106,7 +107,7 @@ function doPost(e) {
     resetFails_(dev);
     if (body.action === 'login') {
       log_('Вход', admin.name, admin.branch);
-      return json_({ ok: true, name: admin.name, branch: admin.branch, boss: admin.boss, couriers: couriers_(),
+      return json_({ ok: true, name: admin.name, branch: admin.branch, boss: admin.boss, viewer: !!admin.viewer, couriers: couriers_(),
         fixPending: admin.boss ? fixList_().length : 0, draft: admin.boss ? null : draftGet_(admin) });
     }
     if (body.action === 'couriers') return json_({ ok: true, couriers: couriers_() });
@@ -115,7 +116,8 @@ function doPost(e) {
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
     }
-    if (body.action === 'history') return json_({ ok: true, boss: admin.boss, shifts: history_(admin, body),
+    if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
+    if (body.action === 'history') return json_({ ok: true, boss: admin.boss, viewer: !!admin.viewer, shifts: history_(admin, body),
       fixPending: admin.boss ? fixList_().length : 0 });
     if (body.action === 'draft_save') return json_(draftSave_(admin, body.draft || null));
     if (body.action === 'draft_get') return json_({ ok: true, draft: draftGet_(admin) });
@@ -155,7 +157,9 @@ function findAdmin_(pin) {
     var active = String(r[3] || '').trim().toLowerCase();
     if (String(r[2]).replace(/\D/g, '') === pin && active !== 'нет' && active !== 'no' && r[0]) {
       return { name: String(r[0]).trim(), branch: String(r[1] || '').trim(),
-        boss: /руковод|владел|управля/i.test(String(r[4] || '')) };
+        boss: /руковод|владел|управля|просмотр|наблюд/i.test(String(r[4] || '')),
+        // «просмотр» — видит всё, как руководитель, но ничего не меняет (не решает исправления, не отправляет отчёты)
+        viewer: /просмотр|наблюд/i.test(String(r[4] || '')) };
     }
   }
   return null;
@@ -689,4 +693,17 @@ function backupDaily() {
     if (f.getName().indexOf('Кассовые отчёты — копия ') === 0 && f.getDateCreated().getTime() < limit) f.setTrashed(true);
   }
   log_('Резервная копия ' + day, '', '');
+}
+
+// РАЗОВАЯ: очистка тестовых данных (22.10.2026). Сначала делает резервную копию таблицы.
+function clearTestData() {
+  backupDaily();
+  var ss = ss_();
+  ['Отчёты', 'Курьеры', 'Приход-расход', 'Доплаты курьерам', 'Исправления', 'Черновики', 'Журнал входов'].forEach(function (n) {
+    var sh = ss.getSheetByName(n);
+    if (!sh) { Logger.log(n + ': нет листа'); return; }
+    var last = sh.getLastRow();
+    if (last > 1) sh.deleteRows(2, last - 1);
+    Logger.log(n + ': удалено строк ' + Math.max(0, last - 1));
+  });
 }
