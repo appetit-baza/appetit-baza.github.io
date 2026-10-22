@@ -181,6 +181,8 @@ function couriers_() {
 // ID чата скрипт находит сам по названию и запоминает в MAX_CHAT_ID.
 var MAX_API = 'https://platform-api2.max.ru';
 var MAX_CHAT_TITLE = 'АДМИНЫ АППЕТИТ';
+// Посредник в Яндекс Облаке (функция max-relay): Google → посредник → MAX
+var MAX_RELAY = 'https://functions.yandexcloud.net/d4ea85u3v2tqfi0e5mc6';
 
 function maxFetch_(method, path, payload) {
   var token = PropertiesService.getScriptProperties().getProperty('MAX_TOKEN');
@@ -188,6 +190,17 @@ function maxFetch_(method, path, payload) {
   // validateHttpsCertificates:false пробовали 22.10.2026 — не помогает (Google всё равно даёт «Ошибка SSL»), проверка оставлена включённой.
   var opt = { method: method, headers: { Authorization: token }, muteHttpExceptions: true };
   if (payload) { opt.contentType = 'application/json'; opt.payload = JSON.stringify(payload); }
+  if (MAX_RELAY) {
+    // напрямую Google до MAX не достучаться (ошибка SSL) — идём через посредника в Яндекс Облаке
+    var rr = UrlFetchApp.fetch(MAX_RELAY, { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      headers: { 'X-Max-Auth': token }, payload: JSON.stringify({ m: method.toUpperCase(), p: path, b: payload || null }) });
+    var out = {};
+    try { out = JSON.parse(rr.getContentText()); } catch (e) { return { code: rr.getResponseCode(), body: {}, error: rr.getContentText().slice(0, 200) }; }
+    var ob = {};
+    try { ob = JSON.parse(out.body); } catch (e) {}
+    if (!out.code) return { code: rr.getResponseCode(), body: {}, error: rr.getContentText().slice(0, 300) };
+    return { code: out.code, body: ob };
+  }
   var r = UrlFetchApp.fetch(MAX_API + path, opt);
   var body = {};
   try { body = JSON.parse(r.getContentText()); } catch (e) {}
@@ -198,11 +211,18 @@ function maxChatId_() {
   var props = PropertiesService.getScriptProperties();
   var id = props.getProperty('MAX_CHAT_ID');
   if (id) return id;
-  var r = maxFetch_('get', '/chats?count=100');
-  var chats = (r.body && r.body.chats) || [];
-  for (var i = 0; i < chats.length; i++) {
-    if (String(chats[i].title || '').toUpperCase().indexOf(MAX_CHAT_TITLE) >= 0) {
-      id = String(chats[i].chat_id);
+  // Список чатов (GET /chats) MAX убрал в июне 2026: ID чата берём из последних событий бота
+  // (бота добавили в чат или кто-то написал в чат) и проверяем название через GET /chats/{id}.
+  var r = maxFetch_('get', '/updates?limit=100&types=bot_added,message_created,user_added,chat_title_changed');
+  var ups = (r.body && r.body.updates) || [], seen = {};
+  for (var i = 0; i < ups.length; i++) {
+    var u = ups[i], c = u.chat_id || (u.message && u.message.recipient && u.message.recipient.chat_id);
+    if (!c || seen[c]) continue;
+    seen[c] = 1;
+    var info = maxFetch_('get', '/chats/' + c);
+    var title = String((info.body && info.body.title) || '');
+    if (title.toUpperCase().indexOf(MAX_CHAT_TITLE) >= 0) {
+      id = String(c);
       props.setProperty('MAX_CHAT_ID', id);
       return id;
     }
