@@ -464,7 +464,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='51';
+  const BUILD='52';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -832,8 +832,8 @@ body.boss .hist-head h2{font-size:26px}
   function bossXlsx(){
     if(!window.XLSX){toast('Excel не загрузился. Обновите страницу.');return}
     const RR=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'],kg=(x,k)=>x.redo&&x.redo.kinds&&x.redo.kinds[k]?x.redo.kinds[k]:[0,0];
-    const head=['Дата смены','Филиал','Администратор',...SUMF.map(x=>x[1]),'Довозов','Довозы, ₽',...RR.map(r=>'Довоз: '+r),'Шашка, ₽','Листовок, шт','Листовки, ₽','Наклейки, ₽','Другие доплаты, ₽','Отправлено','В итогах'];
-    const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),kg(x,'Довоз')[0],kg(x,'Довоз')[1],...RR.map(r=>x.redo&&x.redo.redo&&x.redo.redo[r]?x.redo.redo[r][0]:0),kg(x,'Шашка')[1],kg(x,'Листовки')[0],kg(x,'Листовки')[1],kg(x,'Наклейка')[1],kg(x,'Другое')[1],x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
+    const head=['Дата смены','Филиал','Администратор',...SUMF.map(x=>x[1]),'Довозов','Довозы, ₽',...RR.map(r=>'Довоз: '+r),'Отказов','Отказы, ₽','Шашка, ₽','Листовок, шт','Листовки, ₽','Наклейки, ₽','Другие доплаты, ₽','Отправлено','В итогах'];
+    const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),kg(x,'Довоз')[0],kg(x,'Довоз')[1],...RR.map(r=>x.redo&&x.redo.redo&&x.redo.redo[r]?x.redo.redo[r][0]:0),kg(x,'Отказ')[0],kg(x,'Отказ')[1],kg(x,'Шашка')[1],kg(x,'Листовки')[0],kg(x,'Листовки')[1],kg(x,'Наклейка')[1],kg(x,'Другое')[1],x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
     const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map((h,i)=>({wch:i<3?(i===1?26:18):13}));
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Отчёты');
     try{statSheets(wb)}catch(e){console.error(e)}
@@ -879,7 +879,7 @@ body.boss .hist-head h2{font-size:26px}
       if(!r.ok){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Отчёт не найден.</p>';return}
       const s=r.shift;SHIFT=s;
       const kv=s.summary.filter(([k])=>!(USER&&USER.boss?/^(Повторная)/:/^(Отправлено|Администратор|Повторная)/).test(k)).map(([k,v])=>`<span>${esc(k)}</span><span>${typeof v==='number'?money(v):esc(v)}</span>`).join('');
-      const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>${c.zones?`<tr><td colspan="7"><small>По зонам: ${esc(c.zones)}</small></td></tr>`:''}${(c.extras||[]).length?`<tr><td colspan="7"><small>Доплаты: ${c.extras.map(x=>esc(x.kind+(x.zone?' '+x.zone:'')+(x.kind==='Довоз'||x.kind==='Листовки'?' × '+x.n:'')+(x.reason?' ('+x.reason+')':'')+' = '+money(x.sum))).join('; ')}</small></td></tr>`:''}`).join('')}</table></div>`:'';
+      const ct=s.cour.length?`<p class="h-sec">Курьеры</p><div class="h-table"><table><tr><th>ФИО</th><th>Время</th><th>За часы</th><th>Заказов</th><th>За заказы</th><th>Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.from)}–${esc(c.to)}</td><td>${esc(c.hours)}</td><td>${esc(c.qty)}</td><td>${esc(c.orders)}</td><td><b>${esc(c.total)}</b></td><td>${esc(c.w)}</td></tr>${c.zones?`<tr><td colspan="7"><small>По зонам: ${esc(c.zones)}</small></td></tr>`:''}${(c.extras||[]).length?`<tr><td colspan="7"><small>Доплаты: ${c.extras.map(x=>esc(x.kind+(x.zone?' '+x.zone:'')+(x.kind==='Довоз'||x.kind==='Отказ'||x.kind==='Листовки'?' × '+x.n:'')+(x.reason?' ('+x.reason+')':'')+' = '+money(x.sum))).join('; ')}</small></td></tr>`:''}`).join('')}</table></div>`:'';
       const mt=s.money.length?`<p class="h-sec">Приход и расход</p><div class="h-table"><table><tr><th>Тип</th><th>Дата</th><th>Статья</th><th>Сумма</th></tr>${s.money.map(m=>`<tr><td>${esc(m.type)}</td><td>${esc(m.date)}</td><td>${esc(m.art)}</td><td>${esc(m.sum)}</td></tr>`).join('')}</table></div>`:'';
       const bd=s.raw&&s.raw.bfact!==''&&s.raw.bfact!=null?num(s.raw.bfact)-num(s.raw.rev&&s.raw.rev.r_card):0;
       one.innerHTML=`<button type="button" class="h-back">← Назад к списку</button><p class="h-sec">Сводка · отчёт ${esc(s.id)}</p><div class="h-kv">${kv}</div>${Math.abs(bd)>=0.01?`<p class="flag bad">⚠ Карта не сходится с безналом по сверкам: разница ${money(Math.abs(bd))}.</p>`:''}${ct}${mt}<div id="fx_box">${fixBox(s)}</div>`;
@@ -901,7 +901,7 @@ body.boss .hist-head h2{font-size:26px}
     const cour=s.cour.map(c=>{const from=tm(c.from),to=tm(c.to),a=minutes(from),b=minutes(to);let auto=null;if(a!=null&&b!=null){let m=b-a;if(m<0)m+=1440;auto=Math.floor(m/60*RATE)}
       let z=null;const zb=/казань/i.test(s.raw.branch)?'kzn':/уфа|челябинск/i.test(s.raw.branch)?'chu':null;
       if(zb&&c.zones){const n=ZONESETS[zb].z.map(()=>'');String(c.zones).split(/;\s*/).forEach(p=>{const m=p.match(/^(.*) × (\d+)$/);if(m){const i=ZONESETS[zb].z.findIndex(q=>zLabel(q)===m[1].trim());if(i>=0)n[i]=m[2]}});z={id:zb,n}}
-      const ex=(c.extras||[]).map(x=>({kind:x.kind,zone:x.zone,reason:x.reason,n:x.n,sum:x.kind==='Довоз'?'':x.sum}));
+      const ex=(c.extras||[]).map(x=>({kind:x.kind,zone:x.zone,reason:x.reason,n:x.n,sum:x.kind==='Довоз'||x.kind==='Отказ'?'':x.sum}));
       return {z,ex,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),...(/частично/i.test(c.w)?{w:'p',ws:String((String(c.w).match(/([\d\s.,]+)\s*₽?\s*с изъятием/)||[])[1]||'').replace(/\s/g,'')}:{w:!/нет/i.test(c.w)}),manual:auto!==null&&auto!==num(c.hours)}});
     const mon=t=>s.money.filter(m=>m.type===t).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
     return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,bfact:s.raw.bfact||'',rev:s.raw.rev,ord:s.raw.ord||{},cour,exp:mon('Расход'),inc:mon('Приход')};
@@ -959,13 +959,14 @@ body.boss .hist-head h2{font-size:26px}
   const wOf=w=>w==='p'?'p':w===false?'n':'y';
   const wGet=r=>r.querySelector('[data-k=w]').value||'y';
   document.addEventListener('change',e=>{const sel=e.target.closest('.wsel');if(!sel)return;const row=sel.closest('.crow');sel.dataset.v=sel.value;const wp=row.querySelector('.wpart');wp.hidden=sel.value!=='p';if(sel.value==='p')wp.querySelector('input').focus();calc()});
-  const XKINDS=['Довоз','Шашка','Листовки','Наклейка','Другое'];
+  const XKINDS=['Довоз','Отказ','Шашка','Листовки','Наклейка','Другое'];
   const STICKER=2000; // наклейка — фиксированная доплата
   const REDO_REASONS=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'];
   function zoneOpts(sel){const id=zoneSet();if(!id)return '<option value="">—</option>';return '<option value="">Зона…</option>'+ZONESETS[id].z.map(z=>{const l=zLabel(z);return `<option value="${esc(l)}"${l===sel?' selected':''}>${esc(l)} — ${z[2]} ₽</option>`}).join('')}
   function extraFields(x){
     const k=x.kind||'Довоз';
     if(k==='Довоз')return `<select data-xk="zone" aria-label="Зона">${zoneOpts(x.zone)}</select><select data-xk="reason" aria-label="Причина довоза"><option value="">Причина…</option>${REDO_REASONS.map(r=>`<option${r===x.reason?' selected':''}>${r}</option>`).join('')}</select><input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||1)}" aria-label="Количество довозов"><span class="xu">шт</span><span class="xsum" data-o="xs"></span>`;
+    if(k==='Отказ')return `<select data-xk="zone" aria-label="Зона">${zoneOpts(x.zone)}</select><input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||1)}" aria-label="Количество отказов"><span class="xu">шт</span><span class="xsum" data-o="xs"></span><input data-xk="note" placeholder="Комментарий (необязательно)" value="${esc(x.reason)}" aria-label="Комментарий к отказу">`;
     if(k==='Шашка')return `<input data-xk="sum" class="num" inputmode="decimal" placeholder="Сумма" value="${esc(x.sum)}" aria-label="Сумма за шашку"><span class="xu">₽</span>`;
     if(k==='Наклейка')return `<span class="xsum">${rub(STICKER)}</span><span class="xu">фиксированная сумма</span>`;
     if(k==='Листовки')return `<input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||'')}" aria-label="Количество листовок"><span class="xu">шт</span><input data-xk="sum" class="num" inputmode="decimal" placeholder="Сумма" value="${esc(x.sum)}" aria-label="Сумма за листовки"><span class="xu">₽</span>`;
@@ -979,6 +980,7 @@ body.boss .hist-head h2{font-size:26px}
   function extraState(el){
     const g0=k=>el.querySelector(`[data-xk=${k}]`),g=k=>g0(k)||{value:''},kind=g('kind').value;
     if(kind==='Довоз'){const zone=g('zone').value,n=num(g('n').value)||0,id=zoneSet(),z=id?ZONESETS[id].z.find(q=>zLabel(q)===zone):null;return {kind,zone,reason:g('reason').value,n:g('n').value.trim(),sum:z?z[2]*n:0}}
+    if(kind==='Отказ'){const zone=g('zone').value,n=num(g('n').value)||0,id=zoneSet(),z=id?ZONESETS[id].z.find(q=>zLabel(q)===zone):null;return {kind,zone,reason:g('note').value.trim(),n:g('n').value.trim(),sum:z?z[2]*n:0}}
     if(kind==='Листовки')return {kind,n:g('n').value.trim(),sum:num(g('sum').value)};
     if(kind==='Наклейка')return {kind,sum:STICKER};
     if(kind==='Шашка')return {kind,sum:num(g('sum').value)};
@@ -1002,7 +1004,7 @@ body.boss .hist-head h2{font-size:26px}
       <button type="button" class="del" aria-label="Удалить строку">×</button>
       <div class="wpart"${wOf(d.w)==='p'?'':' hidden'}><label>Из них с изъятием, ₽ <input data-k="ws" class="num" inputmode="decimal" value="${esc(d.ws)}" aria-label="Сумма с изъятием"></label><span class="rest" data-o="wrest"></span></div>
       <div class="zones" hidden></div>
-      <div class="cx"><div class="cx-list"></div><button type="button" class="cx-add">+ Доплата (довоз, шашка, листовки, наклейка…)</button></div>`;
+      <div class="cx"><div class="cx-list"></div><button type="button" class="cx-add">+ Доплата (довоз, отказ, шашка, листовки, наклейка…)</button></div>`;
     r.dataset.manual=''; // «За часы» только автоматически — вручную не вписать
     (d.ex||[]).forEach(x=>addExtra(r,x));r._zinit=d.z||null;
     $('#cour').appendChild(r);
@@ -1092,6 +1094,7 @@ body.boss .hist-head h2{font-size:26px}
         const x=extraState(el);ex+=x.sum;const xs=el.querySelector('[data-o=xs]');if(xs)xs.textContent=x.sum?'= '+rub(x.sum):'';
         const nm=g('name').value.trim()||'Курьер';
         if(x.kind==='Довоз'&&(!x.zone||!x.reason))warns.push(['warn',`${nm}: у довоза укажите зону и причину.`]);
+        else if(x.kind==='Отказ'&&!x.zone)warns.push(['warn',`${nm}: у отказа укажите зону.`]);
         else if(x.kind!=='Довоз'&&!x.sum)warns.push(['warn',`${nm}: у доплаты «${x.kind}» не указана сумма.`]);});
       r.dataset.ex=ex;cx+=ex;
       const h=NOH?0:num(hi.value),o=num(g('orders').value),t=h+o+ex;
