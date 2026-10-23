@@ -114,7 +114,7 @@ function doPost(e) {
     if (body.action === 'couriers') return json_({ ok: true, couriers: couriers_() });
     if (body.action === 'revenue') {
       var res = sendRevenue_(body.report || {}, admin);
-      log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error), admin.name, (body.report || {}).branch || admin.branch);
+      log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error + (res.queued ? ' — в очереди на повтор' : '')), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
     }
     if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report|cash_start|iiko_mark)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
@@ -273,9 +273,47 @@ function sendRevenue_(r, admin) {
     '\n\n' + h(lines.join('\n')) + '\n\n<b>ВСЕГО: ' + fmtRub_(total) + '</b>' + (bon ? '\nБонусы iiko (скидка): ' + fmtRub_(bon) : '') + '\n\n' + (ordText_(r.ord) ? h(ordText_(r.ord)) + '\n\n' : '') + h(redoText_(r.redo)) + '\n❌ Отказы: ' + num_(r.otk);
   var chat = maxChatId_();
   if (!chat) return { ok: false, error: PropertiesService.getScriptProperties().getProperty('MAX_TOKEN') ? 'no_chat' : 'no_token' };
-  var res = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: text, format: 'html' });
-  if (res.code >= 200 && res.code < 300) return { ok: true };
-  return { ok: false, error: 'max_' + res.code };
+  return maxSend_(chat, text);
+}
+
+// Отправка в чат с повтором. Посредник в Яндекс Облаке иногда отвечает 502 (холодный старт, MAX долго отвечает).
+// Сразу пробуем ещё раз; не вышло — сообщение ложится в очередь (свойство MAX_PENDING),
+// её досылает maxRetry по таймеру каждые 3 минуты, до 2 часов. Админу не нужно писать выручку вручную.
+function maxSend_(chat, text) {
+  var t0 = Date.now(), res = maxPost_(chat, text);
+  if (!res.ok && Date.now() - t0 < 12000) { Utilities.sleep(1500); res = maxPost_(chat, text); }
+  if (res.ok) return { ok: true };
+  maxQueue_([{ chat: chat, text: text, n: 0 }]);
+  return { ok: false, queued: true, error: res.error };
+}
+function maxPost_(chat, text) {
+  var r = maxFetch_('post', '/messages?chat_id=' + encodeURIComponent(chat), { text: text, format: 'html' });
+  if (r.code >= 200 && r.code < 300) return { ok: true };
+  return { ok: false, error: 'max_' + r.code + (r.error ? ' ' + String(r.error).slice(0, 80) : '') };
+}
+function maxQueue_(list) {
+  var p = PropertiesService.getScriptProperties(), q = [];
+  try { q = JSON.parse(p.getProperty('MAX_PENDING') || '[]'); } catch (e) {}
+  p.setProperty('MAX_PENDING', JSON.stringify(q.concat(list)));
+  var has = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'maxRetry'; });
+  if (!has) ScriptApp.newTrigger('maxRetry').timeBased().after(3 * 60 * 1000).create();
+}
+// По таймеру: дослать сообщения из очереди. Запускать вручную не нужно.
+function maxRetry() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'maxRetry') ScriptApp.deleteTrigger(t); });
+  var p = PropertiesService.getScriptProperties(), lock = LockService.getScriptLock(), q = [];
+  lock.waitLock(30000);
+  try { q = JSON.parse(p.getProperty('MAX_PENDING') || '[]'); } catch (e) {}
+  p.setProperty('MAX_PENDING', '[]');
+  lock.releaseLock();
+  var left = [];
+  q.forEach(function (m) {
+    var r = maxPost_(m.chat, m.text);
+    if (r.ok) { log_('Выручка в MAX: дослано повторно', '', ''); return; }
+    m.n = (m.n || 0) + 1;
+    if (m.n < 40) left.push(m); else log_('Выручка в MAX: не дошла после повторов — ' + r.error, '', '');
+  });
+  if (left.length) { lock.waitLock(30000); try { maxQueue_(left); } finally { lock.releaseLock(); } }
 }
 
 // Довозы за смену: «🚚 Довозы: 0» или «🚚 Довозы: 3 — Кухня недокомплект 2, Ошибка КЦ 1»
