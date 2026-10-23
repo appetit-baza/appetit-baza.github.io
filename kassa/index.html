@@ -495,7 +495,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='62';
+  const BUILD='63';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -600,7 +600,7 @@ body.boss .hist-head h2{font-size:26px}
   // «Возврат ДС чек №4512» и «Возврат ДС чек № 77» → «Возврат ДС»: номера чеков и прочие хвостовые номера не делят статью
   function artBase(a){return String(a||'').replace(/\s+/g,' ').trim().replace(/\s*(чек\s*)?(№|N|#)\s*[\w\-\/.]*\s*$/i,'').replace(/\s+чек\s*[\d\-\/.]*\s*$/i,'').replace(/\s+\d[\d\-\/.]*\s*$/,'').replace(/[\s,.:;\-–]+$/,'').trim()}
   function moneyArts(rows){const g={'Приход':{},'Расход':{}};
-    rows.forEach(x=>(x.money||[]).forEach(([t,a,v])=>{const G=g[t];if(!G)return;a=artBase(a);const art=a?a[0].toUpperCase()+a.slice(1):'без статьи',k=art.toLowerCase();
+    rows.forEach(x=>(x.money||[]).forEach(([t,a,v,d,ix])=>{if(/^c/.test(ix))return;const G=g[t];if(!G)return;a=artBase(a);const art=a?a[0].toUpperCase()+a.slice(1):'без статьи',k=art.toLowerCase();
       const o=G[k]=G[k]||{art,n:0,sum:0,br:{}};o.n++;o.sum+=v;o.br[x.branch]=(o.br[x.branch]||0)+v}));
     const L=t=>Object.values(g[t]).sort((a,b)=>b.sum-a.sum);return {inc:L('Приход'),exp:L('Расход')}}
   function moneyHtml(rows){
@@ -929,7 +929,7 @@ body.boss .hist-head h2{font-size:26px}
   async function toiMark(id,idx,on){const r=await api({action:'iiko_mark',pin:USER.pin,id,idx,on});if(!r.ok)throw new Error(r.error);
     const x=BOSS_ROWS.find(z=>z.id===id);if(x&&x.money)x.money.forEach(m=>{if(idx===-1||m[4]===idx)m[3]=on?1:0})}
   $('#hb_sum').addEventListener('change',async e=>{const c=e.target.closest('[data-toi]');if(!c)return;const [id,i]=c.dataset.toi.split('|');c.disabled=true;
-    try{await toiMark(id,+i,c.checked);toast(c.checked?'Отмечено: занесено в iiko':'Отметка снята');setTimeout(()=>{if(STAB==='toiiko')renderBoss()},500)}catch(x){c.checked=!c.checked;toast('Не сохранилось')}c.disabled=false});
+    try{await toiMark(id,/^c/.test(i)?i:+i,c.checked);toast(c.checked?'Отмечено: занесено в iiko':'Отметка снята');setTimeout(()=>{if(STAB==='toiiko')renderBoss()},500)}catch(x){c.checked=!c.checked;toast('Не сохранилось')}c.disabled=false});
   $('#hb_sum').addEventListener('click',async e=>{if(e.target.closest('[data-act=toiall]')){TOI_ALL=!TOI_ALL;renderBoss();return}
     const d=e.target.closest('[data-toiday]');if(!d)return;d.disabled=true;try{await toiMark(d.dataset.toiday,-1,true);toast('День отмечен как занесённый');renderBoss()}catch(x){toast('Не сохранилось');d.disabled=false}});
   // ---------- вкладки
@@ -982,7 +982,7 @@ body.boss .hist-head h2{font-size:26px}
     try{statSheets(wb)}catch(e){console.error(e)}
     const live=BOSS_ROWS.filter(x=>!x.old);
     if(live.some(x=>x.money&&x.money.length)){
-      const m=[['Дата смены','Филиал','Администратор','Тип','Статья','Сумма']];live.forEach(x=>x.money.forEach(([t,a,v])=>m.push([x.date,x.branch,x.admin,t,a||'без статьи',v])));
+      const m=[['Дата смены','Филиал','Администратор','Тип','Статья','Сумма']];live.forEach(x=>x.money.forEach(([t,a,v,d,ix])=>/^c/.test(ix)?0:m.push([x.date,x.branch,x.admin,t,a||'без статьи',v])));
       const w2=XLSX.utils.aoa_to_sheet(m);w2['!cols']=[{wch:12},{wch:26},{wch:18},{wch:9},{wch:36},{wch:12}];XLSX.utils.book_append_sheet(wb,w2,'Приход-расход');
       const A=moneyArts(live),brs=[...new Set(live.map(x=>x.branch))].sort(),a=[['Тип','Статья','Раз','Сумма',...brs]];
       [['Расход',A.exp],['Приход',A.inc]].forEach(([t,l])=>l.forEach(o=>a.push([t,o.art,o.n,o.sum,...brs.map(b=>o.br[b]||0)])));
@@ -1088,7 +1088,7 @@ body.boss .hist-head h2{font-size:26px}
       if(zb&&c.zones){const n=ZONESETS[zb].z.map(()=>'');String(c.zones).split(/;\s*/).forEach(p=>{const m=p.match(/^(.*) × (\d+)$/);if(m){const i=ZONESETS[zb].z.findIndex(q=>zLabel(q)===m[1].trim());if(i>=0)n[i]=m[2]}});z={id:zb,n}}
       const ex=(c.extras||[]).map(x=>({kind:x.kind,zone:x.zone,reason:x.reason,n:x.n,sum:XZONE(x.kind)?'':x.sum}));
       return {z,ex,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),...(/частично/i.test(c.w)?{w:'p',ws:String((String(c.w).match(/([\d\s.,]+)\s*₽?\s*с изъятием/)||[])[1]||'').replace(/\s/g,'')}:{w:!/нет/i.test(c.w)}),manual:auto!==null&&auto!==num(c.hours)}});
-    const mon=t=>s.money.filter(m=>m.type===t).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
+    const mon=t=>s.money.filter(m=>m.type===t&&(m.ci===undefined||m.ci===null)).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
     return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,bfact:s.raw.bfact||'',rev:s.raw.rev,ord:s.raw.ord||{},cour,exp:mon('Расход'),inc:mon('Приход')};
   }
   function setFix(f){FIX=f;if(USER){if(f)LS.set('fix:'+USER.name,f);else LS.del('fix:'+USER.name)}$('#fixbar').hidden=!f;if(f)$('#fix_date').textContent=f.date}
@@ -1111,7 +1111,7 @@ body.boss .hist-head h2{font-size:26px}
     b.disabled=false;
   });
   $('#hist_one').addEventListener('change',async e=>{const c=e.target.closest('[data-mk]');if(!c||!SHIFT)return;const i=+c.dataset.mk,on=c.checked;c.disabled=true;
-    try{const r=await api({action:'iiko_mark',pin:USER.pin,id:SHIFT.id,idx:i,on});if(r.ok){SHIFT.money[i].iiko=on?'да':'';const x=BOSS_ROWS.find(z=>z.id===SHIFT.id);if(x)x.money=null;toast(on?'Отмечено: занесено в iiko':'Отметка снята')}else{c.checked=!on;toast('Не сохранилось')}}catch(x){c.checked=!on;toast('Нет связи с сервером')}c.disabled=false});
+    try{const mi=SHIFT.money[i];const r=await api({action:'iiko_mark',pin:USER.pin,id:SHIFT.id,idx:mi.ci!==undefined&&mi.ci!==null?'c'+mi.ci:i,on});if(r.ok){SHIFT.money[i].iiko=on?'да':'';const x=BOSS_ROWS.find(z=>z.id===SHIFT.id);if(x)x.money=null;toast(on?'Отмечено: занесено в iiko':'Отметка снята')}else{c.checked=!on;toast('Не сохранилось')}}catch(x){c.checked=!on;toast('Нет связи с сервером')}c.disabled=false});
   $('#hist_one').addEventListener('click',async e=>{const o=e.target.closest('[data-open]');if(o){openShift(o.dataset.open);return}
     const a=e.target.closest('[data-mkall]');if(a&&SHIFT){const on=a.dataset.mkall==='1';a.disabled=true;
       try{const r=await api({action:'iiko_mark',pin:USER.pin,id:SHIFT.id,idx:-1,on});if(r.ok){SHIFT.money.forEach(m=>m.iiko=on?'да':'');$('#hist_one').innerHTML=shiftView(SHIFT);toast(on?'Всё отмечено как занесённое в iiko':'Отметки сняты')}else toast('Не сохранилось')}catch(x){toast('Нет связи с сервером')}a.disabled=false}});

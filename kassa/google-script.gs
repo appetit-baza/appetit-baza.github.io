@@ -426,7 +426,8 @@ function shift_(id, admin) {
       extras: extraRows_().filter(function (x) { return String(x[0]) === id && String(x[4]) === String(r[3]); })
         .map(function (x) { return { kind: String(x[5]), zone: String(x[6]), reason: String(x[7]), n: Number(x[8]) || 1, sum: Number(x[9]) || 0 }; }) }; });
   var money = ss.getSheetByName(SHEET_MONEY).getDataRange().getDisplayValues().filter(function (r) { return r[0] === id; })
-    .map(function (r) { return { type: r[3], date: r[4], art: r[5], sum: r[6], w: r[7], iiko: r[8] || '' }; });
+    .map(function (r) { return { type: r[3], date: r[4], art: r[5], sum: r[6], w: r[7], iiko: r[8] || '' }; })
+    .concat(courNoW_(id).map(function (c) { return { type: 'Расход', date: '', art: c.art, sum: String(c.sum), w: '', iiko: c.mark, ci: c.k }; }));
   var f = fixFind_(id);
   var rev = {};
   ['r_cash', 'r_card', 'r_ye', 'r_mp', 'r_chib', 'r_sber', 'r_bon'].forEach(function (k, n) { rev[k] = row[5 + n] === 0 ? '' : String(row[5 + n]); });
@@ -800,11 +801,37 @@ function moneyMap_() {
     // 4-й элемент — отмечено ли «занесено в iiko» (столбец I), 5-й — номер строки для отметки
     (m[id] = m[id] || []).push([String(r[3]), String(r[5] || '').trim(), s, String(r[8] || '') ? 1 : 0, idx]);
   });
+  // курьеры без изъятия (из сейфа) — тоже вносятся в iiko расходом; номер строки — 'c' + номер курьера в смене
+  courNoW_().forEach(function (c) { (m[c.id] = m[c.id] || []).push(['Расход', c.art, c.sum, c.mark ? 1 : 0, 'c' + c.k]); });
   return m;
+}
+// Сумма курьеру без изъятия по тексту столбца «Изъятие»: «нет (сейф)» — вся сумма, «частично: … ₽ без» — эта часть
+function noW_(total, w) {
+  w = String(w || '');
+  if (/^нет/i.test(w)) return num_(total);
+  var mm = w.match(/(\d[\d\s]*(?:[.,]\d+)?)\s*₽\s*без/);
+  return mm ? num_(mm[1]) : 0;
+}
+// Все курьеры без изъятия: [{id, k, art, sum, mark}], k — номер строки курьера внутри смены, mark — столбец P «Занесено в iiko»
+function courNoW_(onlyId) {
+  var sh = ss_().getSheetByName(SHEET_COURIERS), out = [], cnt = {};
+  if (!sh || sh.getLastRow() < 2) return out;
+  sh.getRange(2, 1, sh.getLastRow() - 1, 16).getDisplayValues().forEach(function (r) {
+    var id = String(r[0]);
+    if (!id) return;
+    var k = cnt[id] = (cnt[id] === undefined ? 0 : cnt[id] + 1);
+    if (onlyId && id !== onlyId) return;
+    var s = noW_(r[9], r[10]);
+    if (s > 0) out.push({ id: id, k: k, art: 'Курьер без изъятия: ' + (String(r[3]).trim() || '—'), sum: s, mark: String(r[15] || '') });
+  });
+  return out;
 }
 // Отметка «занесено в iiko» для строки прихода/расхода смены (idx — номер строки внутри смены; -1 — все строки)
 function iikoMark_(b, admin) {
-  var id = String(b.id || ''), idx = Number(b.idx), on = !!b.on;
+  var id = String(b.id || ''), on = !!b.on;
+  if (/^c\d+$/.test(String(b.idx))) return courMark_(id, Number(String(b.idx).slice(1)), on, admin);
+  var idx = Number(b.idx);
+  if (idx === -1) courMark_(id, -1, on, admin);
   var sh = ss_().getSheetByName(SHEET_MONEY);
   if (!sh || !id) return { ok: false, error: 'not_found' };
   if (!String(sh.getRange('I1').getValue()).trim()) sh.getRange('I1').setValue('Занесено в iiko').setFontWeight('bold');
@@ -815,7 +842,21 @@ function iikoMark_(b, admin) {
     k++;
     if (idx === -1 || idx === k) { sh.getRange(r + 1, 9).setValue(mark); n++; }
   }
-  return n ? { ok: true, n: n } : { ok: false, error: 'not_found' };
+  return n || idx === -1 ? { ok: true, n: n } : { ok: false, error: 'not_found' };
+}
+// Отметка «занесено в iiko» для курьера без изъятия: столбец P листа «Курьеры» (k — номер курьера в смене, -1 — все без изъятия)
+function courMark_(id, k, on, admin) {
+  var sh = ss_().getSheetByName(SHEET_COURIERS);
+  if (!sh || !id) return { ok: false, error: 'not_found' };
+  if (!String(sh.getRange('P1').getValue()).trim()) sh.getRange('P1').setValue('Занесено в iiko').setFontWeight('bold');
+  var rows = sh.getRange(1, 1, sh.getLastRow(), 11).getDisplayValues(), j = -1, n = 0;
+  var mark = on ? 'да · ' + admin.name + ' · ' + Utilities.formatDate(new Date(), 'Europe/Moscow', 'dd.MM.yyyy HH:mm') : '';
+  for (var r = 1; r < rows.length; r++) {
+    if (String(rows[r][0]) !== id) continue;
+    j++;
+    if ((k === -1 && noW_(rows[r][9], rows[r][10]) > 0) || k === j) { sh.getRange(r + 1, 16).setValue(mark); n++; }
+  }
+  return n || k === -1 ? { ok: true, n: n } : { ok: false, error: 'not_found' };
 }
 
 function num_(v) {
