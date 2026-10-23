@@ -191,6 +191,9 @@ function couriers_() {
 // ID чата скрипт находит сам по названию и запоминает в MAX_CHAT_ID.
 var MAX_API = 'https://platform-api2.max.ru';
 var MAX_CHAT_TITLE = 'АДМИНЫ АППЕТИТ';
+// ID чата «АДМИНЫ АППЕТИТ» (найден 22.10.2026). Запасной вариант, если свойство MAX_CHAT_ID пропадёт:
+// события бота в MAX хранятся недолго, и найти чат заново через /updates может не получиться.
+var MAX_CHAT_DEFAULT = '-72284515974586';
 // Посредник в Яндекс Облаке (функция max-relay): Google → посредник → MAX
 var MAX_RELAY = 'https://functions.yandexcloud.net/d4ea85u3v2tqfi0e5mc6';
 
@@ -221,6 +224,7 @@ function maxChatId_() {
   var props = PropertiesService.getScriptProperties();
   var id = props.getProperty('MAX_CHAT_ID');
   if (id) return id;
+  if (MAX_CHAT_DEFAULT) { props.setProperty('MAX_CHAT_ID', MAX_CHAT_DEFAULT); return MAX_CHAT_DEFAULT; }
   // Список чатов (GET /chats) MAX убрал в июне 2026: ID чата берём из последних событий бота
   // (бота добавили в чат или кто-то написал в чат) и проверяем название через GET /chats/{id}.
   var r = maxFetch_('get', '/updates?limit=100&types=bot_added,message_created,user_added,chat_title_changed');
@@ -292,7 +296,6 @@ function testMaxSend() {
 
 // Запустите вручную после того, как добавите бота в чат: проверит ключ и найдёт чат.
 function testMax() {
-  PropertiesService.getScriptProperties().deleteProperty('MAX_CHAT_ID');
   var me = maxFetch_('get', '/me');
   Logger.log('Бот: ' + JSON.stringify(me));
   Logger.log('Чат: ' + maxChatId_());
