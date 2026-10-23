@@ -113,6 +113,8 @@ function doPost(e) {
     }
     if (body.action === 'couriers') return json_({ ok: true, couriers: couriers_() });
     if (body.action === 'revenue') {
+      // отправка в чат может занять до минуты (повторы) — отпускаем блокировку, чтобы не задерживать отчёты других филиалов
+      lock.releaseLock();
       var res = sendRevenue_(body.report || {}, admin);
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error + (res.queued ? ' — в очереди на повтор' : '')), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
@@ -278,12 +280,14 @@ function sendRevenue_(r, admin) {
 
 // Отправка в чат с повтором. Посредник в Яндекс Облаке иногда отвечает 502 (холодный старт, MAX долго отвечает).
 // Сразу пробуем ещё раз; не вышло — сообщение ложится в очередь (свойство MAX_PENDING),
-// её досылает maxRetry по таймеру каждые 3 минуты, до 2 часов. Админу не нужно писать выручку вручную.
+// её досылает maxRetry по таймеру каждую минуту, до 2 часов. Админу не нужно писать выручку вручную.
 function maxSend_(chat, text) {
-  var t0 = Date.now(), res = maxPost_(chat, text);
-  if (!res.ok && Date.now() - t0 < 12000) { Utilities.sleep(1500); res = maxPost_(chat, text); }
+  // до 3 попыток подряд (пока укладываемся в ~50 секунд), потом — очередь
+  var t0 = Date.now(), res = maxPost_(chat, text), tries = 1;
+  while (!res.ok && tries < 3 && Date.now() - t0 < 50000) { Utilities.sleep(1000); res = maxPost_(chat, text); tries++; }
   if (res.ok) return { ok: true };
-  maxQueue_([{ chat: chat, text: text, n: 0 }]);
+  var lk = LockService.getScriptLock(); lk.waitLock(20000);
+  try { maxQueue_([{ chat: chat, text: text, n: 0 }]); } finally { lk.releaseLock(); }
   return { ok: false, queued: true, error: res.error };
 }
 function maxPost_(chat, text) {
@@ -296,7 +300,7 @@ function maxQueue_(list) {
   try { q = JSON.parse(p.getProperty('MAX_PENDING') || '[]'); } catch (e) {}
   p.setProperty('MAX_PENDING', JSON.stringify(q.concat(list)));
   var has = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'maxRetry'; });
-  if (!has) ScriptApp.newTrigger('maxRetry').timeBased().after(3 * 60 * 1000).create();
+  if (!has) ScriptApp.newTrigger('maxRetry').timeBased().after(60 * 1000).create();
 }
 // По таймеру: дослать сообщения из очереди. Запускать вручную не нужно.
 function maxRetry() {
@@ -311,7 +315,7 @@ function maxRetry() {
     var r = maxPost_(m.chat, m.text);
     if (r.ok) { log_('Выручка в MAX: дослано повторно', '', ''); return; }
     m.n = (m.n || 0) + 1;
-    if (m.n < 40) left.push(m); else log_('Выручка в MAX: не дошла после повторов — ' + r.error, '', '');
+    if (m.n < 120) left.push(m); else log_('Выручка в MAX: не дошла после повторов — ' + r.error, '', '');
   });
   if (left.length) { lock.waitLock(30000); try { maxQueue_(left); } finally { lock.releaseLock(); } }
 }
