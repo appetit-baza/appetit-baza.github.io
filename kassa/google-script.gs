@@ -97,8 +97,9 @@ function doGet() {
 function doPost(e) {
   var body;
   try { body = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: 'bad_request' }); }
+  // Блокировка нужна только для записи (отчёт, черновик, отметки). Чтение (смены, итоги, касса) идёт без очереди —
+  // иначе страница «Все смены» ждала, пока по очереди отработают все запросы.
   var lock = LockService.getScriptLock();
-  lock.waitLock(20000);
   try {
     var dev = String(body.device || 'unknown').replace(/[^\w-]/g, '').slice(0, 64) || 'unknown';
     var lockState = isLocked_(dev);
@@ -106,6 +107,7 @@ function doPost(e) {
     var admin = findAdmin_(body.pin);
     if (!admin) { var st = registerFail_(dev); return json_({ ok: false, error: st || 'bad_pin', left: st ? 0 : undefined }); }
     resetFails_(dev);
+    if (/^(report|draft_save|fix_request|fix_decide|cash_start|iiko_mark|accept)$/.test(String(body.action))) lock.waitLock(20000);
     if (body.action === 'login') {
       log_('Вход', admin.name, admin.branch);
       return json_({ ok: true, name: admin.name, branch: admin.branch, boss: admin.boss, viewer: !!admin.viewer, couriers: couriers_(),
@@ -113,8 +115,6 @@ function doPost(e) {
     }
     if (body.action === 'couriers') return json_({ ok: true, couriers: couriers_() });
     if (body.action === 'revenue') {
-      // отправка в чат может занять до минуты (повторы) — отпускаем блокировку, чтобы не задерживать отчёты других филиалов
-      lock.releaseLock();
       var res = sendRevenue_(body.report || {}, admin);
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error + (res.queued ? ' — в очереди на повтор' : '')), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
