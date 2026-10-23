@@ -199,6 +199,14 @@ input.mismatch{border-color:var(--warn)!important;background:var(--warn-soft)!im
 .hist-list{display:grid;gap:8px}
 .h-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;text-align:left;width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;border-radius:12px;padding:12px 14px;cursor:pointer}
 .h-item:hover{border-color:var(--accent)}
+.h-wrap{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:stretch}
+.h-wrap .acc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1px dashed var(--line);border-radius:12px;font-size:12px;color:var(--muted);cursor:pointer;text-align:center;line-height:1.15;padding:6px 4px;user-select:none}
+.h-wrap .acc input{width:22px;height:22px;margin:0;accent-color:var(--accent);cursor:pointer}
+.h-wrap .acc:hover{border-color:var(--accent)}
+.h-wrap.on .acc{border-style:solid;border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:700}
+.h-wrap.on .h-item{border-color:var(--accent);border-left-width:4px}
+.h-wrap.ro .acc{cursor:default}
+@media (max-width:560px){.h-wrap{grid-template-columns:60px minmax(0,1fr)}}
 .h-item b{font-size:15.5px}
 .h-item small{color:var(--muted);font-size:13px}
 .h-item .sum{text-align:right;font-variant-numeric:tabular-nums}
@@ -487,7 +495,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='61';
+  const BUILD='62';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -552,7 +560,10 @@ body.boss .hist-head h2{font-size:26px}
     else if(q==='week'){f=new Date(d);f.setDate(d.getDate()-6)}else if(q==='month')f=new Date(d.getFullYear(),d.getMonth(),1);
     else{f=new Date(d.getFullYear(),d.getMonth()-1,1);t=new Date(d.getFullYear(),d.getMonth(),0)}
     $('#hb_from').value=iso(f);$('#hb_to').value=iso(t);$$('#hb_quick button').forEach(x=>x.classList.toggle('on',x.dataset.q===q))}
-  function itemHtml(x,boss){return `<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b${x.old||x.replaced?' class="old"':''}>${esc(x.date)}</b>${boss?' · '+esc(x.admin):''}<br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.replaced?' · <span class="rep">заменён исправленным отчётом</span>'+(boss?', в итоги не входит':''):x.old?' · <span class="rep">заменён повторной отправкой, в итоги не входит</span>':x.fixed?' · <span class="rep">исправленный отчёт</span>':x.repeat?' · <span class="rep">повторная отправка</span>':''}${x.bdiff?` · <span class="bad">⚠ Карта ≠ безнал по сверкам на ${money(Math.abs(x.bdiff))}</span>`:''}${boss&&x.money&&x.money.length?(()=>{const t=x.money.length,d=x.money.filter(m=>m[3]).length;return d===t?' · <span class="iiko-ok">✓ занесено в iiko</span>':` · <span class="iiko-no">в iiko занесено ${d} из ${t}</span>`})():''}${x.fix==='ожидает'?' · <span class="rep">ждёт разрешения на исправление</span>':x.fix==='разрешено'?' · <span class="rep">исправление разрешено</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`}
+  // руководитель: слева от смены — галочка «принята» (у «просмотра» только видна, менять нельзя)
+  function itemHtml(x,boss){const b=itemBtn(x,boss);if(!boss||x.old||x.replaced)return b;const ro=!!(USER&&USER.viewer);
+    return `<div class="h-wrap${x.acc?' on':''}${ro?' ro':''}"><label class="acc" title="${x.acc?esc('Принята: '+x.acc):'Отметить, что смена проверена и принята'}"><input type="checkbox" data-acc="${esc(x.id)}"${x.acc?' checked':''}${ro?' disabled':''}><span>${x.acc?'принята':'принять'}</span></label>${b}</div>`}
+  function itemBtn(x,boss){return `<button type="button" class="h-item" data-id="${esc(x.id)}"><span><b${x.old||x.replaced?' class="old"':''}>${esc(x.date)}</b>${boss?' · '+esc(x.admin):''}<br><small>${esc(x.branch)} · отправлено ${esc(x.sent)}${x.replaced?' · <span class="rep">заменён исправленным отчётом</span>'+(boss?', в итоги не входит':''):x.old?' · <span class="rep">заменён повторной отправкой, в итоги не входит</span>':x.fixed?' · <span class="rep">исправленный отчёт</span>':x.repeat?' · <span class="rep">повторная отправка</span>':''}${x.bdiff?` · <span class="bad">⚠ Карта ≠ безнал по сверкам на ${money(Math.abs(x.bdiff))}</span>`:''}${boss&&x.money&&x.money.length?(()=>{const t=x.money.length,d=x.money.filter(m=>m[3]).length;return d===t?' · <span class="iiko-ok">✓ занесено в iiko</span>':` · <span class="iiko-no">в iiko занесено ${d} из ${t}</span>`})():''}${boss&&x.acc&&!x.old&&!x.replaced?` · <span class="iiko-ok">✓ принята ${esc(x.acc.replace(/^.*? · /,''))}</span>`:''}${x.fix==='ожидает'?' · <span class="rep">ждёт разрешения на исправление</span>':x.fix==='разрешено'?' · <span class="rep">исправление разрешено</span>':''}</small></span><span class="sum"><small>выручка</small><br><b>${money(x.rev)}</b><br><small>передано ${money(x.pass)}</small></span></button>`}
   async function loadHist(){
     const boss=!!(USER&&USER.boss);
     $('#hist_list').innerHTML='<p class="hint">Загружаю…</p>';if(boss)$('#hb_sum').innerHTML='';
@@ -575,6 +586,7 @@ body.boss .hist-head h2{font-size:26px}
     const by={};rows.forEach(x=>{const b=by[x.branch]=by[x.branch]||{n:0,rev:0,cash:0,ct:0,ex:0,pass:0};b.n++;['rev','cash','ct','ex','pass'].forEach(k=>b[k]+=x[k]||0)});
     const mis=rows.filter(x=>x.bdiff);
     const tiles=SUMF.filter(([k])=>k==='rev'||tot[k]).map(([k,l])=>`<div class="hb-tile${k==='rev'?' main':''}"><small>${l}</small><b>${money(tot[k])}</b></div>`).join('')
+      +(()=>{const n=rows.filter(x=>!x.acc).length;return `<div class="hb-tile"${n?' style="border-color:var(--amber)"':''}><small>Принято смен</small><b${n?' style="color:var(--amber)"':''}>${rows.length-n} из ${rows.length}</b>${n?`<span class="sub">не принято: ${n}</span>`:''}</div>`})()
       +(mis.length?`<div class="hb-tile" style="border-color:var(--warn)"><small>Карта ≠ безнал по сверкам</small><b style="color:var(--warn)">смен: ${mis.length}</b></div>`:'');
     const names=Object.keys(by).sort((a,b)=>by[b].rev-by[a].rev);
     const tbl=names.length>1?`<p class="h-sec">По филиалам</p><div class="h-table"><table><tr><th>Филиал</th><th class="n">Смен</th><th class="n">Выручка</th><th class="n">Наличные</th><th class="n">Курьерам</th><th class="n">Расходы</th><th class="n">Передано</th></tr>${names.map(n=>{const b=by[n];return `<tr><td>${esc(n)}</td><td class="n">${b.n}</td><td class="n"><b>${money(b.rev)}</b></td><td class="n">${money(b.cash)}</td><td class="n">${money(b.ct)}</td><td class="n">${money(b.ex)}</td><td class="n">${money(b.pass)}</td></tr>`}).join('')}</table></div>`:'';
@@ -1018,7 +1030,7 @@ body.boss .hist-head h2{font-size:26px}
     let cashT='';if(boss){if(!CASH.loaded){Promise.resolve(loadCash()).then(()=>{if(SHIFT===s&&!$('#hist_one').hidden)$('#hist_one').innerHTML=shiftView(s)})}
       else if(!CASH.err){const cd=cashData().find(z=>z.b===s.raw.branch);const k=isoDk(s.raw.date);const o=cd&&!cd.none?cd.days.find(d=>d.k===k):null;
         cashT=o?tile('Остаток кассы',money(Math.round(o.bal*100)/100),'на начало дня '+money(Math.round(o.start*100)/100),'cashtile'):tile('Остаток кассы','—',cd&&!cd.none?'день раньше стартового остатка':'впишите старт на вкладке «Касса»')}}
-    const head=`<div class="sv-head"><div><h3>${esc(sm['Дата смены']||'')} · ${esc(brShort(s.raw.branch))}</h3><p>${esc(s.raw.branch)} · ${esc(sm['Администратор']||s.admin||'')}</p></div><div class="sv-meta">отчёт ${esc(s.id)}${sm['Отправлено']?'<br>отправлен '+esc(sm['Отправлено']):''}</div></div>`;
+    const head=`<div class="sv-head"><div><h3>${esc(sm['Дата смены']||'')} · ${esc(brShort(s.raw.branch))}</h3><p>${esc(s.raw.branch)} · ${esc(sm['Администратор']||s.admin||'')}</p></div><div class="sv-meta">отчёт ${esc(s.id)}${sm['Отправлено']?'<br>отправлен '+esc(sm['Отправлено']):''}${accBtn(s,boss)}</div></div>`;
     const tiles=`<div class="hb-tiles">${tile('Выручка всего',money(rv),'','main')}${tile('Наличные',money(cash))}${tile('Передана сумма',money(pass),'наличные − курьерам из кассы')}${tile('Курьерам',money(ct),N('Не делали изъятие')?'не из кассы: '+money(N('Не делали изъятие')):'')}${inc?tile('Приход',money(inc)):''}${ex?tile('Расход',money(ex)):''}${cashT}</div>`;
     const PT=[['Онлайн','Онлайн'],['Наличные','Наличные'],['Карта','Карта'],['Яндекс/Деливери','Яндекс/Деливери'],['Чиббис','Чиббис'],['Сбермаркет','Сбермаркет']];
     const pay=(PT.filter(([k])=>N(k)).map(([k,l],i)=>`<div class="sv-row"><span>${sw(`var(--s${i+1})`)}${l}</span><b>${money(N(k))}</b><small>${pf(pct(N(k),rv))}</small></div>`).join('')||'<p class="hint">Выручки нет.</p>')+(N('Бонусы iiko (iikocard)')?`<div class="sv-row"><span>Бонусы iiko — скидка</span><b>${money(N('Бонусы iiko (iikocard)'))}</b><small>не в выручке</small></div>`:'');
@@ -1048,6 +1060,17 @@ body.boss .hist-head h2{font-size:26px}
     }catch(x){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Нет связи с сервером.</p>'}
   }
   $('#hist_list').addEventListener('click',e=>{const b=e.target.closest('.h-item');if(b)openShift(b.dataset.id)});
+  // «Смена принята»: галочка в списке и кнопка в карточке смены
+  function accBtn(s,boss){const x=BOSS_ROWS.find(z=>z.id===s.id);if(!boss||!x||x.old||x.replaced)return '';
+    if(USER.viewer)return x.acc?`<br><span class="iiko-ok">✓ принята: ${esc(x.acc)}</span>`:'<br>не принята';
+    return x.acc?`<br><span class="iiko-ok">✓ принята: ${esc(x.acc)}</span><br><button type="button" class="btn sec" data-act="acc" data-on="0" style="margin-top:6px">Снять отметку</button>`:`<br><button type="button" class="btn" data-act="acc" data-on="1" style="margin-top:6px">✓ Смена принята</button>`}
+  async function setAcc(id,on){const r=await api({action:'accept',pin:USER.pin,id,on});if(!r.ok)throw new Error(r.error);
+    const x=BOSS_ROWS.find(z=>z.id===id);if(x)x.acc=r.acc||'';$('#hist_list').innerHTML=BOSS_ROWS.map(z=>itemHtml(z,true)).join('');bossSum();
+    if(SHIFT&&SHIFT.id===id&&!$('#hist_one').hidden)$('#hist_one').innerHTML=shiftView(SHIFT);toast(on?'Смена отмечена как принятая':'Отметка снята')}
+  document.addEventListener('change',async e=>{const c=e.target.closest('[data-acc]');if(!c)return;c.disabled=true;
+    try{await setAcc(c.dataset.acc,c.checked)}catch(x){c.checked=!c.checked;c.disabled=false;toast(x.message==='unknown_action'?'Обновите скрипт в таблице':'Не сохранилось, попробуйте ещё раз')}});
+  document.addEventListener('click',async e=>{const b=e.target.closest('[data-act=acc]');if(!b||!SHIFT)return;b.disabled=true;
+    try{await setAcc(SHIFT.id,b.dataset.on==='1')}catch(x){b.disabled=false;toast('Не сохранилось, попробуйте ещё раз')}});
   // ---------- correction requests (only after the manager approves)
   async function loadFixList(){
     const box=$('#hb_fix');

@@ -119,7 +119,8 @@ function doPost(e) {
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error + (res.queued ? ' — в очереди на повтор' : '')), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
     }
-    if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report|cash_start|iiko_mark)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
+    if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report|cash_start|iiko_mark|accept)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
+    if (body.action === 'accept') return json_(admin.boss ? accept_(body, admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'iiko_mark') return json_(admin.boss ? iikoMark_(body, admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'cash_get') return json_(admin.boss ? cashGet_(admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'iiko_check') return json_(admin.boss ? iikoCheck_(body) : { ok: false, error: 'not_boss' });
@@ -380,9 +381,25 @@ function history_(admin, q) {
       repeat: String(r[20]) === 'да', fixed: String(r[20]) === 'исправление',
       bfact: r[23] === '' || r[23] === undefined || r[23] === null ? null : Number(r[23]) || 0,
       bdiff: r[23] === '' || r[23] === undefined || r[23] === null ? 0 : Math.round(((Number(r[23]) || 0) - (Number(r[6]) || 0)) * 100) / 100, replaced: String(r[22] || ''), fix: (fx[String(r[21])] || {}).status || '', redo: rd[String(r[21])] || null, money: mm[String(r[21])] || [],
-      sentMs: r[0] instanceof Date ? r[0].getTime() : 0, cw: Number(r[14]) || 0, cn: Number(r[15]) || 0, cour: cm[String(r[21])] || [] });
+      sentMs: r[0] instanceof Date ? r[0].getTime() : 0, cw: Number(r[14]) || 0, cn: Number(r[15]) || 0, cour: cm[String(r[21])] || [],
+      acc: r[28] === undefined || r[28] === null ? '' : String(r[28]) });
   }
   return out;
+}
+
+// Отметка руководителя «смена принята» — столбец AC листа «Отчёты»: «кто · когда». Пусто — не принята.
+function accept_(b, admin) {
+  var sh = ss_().getSheetByName(SHEET_REPORTS), id = String(b.id || '');
+  if (!id) return { ok: false, error: 'not_found' };
+  if (!String(sh.getRange('AC1').getValue()).trim()) sh.getRange('AC1').setValue('Принята').setFontWeight('bold');
+  var ids = sh.getRange(1, 22, sh.getLastRow(), 1).getValues();
+  for (var i = 1; i < ids.length; i++) {
+    if (String(ids[i][0]) !== id) continue;
+    var v = b.on ? admin.name + ' · ' + Utilities.formatDate(new Date(), 'Europe/Moscow', 'dd.MM.yyyy HH:mm') : '';
+    sh.getRange(i + 1, 29).setValue(v);
+    return { ok: true, acc: v };
+  }
+  return { ok: false, error: 'not_found' };
 }
 
 function shift_(id, admin) {
