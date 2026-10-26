@@ -222,6 +222,7 @@ input.mismatch{border-color:var(--warn)!important;background:var(--warn-soft)!im
 .hb-quick{display:flex;flex-wrap:wrap;gap:6px}
 .hb-quick button{font:inherit;font-size:13.5px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
 .hb-quick button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.br-chips{margin:10px 0 4px}.br-chips button.on{background:var(--accent-soft)}.br-chips small{color:var(--muted);font-weight:400;margin-left:4px}
 .hb-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .hb-tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
 .hb-tile small{display:block;color:var(--muted);font-size:12.5px}
@@ -495,7 +496,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='63';
+  const BUILD='64';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -574,12 +575,14 @@ body.boss .hist-head h2{font-size:26px}
       if(r.boss&&!boss){USER.boss=true;LS.set('session',USER);setUser(USER);openHist();return}
       if(r.viewer!==undefined&&!!r.viewer!==!!USER.viewer){USER.viewer=!!r.viewer;LS.set('session',USER);setUser(USER)}
       if(boss)loadFixList();
-      if(!r.shifts.length&&boss){FIX_PENDING=r.fixPending||0;histLabel();BOSS_ROWS=[];ITOGI_HTML='';renderBoss()}
+      if(!r.shifts.length&&boss){FIX_PENDING=r.fixPending||0;histLabel();BOSS_ROWS=[];ITOGI_HTML=$('#hb_branch').value?brChips([]):'';renderBoss()}
       if(!r.shifts.length){$('#hist_list').innerHTML=boss?'<p class="hint">За этот период отчётов нет.</p>':'<p class="hint">Отправленных отчётов пока нет. Они появятся здесь после кнопки «Отправить в бухгалтерию».</p>';return}
       if(boss){FIX_PENDING=r.fixPending||0;histLabel();const seen=new Set();r.shifts.forEach(x=>{const k=x.dk+'|'+x.branch;x.old=!!x.replaced||seen.has(k);if(!x.replaced)seen.add(k)});BOSS_ROWS=r.shifts;bossSum()}
       $('#hist_list').innerHTML=r.shifts.map(x=>itemHtml(x,boss)).join('');
     }catch(e){$('#hist_list').innerHTML='<p class="hint">Нет связи с сервером. Попробуйте ещё раз.</p>'}
   }
+  function brChips(rows){const sel=$('#hb_branch').value,n={};rows.forEach(x=>{if(!x.old)n[x.branch]=(n[x.branch]||0)+1});
+    return `<div class="hb-quick br-chips">${['',...BR_ALL()].map(b=>`<button type="button" class="${sel===b?'on':''}" data-brchip="${esc(b)}">${b?esc(brShort(b)):'Все филиалы'}${!sel?`<small>${b?(n[b]||0):rows.filter(x=>!x.old).length}</small>`:''}</button>`).join('')}</div>`}
   const SUMF=[['rev','Выручка всего'],['mp','Онлайн'],['cash','Наличные'],['card','Карта'],['ye','Яндекс/Деливери'],['chib','Чиббис'],['sber','Сбермаркет'],['bon','Бонусы iiko (скидка)'],['ct','Курьерам'],['ex','Прочие расходы'],['inc','Приход'],['pass','Передано']];
   function bossSum(){
     const rows=BOSS_ROWS.filter(x=>!x.old);const tot={};SUMF.forEach(([k])=>tot[k]=rows.reduce((a,x)=>a+(x[k]||0),0));
@@ -593,7 +596,7 @@ body.boss .hist-head h2{font-size:26px}
     const K={},RD={};rows.forEach(x=>{if(!x.redo)return;const a=x.redo;Object.keys(a.kinds||{}).forEach(k=>{K[k]=K[k]||[0,0];K[k][0]+=a.kinds[k][0];K[k][1]+=a.kinds[k][1]});Object.keys(a.redo||{}).forEach(k=>{RD[k]=RD[k]||[0,0];RD[k][0]+=a.redo[k][0];RD[k][1]+=a.redo[k][1]})});
     const kn=Object.keys(K),rn=Object.keys(RD).sort((a,b)=>RD[b][0]-RD[a][0]);
     const xtbl=kn.length?`<p class="h-sec">Доплаты курьерам</p><div class="h-table"><table><tr><th>Вид</th><th class="n">Кол-во</th><th class="n">Сумма</th></tr>${kn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${K[k][0]}</td><td class="n">${money(K[k][1])}</td></tr>`).join('')}</table></div>`+(rn.length?`<p class="h-sec">Довозы по причинам</p><div class="h-table"><table><tr><th>Причина</th><th class="n">Довозов</th><th class="n">Сумма</th></tr>${rn.map(k=>`<tr><td>${esc(k)}</td><td class="n">${RD[k][0]}</td><td class="n">${money(RD[k][1])}</td></tr>`).join('')}</table></div>`:''):'';
-    ITOGI_HTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}${xtbl}${moneyHtml(rows)}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>`;
+    ITOGI_HTML=`<p class="h-sec">Итого · смен: ${rows.length}</p><div class="hb-tiles">${tiles}</div>${tbl}${xtbl}${moneyHtml(rows)}<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"><p class="h-sec" style="margin:0">Отчёты</p><button type="button" class="btn sec" id="hb_xlsx">Скачать в Excel</button></div>${brChips(rows)}`;
     renderBoss();
   }
   // денежные движения: приход и расход по статьям из отчётов, которые входят в итоги
@@ -1002,7 +1005,10 @@ body.boss .hist-head h2{font-size:26px}
   }
   $('#b_hist').addEventListener('click',()=>{if(!USER){openGate();return}openHist()});
   $('#hb_quick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;quick(b.dataset.q);loadHist()});
-  ['#hb_from','#hb_to','#hb_branch'].forEach(id=>$(id).addEventListener('change',()=>{$$('#hb_quick button').forEach(x=>x.classList.remove('on'));loadHist()}));
+  ['#hb_from','#hb_to'].forEach(id=>$(id).addEventListener('change',()=>{$$('#hb_quick button').forEach(x=>x.classList.remove('on'));loadHist()}));
+  $('#hb_branch').addEventListener('change',()=>loadHist());
+  // быстрый выбор филиала кнопками над списком смен (то же, что «Филиал» в фильтре сверху)
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-brchip]');if(!b)return;const sel=$('#hb_branch');if(sel.value===b.dataset.brchip)return;sel.value=b.dataset.brchip;loadHist()});
   $('#hb_sum').addEventListener('click',e=>{if(e.target.id==='hb_xlsx')bossXlsx()});
   let SHIFT=null;
   function fixBox(s){
