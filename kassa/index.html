@@ -496,7 +496,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='64';
+  const BUILD='65';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -504,7 +504,8 @@ body.boss .hist-head h2{font-size:26px}
   const fmt=n=>(Math.round(n*100)/100).toLocaleString('ru-RU',{maximumFractionDigits:2});
   const rub=n=>fmt(n)+' ₽';
   const pad=n=>String(n).padStart(2,'0');
-  const today=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+  // дата смены по умолчанию: смена идёт до 05:00 утра, поэтому ночью (00:00–04:59) это ещё вчерашняя смена
+  const today=()=>{const d=new Date();if(d.getHours()<5)d.setDate(d.getDate()-1);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
   const ruDate=s=>{if(!s)return '';const [y,m,d]=s.split('-');return `${d}.${m}.${y}`};
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const LS={get(k,d){try{const v=localStorage.getItem('kassa:'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('kassa:'+k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem('kassa:'+k)}catch(e){}}};
@@ -1351,6 +1352,7 @@ body.boss .hist-head h2{font-size:26px}
     if(pass<0&&$('#r_cash').value.trim())warns.push(['err','Передана сумма отрицательная: выплат из кассы больше, чем наличных. Проверьте, кому платили из сейфа.']);
     if(!$('#branch').value)warns.push(['warn','Не выбран филиал.']);
     if(!$('#admin').value.trim())warns.push(['warn','Не указано ФИО администратора.']);
+    {const dv=$('#date').value,t=today();if(dv&&dv!==t&&!FIX)warns.push([dv>t?'err':'warn',`Дата смены — ${ruDate(dv)}, а текущая смена — ${ruDate(t)}${dv>t?' (дата из будущего)':''}. Проверьте дату: после полуночи смена ещё вчерашняя.`])}
     $('#warns').innerHTML=warns.map(([c,t])=>`<p class="${c==='err'?'err':''}">${esc(t)}</p>`).join('');
     save();
   }
@@ -1462,6 +1464,7 @@ body.boss .hist-head h2{font-size:26px}
     if(!USER){openGate();return}
     const s=state();
     if(!s.branch){toast('Выберите филиал');$('#branch').focus();return}
+    if(s.date>today()&&!FIX){toast(`Дата смены ${ruDate(s.date)} ещё не наступила — после полуночи смена вчерашняя. Исправьте дату.`);$('#date').focus();return}
     if(!R.rev){toast('Заполните выручку');return}
     const b=$('#b_send');
     if(b.dataset.sentFor===JSON.stringify(s)&&!b.dataset.confirm){b.dataset.confirm='1';b.textContent='Уже отправлен. Отправить ещё раз?';setTimeout(()=>{b.dataset.confirm='';b.textContent='Отправить в бухгалтерию'},4000);return}
@@ -1479,7 +1482,7 @@ body.boss .hist-head h2{font-size:26px}
           $('#sent').textContent=msg+(cr.ok?' Выручка отправлена в чат админов.':cr.queued?' Чат сейчас отвечает медленно — выручка уйдёт в чат автоматически в течение нескольких минут, писать вручную не нужно.':` Выручку в чат отправить не получилось (${cr.error==='net'?'нет связи':revErr(cr.error)}) — напишите её в чат вручную.`);
           if(cr.ok)toast('Выручка отправлена в чат')}}
       else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова — отчёт сохранён.')}
-      else if(r.error==='duplicate'){toast('Смена уже отправлена');showErr('Смена за эту дату по этому филиалу уже отправлена. Чтобы исправить её, откройте «Мои смены», выберите смену и нажмите «Запросить исправление».')}
+      else if(r.error==='duplicate'){toast('Смена уже отправлена');showErr('Смена за эту дату по этому филиалу уже отправлена. Проверьте дату смены — возможно, прошлую смену отправили с этой датой по ошибке. Чтобы исправить отправленную смену, откройте «Мои смены», выберите смену и нажмите «Запросить исправление».')}
       else if(r.error==='fix_not_allowed'){setFix(null);showErr('Исправление не разрешено или уже использовано. Откройте смену в «Мои смены» и запросите исправление.')}
       else toast('Не отправилось: '+(r.error==='locked'?'вход временно заблокирован':'ошибка сервера'));
     }catch(x){toast('Нет связи с сервером. Отчёт сохранён, попробуйте ещё раз.')}
