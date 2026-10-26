@@ -496,7 +496,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='66';
+  const BUILD='67';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1453,10 +1453,8 @@ body.boss .hist-head h2{font-size:26px}
   // ---------- revenue to MAX chat
 
   // выручка в чат админов — автоматически после «Отправить в бухгалтерию»
-  async function revToChat(s){
-    const r=await api({action:'revenue',pin:USER.pin,report:{branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:Object.fromEntries(Object.entries(s.rev||{}).filter(([k])=>k!=='r_bon')),bon:(s.rev||{}).r_bon||'',ord:s.ord,redo:redoList(s),otk:otkCount(s)}});
-    return r;
-  }
+  const chatPayload=s=>({branch:s.branch,dateRu:`${ruDate(s.date)} (${['вс','пн','вт','ср','чт','пт','сб'][new Date(s.date+'T12:00').getDay()]})`,rev:Object.fromEntries(Object.entries(s.rev||{}).filter(([k])=>k!=='r_bon')),bon:(s.rev||{}).r_bon||'',ord:s.ord,redo:redoList(s),otk:otkCount(s)});
+  async function revToChat(s){return api({action:'revenue',pin:USER.pin,report:chatPayload(s)})}
   const revErr=e=>({no_token:'бот MAX не подключён',no_chat:'бот не добавлен в чат «АДМИНЫ АППЕТИТ»',empty:'выручка пустая',bad_pin:'PIN больше не действует'}[e]||'ошибка отправки');
   function showErr(t){const el=$('#send_err');el.textContent=t;el.hidden=false}
   // ---------- send to accounting (Google Sheet)
@@ -1471,18 +1469,17 @@ body.boss .hist-head h2{font-size:26px}
     b.dataset.confirm='';b.disabled=true;b.textContent='Отправляю…';$('#send_err').hidden=true;
     const report={branch:s.branch,dateRu:ruDate(s.date),r041:s.r041,bfact:s.bfact,rev:s.rev,ord:s.ord,totals:{rev:R.rev,ct:R.ct,cw:R.cw,cn:R.cn,ex:R.ex,exW:R.exW,inc:R.inc,pass:R.pass},
       cour:s.cour,exp:s.exp.map(x=>({...x,dateRu:ruDate(x.date)})),inc:s.inc.map(x=>({...x,dateRu:ruDate(x.date)}))};
-    try{const r=await api({action:'report',pin:USER.pin,report,fixOf:FIX?FIX.id:undefined});
+    try{const r=await api({action:'report',pin:USER.pin,report,fixOf:FIX?FIX.id:undefined,chat:MAX_ON&&!FIX?chatPayload(s):undefined});
       if(r.ok){const wasFix=!!FIX;
         // выручка сразу уходит в чат админов (кроме исправлений)
         const autoChat=MAX_ON&&!wasFix;
         dropDraft(false);setFix(null);loadFor(USER,null);draftMsg('');window.scrollTo({top:0});const t=new Date();
         const msg=`Отчёт за ${ruDate(s.date)} ${wasFix?'исправлен':'отправлен'} в ${pad(t.getHours())}:${pad(t.getMinutes())}, номер ${r.id}. Форма очищена — его можно открыть в «Мои смены».`;
-        $('#sent').textContent=msg+(autoChat?' Отправляю выручку в чат…':'');toast('Отчёт отправлен, форма очищена');
-        // кнопку освобождаем сразу: отчёт уже в бухгалтерии, чат отправляется в фоне
-        b.disabled=false;b.textContent='Отправить в бухгалтерию';
-        if(autoChat){let cr;try{cr=await revToChat(s)}catch(e){cr={ok:false,error:'net'}}
+        toast('Отчёт отправлен, форма очищена');b.disabled=false;b.textContent='Отправить в бухгалтерию';
+        // выручку в чат отправляет сервер вместе с отчётом (r.chat); старый скрипт без этого — отправляем отдельно
+        if(autoChat){let cr=r.chat;if(!cr){$('#sent').textContent=msg+' Отправляю выручку в чат…';try{cr=await revToChat(s)}catch(e){cr={ok:false,error:'net'}}}
           $('#sent').textContent=msg+(cr.ok?' Выручка отправлена в чат админов.':cr.queued?' Чат сейчас отвечает медленно — выручка уйдёт в чат автоматически в течение нескольких минут, писать вручную не нужно.':` Выручку в чат отправить не получилось (${cr.error==='net'?'нет связи':revErr(cr.error)}) — напишите её в чат вручную.`);
-          if(cr.ok)toast('Выручка отправлена в чат')}}
+          if(cr.ok)toast('Выручка отправлена в чат')}else $('#sent').textContent=msg}
       else if(r.error==='bad_pin'){LS.del('session');setUser(null);openGate('PIN больше не действует. Войдите снова — отчёт сохранён.')}
       else if(r.error==='duplicate'){toast('Смена уже отправлена');showErr('Смена за эту дату по этому филиалу уже отправлена. Проверьте дату смены — возможно, прошлую смену отправили с этой датой по ошибке. Чтобы исправить отправленную смену, откройте «Мои смены», выберите смену и нажмите «Запросить исправление».')}
       else if(r.error==='fix_not_allowed'){setFix(null);showErr('Исправление не разрешено или уже использовано. Откройте смену в «Мои смены» и запросите исправление.')}

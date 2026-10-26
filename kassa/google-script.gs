@@ -147,7 +147,15 @@ function doPost(e) {
       var id = saveReport_(rep, admin);
       if (fix) fixDone_(fix, id, admin);
       draftSave_(admin, null);
-      return json_({ ok: true, id: id });
+      // выручка в чат — сразу на сервере, вместе с отчётом: не зависит от того, закрыл ли админ страницу.
+      // Не прошло — сообщение ложится в очередь и досылается само (maxRetry).
+      var chatRes = null;
+      if (body.chat && !fix) {
+        lock.releaseLock();
+        try { chatRes = sendRevenue_(body.chat, admin); } catch (err) { chatRes = { ok: false, error: String(err).slice(0, 80) }; }
+        log_('Выручка в MAX: ' + (chatRes.ok ? 'отправлено' : chatRes.error + (chatRes.queued ? ' — в очереди на повтор' : '')), admin.name, body.chat.branch || admin.branch);
+      }
+      return json_({ ok: true, id: id, chat: chatRes });
     }
     return json_({ ok: false, error: 'unknown_action' });
   } finally {
