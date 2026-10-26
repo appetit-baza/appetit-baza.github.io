@@ -496,7 +496,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='67';
+  const BUILD='68';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1053,9 +1053,9 @@ body.boss .hist-head h2{font-size:26px}
     const cr=s.cour.length?`<p class="h-sec">Курьеры · ${s.cour.length}</p><div class="h-table"><table><tr><th>Курьер</th><th>Время</th><th class="n">Заказов</th><th class="n">За часы</th><th class="n">За заказы</th><th class="n">Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td><b>${esc(c.name||'—')}</b>${c.zones?`<div class="sv-sub">по зонам: ${esc(c.zones)}</div>`:''}${(c.extras||[]).length?`<div class="sv-sub">${c.extras.map(x=>`<span class="sv-chip">${esc(x.kind+(x.zone?' · '+x.zone:'')+(x.kind==='Довоз'||x.kind==='Отказ'||x.kind==='Листовки'?' × '+x.n:'')+(x.reason?' · '+x.reason:''))} = ${money(x.sum)}</span>`).join(' ')}</div>`:''}</td><td>${c.from||c.to?esc(c.from)+'–'+esc(c.to):'—'}</td><td class="n">${esc(c.qty)||'—'}</td><td class="n">${esc(c.hours)||'—'}</td><td class="n">${esc(c.orders)||'—'}</td><td class="n"><b>${esc(c.total)}</b></td><td>${esc(wTxt(c.w))}</td></tr>`).join('')}</table></div>`:'';
     const canMk=boss&&!USER.viewer;
     const mk=(m,i)=>canMk?`<label class="mk" title="${esc(m.iiko||'Отметьте, когда занесёте в iiko')}"><input type="checkbox" data-mk="${i}"${m.iiko?' checked':''}> в iiko</label>`:(m.iiko?'<span class="iiko-ok" title="'+esc(m.iiko)+'">✓ в iiko</span>':'<span class="mut">не в iiko</span>');
-    const ml=t=>{const L=s.money.map((m,i)=>[m,i]).filter(([m])=>m.type===t);return L.length?`<div class="sv-box"><p class="h-sec" style="margin-top:0">${t==='Приход'?'Приход':'Расход'} · ${money(L.reduce((a,[m])=>a+num(m.sum),0))}</p>${L.map(([m,i])=>`<div class="sv-row"><span>${esc(m.art||'—')}</span><b>${money(num(m.sum))}</b>${mk(m,i)}</div>`).join('')}</div>`:''};
-    const allMk=s.money.length&&s.money.every(m=>m.iiko);
-    const mon=s.money.length?`<div class="sv-grid">${ml('Приход')}${ml('Расход')}</div>${canMk?`<div style="margin-top:8px"><button type="button" class="btn ${allMk?'ghost':'sec'}" data-mkall="${allMk?0:1}">${allMk?'Снять отметки «в iiko»':'✓ Всё занесено в iiko'}</button></div>`:''}`:'';
+    const ml=t=>{const L=s.money.map((m,i)=>[m,i]).filter(([m])=>m.type===t&&num(m.sum)!==0); // строки с суммой 0 (обнулённые вручную) не показываемreturn L.length?`<div class="sv-box"><p class="h-sec" style="margin-top:0">${t==='Приход'?'Приход':'Расход'} · ${money(L.reduce((a,[m])=>a+num(m.sum),0))}</p>${L.map(([m,i])=>`<div class="sv-row"><span>${esc(m.art||'—')}</span><b>${money(num(m.sum))}</b>${mk(m,i)}</div>`).join('')}</div>`:''};
+    const allMk=s.money.some(m=>num(m.sum)!==0)&&s.money.every(m=>m.iiko||num(m.sum)===0);
+    const mon=s.money.some(m=>num(m.sum)!==0)?`<div class="sv-grid">${ml('Приход')}${ml('Расход')}</div>${canMk?`<div style="margin-top:8px"><button type="button" class="btn ${allMk?'ghost':'sec'}" data-mkall="${allMk?0:1}">${allMk?'Снять отметки «в iiko»':'✓ Всё занесено в iiko'}</button></div>`:''}`:'';
     return `<button type="button" class="h-back">← Назад к списку</button>${nav}${head}${tiles}<div class="sv-grid"><div class="sv-box"><p class="h-sec" style="margin-top:0">Выручка по видам оплаты</p>${pay}</div><div class="sv-box"><p class="h-sec" style="margin-top:0">Сверка</p>${ver}</div></div>${cr}${mon}<div id="fx_box">${fixBox(s)}</div>`;
   }
   async function openShift(id){
