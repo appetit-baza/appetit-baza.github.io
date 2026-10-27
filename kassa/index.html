@@ -496,7 +496,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='69';
+  const BUILD='70';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -622,7 +622,7 @@ body.boss .hist-head h2{font-size:26px}
   const STABS=[['sum','Итоги'],['cash','Касса'],['toiiko','В iiko'],['iiko','Сверка с iiko'],['disc','Сдача отчётов'],['rev','Выручка'],['pay','Оплаты'],['cour','Курьеры'],['redo','Довозы'],['bf','Сверка']];
   let STAB=(LS.get('stab')||'sum'),ITOGI_HTML='',PREV={key:'',rows:null,busy:false};
   const LATE_HOUR=12; // отчёт вовремя, если отправлен до 12:00 (МСК) следующего дня
-  const RR4=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'];
+  const RR4=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ','По вине клиента'];
   const PAY=[['mp','Онлайн'],['cash','Наличные'],['card','Карта'],['ye','Яндекс/Деливери'],['chib','Чиббис'],['sber','Сбермаркет']]; // бонусы iiko — скидка, в структуру оплат не входят
   const BR_ALL=()=>[...$('#branch').options].filter(o=>o.value).map(o=>o.value);
   const brIdx=b=>{const i=BR_ALL().indexOf(b);return i<0?6:i};
@@ -978,7 +978,7 @@ body.boss .hist-head h2{font-size:26px}
   }
   function bossXlsx(){
     if(!window.XLSX){toast('Excel не загрузился. Обновите страницу.');return}
-    const RR=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'],kg=(x,k)=>x.redo&&x.redo.kinds&&x.redo.kinds[k]?x.redo.kinds[k]:[0,0];
+    const RR=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ','По вине клиента'],kg=(x,k)=>x.redo&&x.redo.kinds&&x.redo.kinds[k]?x.redo.kinds[k]:[0,0];
     const head=['Дата смены','Филиал','Администратор',...SUMF.map(x=>x[1]),'Довозов','Довозы, ₽',...RR.map(r=>'Довоз: '+r),'Отказов','Отказы, ₽','Шашка, ₽','Листовок, шт','Листовки, ₽','Наклейки, ₽','Другое по зонам, шт','Другое по зонам, ₽','Другое по сумме, ₽','Отправлено','В итогах'];
     const aoa=[head,...BOSS_ROWS.map(x=>[x.date,x.branch,x.admin,...SUMF.map(([k])=>x[k]||0),kg(x,'Довоз')[0],kg(x,'Довоз')[1],...RR.map(r=>x.redo&&x.redo.redo&&x.redo.redo[r]?x.redo.redo[r][0]:0),kg(x,'Отказ')[0],kg(x,'Отказ')[1],kg(x,'Шашка')[1],kg(x,'Листовки')[0],kg(x,'Листовки')[1],kg(x,'Наклейка')[1],kg(x,'Другое по зонам')[0],kg(x,'Другое по зонам')[1],kg(x,'Другое по сумме')[1]+kg(x,'Другое')[1],x.sent,x.replaced?'нет (исправлен)':x.old?'нет (повтор)':'да'])];
     const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=head.map((h,i)=>({wch:i<3?(i===1?26:18):13}));
@@ -1160,7 +1160,7 @@ body.boss .hist-head h2{font-size:26px}
   const XZONE=k=>k==='Довоз'||k==='Отказ'||k==='Другое по зонам'; // сумма считается по тарифу зоны × кол-во
   const xKind=k=>k==='Другое'?'Другое по сумме':k; // старые отчёты и черновики
   const STICKER=2000; // наклейка — фиксированная доплата
-  const REDO_REASONS=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ'];
+  const REDO_REASONS=['Админ недокомплект','Кухня недокомплект','Курьер недокомплект','Ошибка КЦ','По вине клиента'];
   function zoneOpts(sel){const id=zoneSet();if(!id)return '<option value="">—</option>';return '<option value="">Зона…</option>'+ZONESETS[id].z.map(z=>{const l=zLabel(z);return `<option value="${esc(l)}"${l===sel?' selected':''}>${esc(l)} — ${z[2]} ₽</option>`}).join('')}
   function extraFields(x){
     const k=xKind(x.kind||'Довоз');
