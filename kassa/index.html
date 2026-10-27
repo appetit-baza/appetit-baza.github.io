@@ -496,7 +496,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='70';
+  const BUILD='71';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -842,7 +842,7 @@ body.boss .hist-head h2{font-size:26px}
       const by={};CASH.shifts.filter(x=>x.branch===b&&!x.old&&x.dk>=s0.dk).forEach(x=>by[x.dk]=x);
       let bal=s0.amount,last=null;const days=[];
       dayList(s0.dk,today).forEach(k=>{const x=by[k],o={k,x,start:bal};
-        if(x){o.cash=x.cash||0;o.cw=x.cw||0;o.inc=x.inc||0;o.ex=x.ex||0;bal=bal+o.cash-o.cw+o.inc-o.ex;last=k}
+        if(x){o.cash=x.cash||0;o.cn=x.cn||0;o.cw=(x.cw||0)+o.cn;o.inc=x.inc||0;o.ex=x.ex||0;bal=bal+o.cash-o.cw+o.inc-o.ex;last=k}
         o.bal=bal;days.push(o)});
       return {b,s0,days,bal,last}});
   }
@@ -856,11 +856,11 @@ body.boss .hist-head h2{font-size:26px}
       if(x.none)return `<div class="cash-card"><p class="h-sec" style="margin-top:0">${esc(x.b)}</p><p class="hint">Остаток на начало ещё не внесён. Впишите остаток кассы из iiko на начало какого-то дня — дальше сайт будет считать сам по отчётам админов.</p>${form(x.b)}</div>`;
       const rows=x.days.filter(o=>o.k>=f&&o.k<=t).reverse();
       const miss=x.days.filter(o=>!o.x&&o.k<todayDk()).length;
-      const tb=rows.length?tbl(['Дата',['Начало дня'],['Наличные'],['Курьерам из кассы'],['Приход'],['Расход'],['Остаток']],rows.map(o=>o.x?`<tr class="clk" data-open="${esc(o.x.id)}"><td>${dkRu(o.k)}</td><td class="n mut">${money(o.start)}</td><td class="n">${money(o.cash)}</td><td class="n">${o.cw?'−'+money(o.cw):'—'}</td><td class="n">${o.inc?'+'+money(o.inc):'—'}</td><td class="n">${o.ex?'−'+money(o.ex):'—'}</td><td class="n"><b>${money(Math.round(o.bal*100)/100)}</b></td></tr>`:`<tr><td>${dkRu(o.k)}</td><td class="n mut">${money(o.start)}</td><td colspan="4" class="mut">${o.k===todayDk()?'смена сегодня — ждём отчёт':'нет отчёта'}</td><td class="n mut">${money(Math.round(o.bal*100)/100)}</td></tr>`)):'<p class="hint">В выбранном периоде дней нет.</p>';
+      const tb=rows.length?tbl(['Дата',['Начало дня'],['Наличные'],['Курьерам'],['Приход'],['Расход'],['Остаток']],rows.map(o=>o.x?`<tr class="clk" data-open="${esc(o.x.id)}"><td>${dkRu(o.k)}</td><td class="n mut">${money(o.start)}</td><td class="n">${money(o.cash)}</td><td class="n">${o.cw?'−'+money(o.cw):'—'}${o.cn?`<div class="mut" style="font-size:12px">в т.ч. без изъятия ${money(o.cn)}</div>`:''}</td><td class="n">${o.inc?'+'+money(o.inc):'—'}</td><td class="n">${o.ex?'−'+money(o.ex):'—'}</td><td class="n"><b>${money(Math.round(o.bal*100)/100)}</b></td></tr>`:`<tr><td>${dkRu(o.k)}</td><td class="n mut">${money(o.start)}</td><td colspan="4" class="mut">${o.k===todayDk()?'смена сегодня — ждём отчёт':'нет отчёта'}</td><td class="n mut">${money(Math.round(o.bal*100)/100)}</td></tr>`)):'<p class="hint">В выбранном периоде дней нет.</p>';
       return `<div class="cash-card"><div class="cash-h"><p class="h-sec" style="margin:0">${esc(x.b)}</p><span class="cash-bal">${money(Math.round(x.bal*100)/100)}</span></div>
         <p class="hint" style="margin:4px 0 8px">Старт: ${money(x.s0.amount)} на начало ${dkRu(x.s0.dk)}.${Math.floor(x.s0.dk/1e4)}${miss?` · <span class="t-warn">дней без отчёта: ${miss}</span>`:''}${edit?' · <a href="#" data-act="cashedit">изменить старт</a>':''}</p>
         <div class="cash-edit" hidden>${form(x.b,x.s0)}</div>${tb}</div>`}).join('');
-    return `${tiles?`<div class="hb-tiles">${tiles}</div>`:''}<p class="hint">Остаток = остаток на начало дня + наличные − выплаты курьерам из кассы (изъятие) + приход − расход. Сравнивайте с остатком счёта кассы в iiko. Таблица — за период из фильтра, сверху свежие дни; нажмите на день, чтобы открыть смену.</p>${cards}`;
+    return `${tiles?`<div class="hb-tiles">${tiles}</div>`:''}<p class="hint">Остаток = остаток на начало дня + наличные − выплаты курьерам (с изъятием и без — курьеры без изъятия заносятся в iiko отдельно) + приход − расход. Сравнивайте с остатком счёта кассы в iiko. Таблица — за период из фильтра, сверху свежие дни; нажмите на день, чтобы открыть смену.</p>${cards}`;
   }
   const ruIso=k=>`${Math.floor(k/1e4)}-${pad(Math.floor(k/100)%100)}-${pad(k%100)}`;
   $('#hb_sum').addEventListener('click',async e=>{
@@ -971,7 +971,7 @@ body.boss .hist-head h2{font-size:26px}
     const rows=liveRows(),brs=brList(rows),sum=(rs,k)=>rs.reduce((a,x)=>a+(x[k]||0),0);
     add('Структура оплат',[['Филиал',...PAY.map(p=>p[1]+', ₽'),...PAY.map(p=>p[1]+', %')]].concat([['Все филиалы',rows]].concat(brs.map(b=>[b,rows.filter(x=>x.branch===b)])).map(([n,rs])=>{const t=PAY.reduce((a,[k])=>a+sum(rs,k),0);return [n,...PAY.map(([k])=>sum(rs,k)),...PAY.map(([k])=>Math.round(pct(sum(rs,k),t)*10)/10)]})),[30]);
     const C=courData();add('Курьеры',[['Курьер','Филиал','Смен','Заказов','За часы','За заказы','Доплаты','Итого']].concat(C.C.map(c=>[c.nm,c.b,c.n,c.q,c.h,c.o,c.e,c.t])),[28,30]);
-    if(CASH.loaded&&!CASH.err){const cs=[['Филиал','Дата','Начало дня','Наличные','Курьерам из кассы','Приход','Расход','Остаток','Отчёт']];cashData().filter(x=>!x.none).forEach(x=>x.days.forEach(o=>cs.push([x.b,dkRu(o.k)+'.'+Math.floor(o.k/1e4),Math.round(o.start*100)/100,o.cash||0,o.cw||0,o.inc||0,o.ex||0,Math.round(o.bal*100)/100,o.x?'есть':'нет'])));add('Касса',cs,[30,12,14,12,16,10,10,14,8])}
+    if(CASH.loaded&&!CASH.err){const cs=[['Филиал','Дата','Начало дня','Наличные','Курьерам','Приход','Расход','Остаток','Отчёт']];cashData().filter(x=>!x.none).forEach(x=>x.days.forEach(o=>cs.push([x.b,dkRu(o.k)+'.'+Math.floor(o.k/1e4),Math.round(o.start*100)/100,o.cash||0,o.cw||0,o.inc||0,o.ex||0,Math.round(o.bal*100)/100,o.x?'есть':'нет'])));add('Касса',cs,[30,12,14,12,16,10,10,14,8])}
     {const t=[['Касса iiko','Филиал','Дата','Администратор','Тип','Статья','Сумма','Занесено']];toiData().forEach(r=>t.push([CASH_ACC[r.x.branch]||r.x.branch,r.x.branch,r.x.date,r.x.admin,r.type,r.art,r.sum,r.done?'да':'']));add('К занесению в iiko',t,[34,30,12,22,9,30,12,10])}
     const Rd=redoData();add('Довозы',[['Администратор на смене','Смен','Довозов','Сумма',...Rd.rs]].concat(Object.entries(Rd.A).map(([n,a])=>[n,a.sh,a.n,a.s,...Rd.rs.map(r=>a.r[r]||0)])),[24]);
     add('Сверка',[['Дата','Филиал','Администратор','Карта','Безнал по сверкам','Разница']].concat(rows.filter(x=>x.bdiff).map(x=>[x.date,x.branch,x.admin,x.card,x.bfact,x.bdiff])),[12,30,22]);
