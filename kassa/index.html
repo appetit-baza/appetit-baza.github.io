@@ -496,7 +496,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='71';
+  const BUILD='72';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1095,7 +1095,7 @@ body.boss .hist-head h2{font-size:26px}
       if(zb&&c.zones){const n=ZONESETS[zb].z.map(()=>'');String(c.zones).split(/;\s*/).forEach(p=>{const m=p.match(/^(.*) × (\d+)$/);if(m){const i=ZONESETS[zb].z.findIndex(q=>zLabel(q)===m[1].trim());if(i>=0)n[i]=m[2]}});z={id:zb,n}}
       const ex=(c.extras||[]).map(x=>({kind:x.kind,zone:x.zone,reason:x.reason,n:x.n,sum:XZONE(x.kind)?'':x.sum}));
       return {z,ex,name:c.name,from,to,hours:nn(c.hours),qty:nn(c.qty)==='0'?'':nn(c.qty),orders:nn(c.orders)==='0'?'':nn(c.orders),...(/частично/i.test(c.w)?{w:'p',ws:String((String(c.w).match(/([\d\s.,]+)\s*₽?\s*с изъятием/)||[])[1]||'').replace(/\s/g,'')}:{w:!/нет/i.test(c.w)}),manual:auto!==null&&auto!==num(c.hours)}});
-    const mon=t=>s.money.filter(m=>m.type===t&&(m.ci===undefined||m.ci===null)).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
+    const mon=t=>s.money.filter(m=>m.type===t&&(m.ci===undefined||m.ci===null)&&!/^\s*Курьер без изъятия:/i.test(m.art||'')).map(m=>({date:iso(m.date)||s.raw.date,art:m.art,sum:nn(m.sum),w:m.w==='да'}));
     return {date:s.raw.date,branch:s.raw.branch,admin:USER.name,r041:s.raw.r041,bfact:s.raw.bfact||'',rev:s.raw.rev,ord:s.raw.ord||{},cour,exp:mon('Расход'),inc:mon('Приход')};
   }
   function setFix(f){FIX=f;if(USER){if(f)LS.set('fix:'+USER.name,f);else LS.del('fix:'+USER.name)}$('#fixbar').hidden=!f;if(f)$('#fix_date').textContent=f.date}
