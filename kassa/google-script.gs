@@ -896,6 +896,14 @@ function saveReport_(r, admin) {
   var ss = ss_();
   var id = Utilities.formatDate(new Date(), 'Europe/Moscow', 'yyMMdd-HHmmss') + '-' + Math.floor(Math.random() * 900 + 100);
   var t = r.totals || {};
+  // Строки «Курьер без изъятия: …» — служебные (сайт показывает курьеров из листа «Курьеры»), в расходы смены их не пишем
+  // (старая версия страницы при исправлении отчёта копировала их как обычные расходы — двойной учёт).
+  var cnx = /^\s*Курьер без изъятия:/i, dropEx = 0, dropW = 0;
+  r.exp = (r.exp || []).filter(function (x) {
+    if (!cnx.test(String(x.art || ''))) return true;
+    dropEx += num_(x.sum); if (x.w) dropW += num_(x.sum); return false;
+  });
+  if (dropEx) { t.ex = num_(t.ex) - dropEx; t.exW = num_(t.exW) - dropW; t.pass = num_(t.pass) + dropW; }
   var rev = r.rev || {};
   var branch = r.branch || admin.branch;
   var rep = ss.getSheetByName(SHEET_REPORTS);
