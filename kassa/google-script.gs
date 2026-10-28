@@ -107,7 +107,7 @@ function doPost(e) {
     var admin = findAdmin_(body.pin);
     if (!admin) { var st = registerFail_(dev); return json_({ ok: false, error: st || 'bad_pin', left: st ? 0 : undefined }); }
     resetFails_(dev);
-    if (/^(report|draft_save|fix_request|fix_decide|cash_start|iiko_mark|accept)$/.test(String(body.action))) lock.waitLock(20000);
+    if (/^(report|draft_save|fix_request|fix_decide|cash_start|iiko_mark|accept|money_edit)$/.test(String(body.action))) lock.waitLock(20000);
     if (body.action === 'login') {
       log_('Вход', admin.name, admin.branch);
       return json_({ ok: true, name: admin.name, branch: admin.branch, boss: admin.boss, viewer: !!admin.viewer, couriers: couriers_(),
@@ -119,9 +119,10 @@ function doPost(e) {
       log_('Выручка в MAX: ' + (res.ok ? 'отправлено' : res.error + (res.queued ? ' — в очереди на повтор' : '')), admin.name, (body.report || {}).branch || admin.branch);
       return json_(res);
     }
-    if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report|cash_start|iiko_mark|accept)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
+    if (admin.viewer && /^(revenue|draft_save|fix_request|fix_decide|report|cash_start|iiko_mark|accept|money_edit)$/.test(String(body.action))) return json_({ ok: false, error: 'view_only' });
     if (body.action === 'accept') return json_(admin.boss ? accept_(body, admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'iiko_mark') return json_(admin.boss ? iikoMark_(body, admin) : { ok: false, error: 'not_boss' });
+    if (body.action === 'money_edit') return json_(admin.boss ? moneyEdit_(body, admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'cash_get') return json_(admin.boss ? cashGet_(admin) : { ok: false, error: 'not_boss' });
     if (body.action === 'iiko_check') return json_(admin.boss ? iikoCheck_(body) : { ok: false, error: 'not_boss' });
     if (body.action === 'cash_start') return json_(admin.boss ? cashStart_(body, admin) : { ok: false, error: 'not_boss' });
@@ -851,6 +852,49 @@ function iikoMark_(b, admin) {
     if (idx === -1 || idx === k) { sh.getRange(r + 1, 9).setValue(mark); n++; }
   }
   return n || idx === -1 ? { ok: true, n: n } : { ok: false, error: 'not_found' };
+}
+// Руководитель добавляет приход/расход в смену (op: 'add') или убирает строку (op: 'zero' — сумма → 0, строка остаётся для истории).
+// Итоги смены в листе «Отчёты» пересчитываются: Q «Прочие расходы», S «Приход», для вычтенных — R «из них вычтено» и T «Передана сумма».
+function moneyEdit_(b, admin) {
+  var ss = ss_(), id = String(b.id || ''), rep = ss.getSheetByName(SHEET_REPORTS), ms = ss.getSheetByName(SHEET_MONEY);
+  if (!id || !rep || !ms) return { ok: false, error: 'not_found' };
+  var vals = rep.getDataRange().getValues(), row = 0;
+  for (var i = 1; i < vals.length; i++) if (String(vals[i][21]) === id) { row = i + 1; break; }
+  if (!row) return { ok: false, error: 'not_found' };
+  var R = vals[row - 1];
+  if (String(R[22] || '').trim()) return { ok: false, error: 'replaced' };
+  var branch = String(R[2]), dk = dkey_(R[1]);
+  var dRu = dk ? String(dk).replace(/(\d{4})(\d{2})(\d{2})/, '$3.$2.$1') : String(R[1]);
+  var bump = function (col, d) { var c = rep.getRange(row, col); c.setValue(Math.round((num_(c.getValue()) + d) * 100) / 100); };
+  if (b.op === 'add') {
+    var type = b.type === 'Приход' ? 'Приход' : 'Расход';
+    var art = String(b.art || '').replace(/\s+/g, ' ').trim().slice(0, 120), sum = Math.round(num_(b.sum) * 100) / 100;
+    if (!art || /^Курьер без изъятия:/i.test(art)) return { ok: false, error: 'bad_art' };
+    if (!(sum > 0) || sum > 10000000) return { ok: false, error: 'bad_sum' };
+    var dm = String(b.date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/), date = dm ? dm[3] + '.' + dm[2] + '.' + dm[1] : dRu;
+    ms.appendRow([id, dRu, branch, type, date, art, sum, '']);
+    bump(type === 'Расход' ? 17 : 19, sum);
+    log_(type + ' «' + art + '» ' + sum + ' добавлен в отчёт ' + id + ' (руководитель)', admin.name, branch);
+    return { ok: true };
+  }
+  if (b.op === 'zero') {
+    var idx = Number(b.idx), ids = ms.getRange(1, 1, ms.getLastRow(), 8).getValues(), k = -1;
+    for (var r = 1; r < ids.length; r++) {
+      if (String(ids[r][0]) !== id) continue;
+      k++;
+      if (k !== idx) continue;
+      var t = String(ids[r][3]), s0 = num_(ids[r][6]);
+      if (b.art !== undefined && String(ids[r][5]) !== String(b.art)) return { ok: false, error: 'changed' };
+      if (!s0) return { ok: true };
+      ms.getRange(r + 1, 7).setValue(0);
+      bump(t === 'Приход' ? 19 : 17, -s0);
+      if (t !== 'Приход' && String(ids[r][7]) === 'да') { bump(18, -s0); bump(20, s0); }
+      log_(t + ' «' + ids[r][5] + '» ' + s0 + ' убран из отчёта ' + id + ' (руководитель)', admin.name, branch);
+      return { ok: true };
+    }
+    return { ok: false, error: 'not_found' };
+  }
+  return { ok: false, error: 'bad_op' };
 }
 // Отметка «занесено в iiko» для курьера без изъятия: столбец P листа «Курьеры» (k — номер курьера в смене, -1 — все без изъятия)
 function courMark_(id, k, on, admin) {

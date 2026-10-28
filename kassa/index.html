@@ -350,6 +350,7 @@ body.boss .hist-head h2{font-size:26px}
 .logo{height:32px;width:auto;display:block}
 .logo-gate{height:42px;margin:0 auto}
 @media (max-width:640px){.logo{height:26px}}
+.me-wrap{margin-top:12px}.me-wrap .row{display:flex;gap:8px;flex-wrap:wrap}.me-wrap .row .btn{width:auto;flex:0 1 auto}.me-form{margin-top:10px}.me-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px}.me-grid label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted,#667)}.me-grid input{font:inherit;padding:8px 10px;border:1px solid var(--line,#d6dbe1);border-radius:8px;min-width:0;background:var(--surface);color:inherit}@media(max-width:560px){.me-grid{grid-template-columns:1fr 1fr}.me-grid label:first-child{grid-column:1/-1}}.me-del{border:0;background:none;color:var(--muted,#889);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px;margin-left:4px}.me-del:hover{background:rgba(200,0,0,.08);color:#c0392b}.me-del.ask{color:#c0392b;font-weight:600}
 </style>
 </head><body>
 <header class="top"><div class="top-in">
@@ -496,7 +497,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='72';
+  const BUILD='73';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1052,11 +1053,12 @@ body.boss .hist-head h2{font-size:26px}
     const wTxt=w=>String(w||'').replace(/^да$/i,'сделано').replace(/^нет.*$/i,'не сделано');
     const cr=s.cour.length?`<p class="h-sec">Курьеры · ${s.cour.length}</p><div class="h-table"><table><tr><th>Курьер</th><th>Время</th><th class="n">Заказов</th><th class="n">За часы</th><th class="n">За заказы</th><th class="n">Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td><b>${esc(c.name||'—')}</b>${c.zones?`<div class="sv-sub">по зонам: ${esc(c.zones)}</div>`:''}${(c.extras||[]).length?`<div class="sv-sub">${c.extras.map(x=>`<span class="sv-chip">${esc(x.kind+(x.zone?' · '+x.zone:'')+(x.kind==='Довоз'||x.kind==='Отказ'||x.kind==='Листовки'?' × '+x.n:'')+(x.reason?' · '+x.reason:''))} = ${money(x.sum)}</span>`).join(' ')}</div>`:''}</td><td>${c.from||c.to?esc(c.from)+'–'+esc(c.to):'—'}</td><td class="n">${esc(c.qty)||'—'}</td><td class="n">${esc(c.hours)||'—'}</td><td class="n">${esc(c.orders)||'—'}</td><td class="n"><b>${esc(c.total)}</b></td><td>${esc(wTxt(c.w))}</td></tr>`).join('')}</table></div>`:'';
     const canMk=boss&&!USER.viewer;
+    const canEd=canMk&&!s.replaced; // руководитель может добавить/убрать приход и расход
     const mk=(m,i)=>canMk?`<label class="mk" title="${esc(m.iiko||'Отметьте, когда занесёте в iiko')}"><input type="checkbox" data-mk="${i}"${m.iiko?' checked':''}> в iiko</label>`:(m.iiko?'<span class="iiko-ok" title="'+esc(m.iiko)+'">✓ в iiko</span>':'<span class="mut">не в iiko</span>');
-    const ml=t=>{const L=s.money.map((m,i)=>[m,i]).filter(([m])=>m.type===t&&num(m.sum)!==0); /* строки с суммой 0 (обнулённые вручную) не показываем */ return L.length?`<div class="sv-box"><p class="h-sec" style="margin-top:0">${t==='Приход'?'Приход':'Расход'} · ${money(L.reduce((a,[m])=>a+num(m.sum),0))}</p>${L.map(([m,i])=>`<div class="sv-row"><span>${esc(m.art||'—')}</span><b>${money(num(m.sum))}</b>${mk(m,i)}</div>`).join('')}</div>`:''};
+    const ml=t=>{const L=s.money.map((m,i)=>[m,i]).filter(([m])=>m.type===t&&num(m.sum)!==0); /* строки с суммой 0 (обнулённые вручную) не показываем */ return L.length?`<div class="sv-box"><p class="h-sec" style="margin-top:0">${t==='Приход'?'Приход':'Расход'} · ${money(L.reduce((a,[m])=>a+num(m.sum),0))}</p>${L.map(([m,i])=>`<div class="sv-row"><span>${esc(m.art||'—')}</span><b>${money(num(m.sum))}</b>${mk(m,i)}${canEd&&(m.ci===undefined||m.ci===null)?`<button type="button" class="me-del" data-medel="${i}" title="Убрать из смены">✕</button>`:''}</div>`).join('')}</div>`:''};
     const allMk=s.money.some(m=>num(m.sum)!==0)&&s.money.every(m=>m.iiko||num(m.sum)===0);
     const mon=s.money.some(m=>num(m.sum)!==0)?`<div class="sv-grid">${ml('Приход')}${ml('Расход')}</div>${canMk?`<div style="margin-top:8px"><button type="button" class="btn ${allMk?'ghost':'sec'}" data-mkall="${allMk?0:1}">${allMk?'Снять отметки «в iiko»':'✓ Всё занесено в iiko'}</button></div>`:''}`:'';
-    return `<button type="button" class="h-back">← Назад к списку</button>${nav}${head}${tiles}<div class="sv-grid"><div class="sv-box"><p class="h-sec" style="margin-top:0">Выручка по видам оплаты</p>${pay}</div><div class="sv-box"><p class="h-sec" style="margin-top:0">Сверка</p>${ver}</div></div>${cr}${mon}<div id="fx_box">${fixBox(s)}</div>`;
+    return `<button type="button" class="h-back">← Назад к списку</button>${nav}${head}${tiles}<div class="sv-grid"><div class="sv-box"><p class="h-sec" style="margin-top:0">Выручка по видам оплаты</p>${pay}</div><div class="sv-box"><p class="h-sec" style="margin-top:0">Сверка</p>${ver}</div></div>${cr}${mon}${canEd?meBox():''}<div id="fx_box">${fixBox(s)}</div>`;
   }
   async function openShift(id){
     const one=$('#hist_one');one.hidden=false;$('#hist_list').hidden=true;$('#hist_note').hidden=true;$('#hist_boss').hidden=true;one.innerHTML='<p class="hint">Загружаю…</p>';H.scrollTop=0;
@@ -1067,6 +1069,30 @@ body.boss .hist-head h2{font-size:26px}
     }catch(x){one.innerHTML='<button type="button" class="h-back">← Назад к списку</button><p class="hint">Нет связи с сервером.</p>'}
   }
   $('#hist_list').addEventListener('click',e=>{const b=e.target.closest('.h-item');if(b)openShift(b.dataset.id)});
+  // ---------- руководитель: добавить приход/расход в смену, убрать строку (сумма → 0)
+  function meBox(){return `<div class="me-wrap"><div class="row" id="me_btns"><button type="button" class="btn sec" data-meopen="Расход">+ Добавить расход</button><button type="button" class="btn sec" data-meopen="Приход">+ Добавить приход</button></div>
+    <div class="sv-box me-form" id="me_form" hidden><p class="h-sec" style="margin-top:0" id="me_title">Новый расход</p>
+    <div class="me-grid"><label>Статья<input id="me_art" list="articles" maxlength="120" placeholder="Например: Вода" autocomplete="off"></label><label>Сумма, ₽<input id="me_sum" inputmode="decimal" placeholder="0"></label><label>Дата<input id="me_date" type="date"></label></div>
+    <div class="row" style="margin-top:8px"><button type="button" class="btn primary" data-me="save">Добавить</button><button type="button" class="btn ghost" data-me="cancel">Отмена</button></div></div></div>`}
+  let ME_TYPE='Расход';
+  $('#hist_one').addEventListener('click',async e=>{if(!SHIFT)return;
+    const o=e.target.closest('[data-meopen]');if(o){ME_TYPE=o.dataset.meopen;const f=$('#me_form');f.hidden=false;$('#me_title').textContent=ME_TYPE==='Приход'?'Новый приход':'Новый расход';$('#me_art').placeholder=ME_TYPE==='Приход'?'Например: из сейфа':'Например: Вода';$('#me_date').value=SHIFT.raw.date||'';$('#me_art').focus();return}
+    const c=e.target.closest('[data-me=cancel]');if(c){$('#me_form').hidden=true;return}
+    const sv=e.target.closest('[data-me=save]');if(sv){const art=$('#me_art').value.trim(),sum=num($('#me_sum').value);
+      if(!art){toast('Впишите статью');$('#me_art').focus();return}if(!(sum>0)){toast('Впишите сумму');$('#me_sum').focus();return}
+      sv.disabled=true;sv.textContent='Сохраняю…';
+      try{const r=await api({action:'money_edit',op:'add',pin:USER.pin,id:SHIFT.id,type:ME_TYPE,art,sum,date:$('#me_date').value});
+        if(r.ok){toast((ME_TYPE==='Приход'?'Приход':'Расход')+' добавлен: '+art+' — '+money(sum));meDone()}
+        else{toast(r.error==='replaced'?'Отчёт уже исправлен — откройте новый':r.error==='bad_sum'?'Проверьте сумму':r.error==='bad_art'?'Проверьте статью':r.error==='unknown_action'?'Нужно обновить скрипт':'Не сохранилось');sv.disabled=false;sv.textContent='Добавить'}}
+      catch(x){toast('Нет связи с сервером');sv.disabled=false;sv.textContent='Добавить'}return}
+    const d=e.target.closest('[data-medel]');if(d){const i=+d.dataset.medel,m=SHIFT.money[i];if(!m)return;
+      if(!d.classList.contains('ask')){d.classList.add('ask');d.textContent='Убрать?';setTimeout(()=>{if(d.isConnected){d.classList.remove('ask');d.textContent='✕'}},4000);return}
+      d.disabled=true;
+      try{const r=await api({action:'money_edit',op:'zero',pin:USER.pin,id:SHIFT.id,idx:i,art:m.art});
+        if(r.ok){toast('Убрано: '+(m.art||'')+' — '+money(num(m.sum)));meDone()}else{toast(r.error==='changed'?'Смена изменилась — обновите':'Не сохранилось');d.disabled=false}}
+      catch(x){toast('Нет связи с сервером');d.disabled=false}}
+  });
+  async function meDone(){const id=SHIFT.id;CASH.loaded=false;const x=BOSS_ROWS.find(z=>z.id===id);if(x)x.money=null;const y=H.scrollTop;await openShift(id);H.scrollTop=y}
   // «Смена принята»: галочка в списке и кнопка в карточке смены
   function accBtn(s,boss){const x=BOSS_ROWS.find(z=>z.id===s.id);if(!boss||!x||x.old||x.replaced)return '';
     if(USER.viewer)return x.acc?`<br><span class="iiko-ok">✓ принята: ${esc(x.acc)}</span>`:'<br>не принята';
