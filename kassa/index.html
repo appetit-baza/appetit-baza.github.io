@@ -422,7 +422,7 @@ body.boss .hist-head h2{font-size:26px}
     <button type="button" class="add" id="add_cour">+ Добавить курьера</button>
     <p class="hint c-h-only">«За часы» считается по времени × ставку, копейки отбрасываются. Вручную её не вписать — укажите время «С» и «По». «Изъятие сделано» — выплата из кассы с изъятием; «Изъятие не сделано» — выдали из сейфа без изъятия; «Изъятие частично» — часть с изъятием, остальное из сейфа (впишите, сколько с изъятием). Выберите в списке у курьера.</p>
     <div class="sumrow">
-      <div class="c-h">За часы<b id="o_c_h">0</b></div><div>За заказы<b id="o_c_o">0</b></div><div id="o_c_x_box" hidden>Доплаты<b id="o_c_x">0</b></div><div>Итого курьерам<b id="o_c_t">0</b></div>
+      <div class="c-h">За часы<b id="o_c_h">0</b></div><div>За заказы<b id="o_c_o">0</b></div><div id="o_c_x_box" hidden>Доплаты / удержания<b id="o_c_x">0</b></div><div>Итого курьерам<b id="o_c_t">0</b></div>
       <div>Делали изъятие<b id="o_c_w">0</b></div><div>Не делали изъятие<b id="o_c_n">0</b></div><div>Заказов<b id="o_c_q">0</b></div>
     </div>
   </section>
@@ -503,7 +503,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='75';
+  const BUILD='76';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1195,7 +1195,7 @@ body.boss .hist-head h2{font-size:26px}
   const wOf=w=>w==='p'?'p':w===false?'n':'y';
   const wGet=r=>r.querySelector('[data-k=w]').value||'y';
   document.addEventListener('change',e=>{const sel=e.target.closest('.wsel');if(!sel)return;const row=sel.closest('.crow');sel.dataset.v=sel.value;const wp=row.querySelector('.wpart');wp.hidden=sel.value!=='p';if(sel.value==='p')wp.querySelector('input').focus();calc()});
-  const XKINDS=['Довоз','Отказ','Шашка','Листовки','Наклейка','Другое по зонам','Другое по сумме'];
+  const XKINDS=['Довоз','Отказ','Шашка','Листовки','Наклейка','Другое по зонам','Другое по сумме','Удержание'];
   const XZONE=k=>k==='Довоз'||k==='Отказ'||k==='Другое по зонам'; // сумма считается по тарифу зоны × кол-во
   const xKind=k=>k==='Другое'?'Другое по сумме':k; // старые отчёты и черновики
   const STICKER=2000; // наклейка — фиксированная доплата
@@ -1203,6 +1203,7 @@ body.boss .hist-head h2{font-size:26px}
   function zoneOpts(sel){const id=zoneSet();if(!id)return '<option value="">—</option>';return '<option value="">Зона…</option>'+ZONESETS[id].z.map(z=>{const l=zLabel(z);return `<option value="${esc(l)}"${l===sel?' selected':''}>${esc(l)} — ${z[2]} ₽</option>`}).join('')}
   function extraFields(x){
     const k=xKind(x.kind||'Довоз');
+    if(k==='Удержание')return `<input data-xk="sum" class="num" inputmode="decimal" placeholder="Сумма удержания" value="${esc(x.sum==null?'':Math.abs(num(x.sum))||'')}" aria-label="Сумма удержания"><span class="xu">₽</span><input data-xk="note" placeholder="Причина удержания" value="${esc(x.reason)}" aria-label="Причина удержания">`;
     if(k==='Другое по зонам')return `<select data-xk="zone" aria-label="Зона">${zoneOpts(x.zone)}</select><input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||1)}" aria-label="Количество"><span class="xu">шт</span><span class="xsum" data-o="xs"></span><input data-xk="note" placeholder="Что это было (обязательно)" value="${esc(x.reason)}" aria-label="Комментарий — что это было">`;
     if(k==='Довоз')return `<select data-xk="zone" aria-label="Зона">${zoneOpts(x.zone)}</select><select data-xk="reason" aria-label="Причина довоза"><option value="">Причина…</option>${REDO_REASONS.map(r=>`<option${r===x.reason?' selected':''}>${r}</option>`).join('')}</select><input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||1)}" aria-label="Количество довозов"><span class="xu">шт</span><span class="xsum" data-o="xs"></span>`;
     if(k==='Отказ')return `<select data-xk="zone" aria-label="Зона">${zoneOpts(x.zone)}</select><input data-xk="n" class="num" inputmode="numeric" placeholder="Кол-во" value="${esc(x.n||1)}" aria-label="Количество отказов"><span class="xu">шт</span><span class="xsum" data-o="xs"></span><input data-xk="note" placeholder="Комментарий (необязательно)" value="${esc(x.reason)}" aria-label="Комментарий к отказу">`;
@@ -1222,11 +1223,13 @@ body.boss .hist-head h2{font-size:26px}
     if(kind==='Другое по зонам'){const zone=g('zone').value,n=num(g('n').value)||0,id=zoneSet(),z=id?ZONESETS[id].z.find(q=>zLabel(q)===zone):null;return {kind,zone,reason:g('note').value.trim(),n:g('n').value.trim(),sum:z?z[2]*n:0}}
     if(kind==='Отказ'){const zone=g('zone').value,n=num(g('n').value)||0,id=zoneSet(),z=id?ZONESETS[id].z.find(q=>zLabel(q)===zone):null;return {kind,zone,reason:g('note').value.trim(),n:g('n').value.trim(),sum:z?z[2]*n:0}}
     if(kind==='Листовки')return {kind,n:g('n').value.trim(),sum:num(g('sum').value)};
+    if(kind==='Удержание')return {kind,reason:g('note').value.trim(),sum:-Math.abs(num(g('sum').value))};
     if(kind==='Наклейка')return {kind,sum:STICKER};
     if(kind==='Шашка')return {kind,sum:num(g('sum').value)};
     return {kind,reason:g('note').value.trim(),sum:num(g('sum').value)};
   }
   document.addEventListener('click',e=>{
+    const hold=e.target.closest('.cx-hold');if(hold){const el=addExtra(hold.closest('.crow'),{kind:'Удержание'});el.querySelector('[data-xk=sum]').focus();calc();return}
     const a=e.target.closest('.cx-add');if(a){const el=addExtra(a.closest('.crow'));el.querySelector('select').focus();calc();return}
     const d=e.target.closest('.xdel');if(d){d.closest('.xrow').remove();calc()}
   });
@@ -1244,7 +1247,7 @@ body.boss .hist-head h2{font-size:26px}
       <button type="button" class="del" aria-label="Удалить строку">×</button>
       <div class="wpart"${wOf(d.w)==='p'?'':' hidden'}><label>Из них с изъятием, ₽ <input data-k="ws" class="num" inputmode="decimal" value="${esc(d.ws)}" aria-label="Сумма с изъятием"></label><span class="rest" data-o="wrest"></span></div>
       <div class="zones" hidden></div>
-      <div class="cx"><div class="cx-list"></div><button type="button" class="cx-add">+ Доплата (довоз, отказ, шашка, листовки, наклейка…)</button></div>`;
+      <div class="cx"><div class="cx-list"></div><button type="button" class="cx-add">+ Доплата (довоз, отказ, шашка, листовки, наклейка…)</button> <button type="button" class="cx-add cx-hold">+ Удержание</button></div>`;
     r.dataset.manual=''; // «За часы» только автоматически — вручную не вписать
     (d.ex||[]).forEach(x=>addExtra(r,x));r._zinit=d.z||null;
     $('#cour').appendChild(r);
@@ -1334,6 +1337,7 @@ body.boss .hist-head h2{font-size:26px}
         const x=extraState(el);ex+=x.sum;const xs=el.querySelector('[data-o=xs]');if(xs)xs.textContent=x.sum?'= '+rub(x.sum):'';
         const nm=g('name').value.trim()||'Курьер';
         if(x.kind==='Довоз'&&(!x.zone||!x.reason))warns.push(['warn',`${nm}: у довоза укажите зону и причину.`]);
+        else if(x.kind==='Удержание'&&!x.reason)warns.push(['warn',`${nm}: у удержания укажите причину.`]);
         else if(x.kind==='Отказ'&&!x.zone)warns.push(['warn',`${nm}: у отказа укажите зону.`]);
         else if(x.kind==='Другое по зонам'&&!x.zone)warns.push(['warn',`${nm}: у доплаты «Другое по зонам» укажите зону.`]);
         else if(/^Другое/.test(x.kind)&&!x.reason)warns.push(['warn',`${nm}: у доплаты «${x.kind}» напишите, что это было.`]);
@@ -1549,6 +1553,8 @@ body.boss .hist-head h2{font-size:26px}
     const s2=[['НЕОТОБРАЖЕННЫЕ ДОСТАВКИ В КУРЬЕРИКЕ'],['Должность','Время','За часы','ФИО','кол-во заказов','За заказы','Итого Сумма','ДЕЛАЛИ ИЗЪЯТИЕ','НЕ ДЕЛАЛИ ИЗЪЯТИЕ']];
     s.cour.forEach(c=>{const h=num(c.hours),o=num(c.orders),t=h+o+num(c.exSum);if(!t&&!c.name)return;s2.push(['Курьер',c.from&&c.to?`${c.from}-${c.to}`:'',h||null,c.name,n(c.qty),o||null,t,c.w==='p'?Math.min(num(c.ws),t):c.w?t:null,c.w==='p'?t-Math.min(num(c.ws),t):c.w?null:t])});
     s2.push([],['ИТОГО',null,R.ch,'-',R.cq||null,R.co,R.ct,R.cw,R.cn]);
+    const holds=s.cour.flatMap(c=>(c.ex||[]).filter(x=>x.kind==='Удержание'&&num(x.sum)).map(x=>[c.name,Math.abs(num(x.sum)),x.reason||'']));
+    if(holds.length)s2.push([],['УДЕРЖАНИЯ'],['Курьер','Сумма удержания, ₽','Причина'],...holds);
     const w2=XLSX.utils.aoa_to_sheet(s2);w2['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}}];w2['!cols']=[{wch:10},{wch:13},{wch:9},{wch:24},{wch:9},{wch:10},{wch:12},{wch:15},{wch:17}];XLSX.utils.book_append_sheet(wb,w2,'Курьеры');
     // sheet 3
     const s3=[['','Дата','Статья','Сумма'],['ПРИХОД']];
