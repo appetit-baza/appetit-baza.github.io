@@ -393,7 +393,7 @@ body.boss .hist-head h2{font-size:26px}
     </div>
     <div class="total-line sm"><span>Общее (самовывоз + доставка)</span><strong id="q_tot">—</strong></div>
     <p class="flag" id="f_ord"></p>
-    <p class="h-sub">Кем доставлены заказы <span class="lbl-note">— количество доставок</span></p>
+    <p class="h-sub">Кем доставлены заказы Яндекса <span class="lbl-note">— количество доставок</span></p>
     <div class="rev">
       <div class="field"><label for="q_own">Нашими курьерами</label><input id="q_own" class="num" inputmode="numeric"></div>
       <div class="field"><label for="q_yandex">Яндексом</label><input id="q_yandex" class="num" inputmode="numeric"></div>
@@ -503,7 +503,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='74';
+  const BUILD='75';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1184,8 +1184,8 @@ body.boss .hist-head h2{font-size:26px}
   function deliveryError(o){
     const keys=['q_own','q_yandex'];
     if(keys.some(k=>o[k]==null||String(o[k]).trim()===''))return 'Укажите количество доставок нашими курьерами и Яндексом (если доставок не было — 0 и 0).';
-    if(['q_dn',...keys].some(k=>o[k]==null||String(o[k]).trim()===''||!/^\d+$/.test(String(o[k]).trim())||!Number.isSafeInteger(Number(o[k]))))return 'Количество доставок должно быть целым неотрицательным числом.';
-    return num(o.q_own)+num(o.q_yandex)===num(o.q_dn)?'':'Нашими курьерами + Яндексом должно совпадать с количеством доставок.';
+    if(keys.some(k=>!/^\d+$/.test(String(o[k]).trim())||!Number.isSafeInteger(Number(o[k]))))return 'Количество доставок должно быть целым неотрицательным числом.';
+    return '';
   }
 
   // ---------- rows
@@ -1377,7 +1377,7 @@ body.boss .hist-head h2{font-size:26px}
       ['q_ps','q_ds'].forEach(id=>$('#'+id).classList.toggle('mismatch',bad))}
     // Карта должна совпадать с безналом по сверкам
     {const error=deliveryError(state().ord),f=$('#f_delivery');
-      f.className='flag '+(error?'bad':'ok');f.textContent=error||'Нашими курьерами + Яндексом сходится с количеством доставок.';
+      f.className='flag '+(error?'bad':'ok');f.textContent=error||'Количество доставок указано.';
       ['q_own','q_yandex'].forEach(id=>$('#'+id).classList.toggle('mismatch',!!error));}
     {const fb=$('#f_bfact'),bf=$('#r_bfact').value.trim(),card=$('#r_card').value.trim();let bad=false;
       if(bf!==''||card!==''){const d=num(bf)-num(card);bad=bf!==''&&Math.abs(d)>=0.01;
