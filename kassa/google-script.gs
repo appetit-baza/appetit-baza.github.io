@@ -443,7 +443,7 @@ function shift_(id, admin) {
   var dk = dkey_(row[1]);
   var raw = { date: dk ? String(dk).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : '', branch: String(row[2]), r041: String(row[12] === '' ? '' : row[12]),
     bfact: row[23] === '' || row[23] === undefined || row[23] === null ? '' : String(row[23]), rev: rev,
-    ord: { q_pn: oq(24), q_ps: oq(25), q_dn: oq(26), q_ds: oq(27) } };
+    ord: { q_pn: oq(24), q_ps: oq(25), q_dn: oq(26), q_ds: oq(27), q_own: oq(29), q_yandex: oq(30) } };
   return { id: id, own: String(row[3]).trim() === admin.name, admin: String(row[3]), replaced: String(row[22] || ''),
     fix: f ? { status: f.status, rid: f.rid, reason: f.reason } : null, raw: raw, summary: summary, cour: cour, money: money };
 }
@@ -918,6 +918,8 @@ function num_(v) {
 
 // Новые названия видов оплаты и столбец «Безнал факт» в листе «Отчёты» (для уже работающей таблицы)
 function ensureReportHeaders_(rep) {
+  if (rep.getMaxColumns() < 31) rep.insertColumnsAfter(rep.getMaxColumns(), 31 - rep.getMaxColumns());
+  rep.getRange('AC1:AE1').setValues([['Принята', 'Нашими курьерами, заказов', 'Яндексом, заказов']]).setFontWeight('bold');
   var h = rep.getRange('F1:I1').getValues()[0];
   if (String(h[0]) === 'Наличка') rep.getRange('F1:I1').setValues([['Наличные', 'Карта', 'Яндекс/Деливери', 'Онлайн']]);
   if (!String(rep.getRange('X1').getValue()).trim()) rep.getRange('X1').setValue('Безнал факт (по сверкам)').setFontWeight('bold');
@@ -933,7 +935,9 @@ function ordText_(o) {
   var has = function (k) { return o[k] !== undefined && o[k] !== null && String(o[k]).trim() !== ''; };
   if (!has('q_pn') && !has('q_ps') && !has('q_dn') && !has('q_ds')) return '';
   var pn = num_(o.q_pn), ps = num_(o.q_ps), dn = num_(o.q_dn), ds = num_(o.q_ds);
-  return 'Самовывоз: ' + pn + ' / ' + fmtRub_(ps) + '\nДоставка: ' + dn + ' / ' + fmtRub_(ds) + '\nОбщее: ' + (pn + dn) + ' / ' + fmtRub_(ps + ds);
+  return 'Самовывоз: ' + pn + ' / ' + fmtRub_(ps) + '\nДоставка: ' + dn + ' / ' + fmtRub_(ds) +
+    (has('q_own') || has('q_yandex') ? '\n🚗 Наши курьеры: ' + (has('q_own') ? num_(o.q_own) : '—') + '\n🟡 Яндекс: ' + (has('q_yandex') ? num_(o.q_yandex) : '—') : '') +
+    '\nОбщее: ' + (pn + dn) + ' / ' + fmtRub_(ps + ds);
 }
 
 function saveReport_(r, admin) {
@@ -954,12 +958,13 @@ function saveReport_(r, admin) {
   var repeat = rep.getDataRange().getDisplayValues().some(function (row, i) {
     return i > 0 && row[1] === r.dateRu && row[2] === branch;
   });
+  ensureReportHeaders_(rep);
   rep.appendRow([new Date(), r.dateRu, branch, admin.name, num_(t.rev), num_(rev.r_cash), num_(rev.r_card),
     num_(rev.r_ye), num_(rev.r_mp), num_(rev.r_chib), num_(rev.r_sber), num_(rev.r_bon),
     r.r041 ? num_(r.r041) : '', num_(t.ct), num_(t.cw), num_(t.cn), num_(t.ex), num_(t.exW), num_(t.inc),
     num_(t.pass), repeat ? 'да' : '', id, '', r.bfact ? num_(r.bfact) : '',
-    ordVal_(r, 'q_pn'), ordVal_(r, 'q_ps'), ordVal_(r, 'q_dn'), ordVal_(r, 'q_ds')]);
-  ensureReportHeaders_(rep);
+    ordVal_(r, 'q_pn'), ordVal_(r, 'q_ps'), ordVal_(r, 'q_dn'), ordVal_(r, 'q_ds'), '',
+    ordVal_(r, 'q_own'), ordVal_(r, 'q_yandex')]);
   var cs = ss.getSheetByName(SHEET_COURIERS);
   if ((r.cour || []).some(function (c) { return c.zt || (c.ex && c.ex.length); })) ensureZonesHeader_();
   var xs = null;

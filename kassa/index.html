@@ -393,6 +393,12 @@ body.boss .hist-head h2{font-size:26px}
     </div>
     <div class="total-line sm"><span>Общее (самовывоз + доставка)</span><strong id="q_tot">—</strong></div>
     <p class="flag" id="f_ord"></p>
+    <p class="h-sub">Кем доставлены заказы <span class="lbl-note">— количество доставок</span></p>
+    <div class="rev">
+      <div class="field"><label for="q_own">Нашими курьерами</label><input id="q_own" class="num" inputmode="numeric"></div>
+      <div class="field"><label for="q_yandex">Яндексом</label><input id="q_yandex" class="num" inputmode="numeric"></div>
+    </div>
+    <p class="flag" id="f_delivery"></p>
     <p class="h-sub">Сверка <span class="lbl-note">— в чат не отправляется</span></p>
     <div class="rev">
       <div class="field"><label for="r_041">Итого по отчёту 041</label><input id="r_041" class="num" inputmode="decimal" placeholder="для сверки"></div>
@@ -497,7 +503,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='73';
+  const BUILD='74';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1049,6 +1055,7 @@ body.boss .hist-head h2{font-size:26px}
     if(r041!=null)ver+=chk(`Отчёт 041: ${money(r041)}`,rv,r041,'сходится');
     if(bf!=null)ver+=chk(`Безнал по сверкам: ${money(bf)} (карта ${money(N('Карта'))})`,N('Карта'),bf,'сходится');
     if(hasOrd){ver+=`<div class="sv-row"><span>Самовывоз</span><b>${num(o.q_pn)} / ${money(num(o.q_ps))}</b></div><div class="sv-row"><span>Доставка</span><b>${num(o.q_dn)} / ${money(num(o.q_ds))}</b></div>`;ver+=chk(`Общее: ${num(o.q_pn)+num(o.q_dn)} / ${money(ordSum)}`,rv,ordSum,'= выручке')}
+    [['q_own','Нашими курьерами'],['q_yandex','Яндексом']].forEach(([k,label])=>{if(o[k]!==''&&o[k]!=null)ver+=`<div class="sv-row"><span>${label}</span><b>${num(o[k])} заказов</b></div>`});
     if(!ver)ver='<p class="hint">Сверочные поля не заполнены.</p>';
     const wTxt=w=>String(w||'').replace(/^да$/i,'сделано').replace(/^нет.*$/i,'не сделано');
     const cr=s.cour.length?`<p class="h-sec">Курьеры · ${s.cour.length}</p><div class="h-table"><table><tr><th>Курьер</th><th>Время</th><th class="n">Заказов</th><th class="n">За часы</th><th class="n">За заказы</th><th class="n">Итого</th><th>Изъятие</th></tr>${s.cour.map(c=>`<tr><td><b>${esc(c.name||'—')}</b>${c.zones?`<div class="sv-sub">по зонам: ${esc(c.zones)}</div>`:''}${(c.extras||[]).length?`<div class="sv-sub">${c.extras.map(x=>`<span class="sv-chip">${esc(x.kind+(x.zone?' · '+x.zone:'')+(x.kind==='Довоз'||x.kind==='Отказ'||x.kind==='Листовки'?' × '+x.n:'')+(x.reason?' · '+x.reason:''))} = ${money(x.sum)}</span>`).join(' ')}</div>`:''}</td><td>${c.from||c.to?esc(c.from)+'–'+esc(c.to):'—'}</td><td class="n">${esc(c.qty)||'—'}</td><td class="n">${esc(c.hours)||'—'}</td><td class="n">${esc(c.orders)||'—'}</td><td class="n"><b>${esc(c.total)}</b></td><td>${esc(wTxt(c.w))}</td></tr>`).join('')}</table></div>`:'';
@@ -1173,7 +1180,13 @@ body.boss .hist-head h2{font-size:26px}
   }
   document.addEventListener('click',e=>{const t=e.target.closest('.z-tog');if(!t)return;const ch=t.parentElement.querySelector('.zchips');ch.hidden=!ch.hidden;t.textContent=zTogText(!ch.hidden,t.closest('.crow').dataset.zid);if(!ch.hidden){const i=ch.querySelector('input');if(i)i.focus()}});
   const REV=[['r_mp','Онлайн'],['r_cash','Наличные'],['r_card','Карта'],['r_ye','Яндекс/Деливери'],['r_chib','Чиббис'],['r_sber','Сбермаркет'],['r_bon','Бонусы iiko (iikocard)']];
-  const ORD=['q_pn','q_ps','q_dn','q_ds']; // самовывоз и доставка: кол-во и сумма
+  const ORD=['q_pn','q_ps','q_dn','q_ds','q_own','q_yandex']; // самовывоз и доставка: кол-во и сумма
+  function deliveryError(o){
+    const keys=['q_own','q_yandex'];
+    if(keys.some(k=>o[k]==null||String(o[k]).trim()===''))return 'Укажите количество доставок нашими курьерами и Яндексом (если доставок не было — 0 и 0).';
+    if(['q_dn',...keys].some(k=>o[k]==null||String(o[k]).trim()===''||!/^\d+$/.test(String(o[k]).trim())||!Number.isSafeInteger(Number(o[k]))))return 'Количество доставок должно быть целым неотрицательным числом.';
+    return num(o.q_own)+num(o.q_yandex)===num(o.q_dn)?'':'Нашими курьерами + Яндексом должно совпадать с количеством доставок.';
+  }
 
   // ---------- rows
   function minutes(t){t=String(t||'').trim().replace(/[.,;\-]/g,':');if(/^\d{3,4}$/.test(t))t=t.slice(0,-2)+':'+t.slice(-2);if(!/^\d{1,2}:\d{2}$/.test(t))return null;const [h,m]=t.split(':').map(Number);if(h>24||m>59)return null;return h*60+m}
@@ -1363,6 +1376,9 @@ body.boss .hist-head h2{font-size:26px}
       if(bad)warns.push(['warn',`Самовывоз + доставка (${rub(sm)}) не сходится с выручкой (${rub(rev)}).`]);
       ['q_ps','q_ds'].forEach(id=>$('#'+id).classList.toggle('mismatch',bad))}
     // Карта должна совпадать с безналом по сверкам
+    {const error=deliveryError(state().ord),f=$('#f_delivery');
+      f.className='flag '+(error?'bad':'ok');f.textContent=error||'Нашими курьерами + Яндексом сходится с количеством доставок.';
+      ['q_own','q_yandex'].forEach(id=>$('#'+id).classList.toggle('mismatch',!!error));}
     {const fb=$('#f_bfact'),bf=$('#r_bfact').value.trim(),card=$('#r_card').value.trim();let bad=false;
       if(bf!==''||card!==''){const d=num(bf)-num(card);bad=bf!==''&&Math.abs(d)>=0.01;
         fb.className='flag '+(bad?'bad':'ok');fb.textContent=bf===''?'':bad?`Карта не сходится с безналом по сверкам: разница ${rub(Math.abs(d))} (${d>0?'по сверкам больше':'в «Карте» больше'}).`:'Карта сходится с безналом по сверкам.';
@@ -1488,6 +1504,7 @@ body.boss .hist-head h2{font-size:26px}
     if(!USER){openGate();return}
     const s=state();
     if(!s.branch){toast('Выберите филиал');$('#branch').focus();return}
+    const deliveryIssue=deliveryError(s.ord);if(deliveryIssue){toast(deliveryIssue);$('#q_own').focus();return}
     if(s.date>today()&&!FIX){toast(`Дата смены ${ruDate(s.date)} ещё не наступила — после полуночи смена вчерашняя. Исправьте дату.`);$('#date').focus();return}
     if(!R.rev){toast('Заполните выручку');return}
     const b=$('#b_send');
@@ -1524,6 +1541,7 @@ body.boss .hist-head h2{font-size:26px}
     REV.forEach(([id,name])=>s1.push([id==='r_bon'?name+' — скидка, не в выручке':name,n(s.rev[id])]));
     if(s.bfact)s1.push(['Безнал факт (по сверкам)',n(s.bfact)]);
     if(s.ord&&ORD.some(id=>s.ord[id])){const o=s.ord;s1.push([],['Самовывоз (заказов / ₽)',`${num(o.q_pn)} / ${num(o.q_ps)}`],['Доставка (заказов / ₽)',`${num(o.q_dn)} / ${num(o.q_ds)}`],['Общее (заказов / ₽)',`${num(o.q_pn)+num(o.q_dn)} / ${num(o.q_ps)+num(o.q_ds)}`])}
+    [['q_own','Нашими курьерами, заказов'],['q_yandex','Яндексом, заказов']].forEach(([k,label])=>{if(s.ord&&s.ord[k]!==''&&s.ord[k]!=null)s1.push([label,num(s.ord[k])])});
     s1.push([],[],['РАСХОДЫ:',R.ct],['НЕ ДЕЛАЛИ ИЗЪЯТИЕ',R.cn||null],[],['ПЕРЕДАНА СУММА',R.pass]);
     if(R.exW)s1.push([],['в т.ч. вычтены прочие расходы',R.exW]);
     const w1=XLSX.utils.aoa_to_sheet(s1);w1['!cols']=[{wch:30},{wch:26}];XLSX.utils.book_append_sheet(wb,w1,'Сводка');
