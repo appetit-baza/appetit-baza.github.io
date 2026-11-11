@@ -451,7 +451,7 @@ body.boss .hist-head h2{font-size:26px}
     <div class="line"><span>из них не делали изъятие</span><span id="s_noW">0 ₽</span></div>
     <div class="line"><span>Прочие расходы</span><span id="s_exp">0 ₽</span></div>
     <div class="line"><span>Приход</span><span id="s_inc">0 ₽</span></div>
-    <div class="big" id="s_big"><small>Передана сумма</small><b id="s_pass">0 ₽</b></div>
+    <div class="big" id="s_big"><small>Переданная сумма по Айко</small><b id="s_pass">0 ₽</b></div>
     <p class="formula" id="s_formula">Наличные − выплаты курьерам с изъятием</p>
   </div>
   <div class="warns" id="warns"></div>
@@ -464,7 +464,7 @@ body.boss .hist-head h2{font-size:26px}
 </aside>
 </div>
 
-<div class="mob-bar"><div><small>Передана сумма</small><b id="m_pass">0 ₽</b></div><a href="#result">Итоги и Excel</a></div>
+<div class="mob-bar"><div><small>Переданная сумма по Айко</small><b id="m_pass">0 ₽</b></div><a href="#result">Итоги и Excel</a></div>
 <div class="hist" id="hist" hidden role="dialog" aria-modal="true" aria-labelledby="hist_t">
   <div class="hist-box">
     <div class="hist-head"><h2 id="hist_t">Мои смены</h2><button type="button" class="x" id="hist_close" aria-label="Закрыть">×</button></div>
@@ -503,7 +503,7 @@ body.boss .hist-head h2{font-size:26px}
 <script>
 (function(){
   // ---------- автообновление: если на сайте вышла новая версия, страница перезагрузится сама
-  const BUILD='76';
+  const BUILD='77';
   (async()=>{try{const v=(await fetch('version.txt?'+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'')).trim();
     if(v&&v!==BUILD){const u=new URL(location.href);if(u.searchParams.get('v')!==v){u.searchParams.set('v',v);location.replace(u.toString())}}}catch(e){}})();
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -1045,7 +1045,7 @@ body.boss .hist-head h2{font-size:26px}
       else if(!CASH.err){const cd=cashData().find(z=>z.b===s.raw.branch);const k=isoDk(s.raw.date);const o=cd&&!cd.none?cd.days.find(d=>d.k===k):null;
         cashT=o?tile('Остаток кассы',money(Math.round(o.bal*100)/100),'на начало дня '+money(Math.round(o.start*100)/100),'cashtile'):tile('Остаток кассы','—',cd&&!cd.none?'день раньше стартового остатка':'впишите старт на вкладке «Касса»')}}
     const head=`<div class="sv-head"><div><h3>${esc(sm['Дата смены']||'')} · ${esc(brShort(s.raw.branch))}</h3><p>${esc(s.raw.branch)} · ${esc(sm['Администратор']||s.admin||'')}</p></div><div class="sv-meta">отчёт ${esc(s.id)}${sm['Отправлено']?'<br>отправлен '+esc(sm['Отправлено']):''}${accBtn(s,boss)}</div></div>`;
-    const tiles=`<div class="hb-tiles">${tile('Выручка всего',money(rv),'','main')}${tile('Наличные',money(cash))}${tile('Передана сумма',money(pass),'наличные − курьерам из кассы')}${tile('Курьерам',money(ct),N('Не делали изъятие')?'не из кассы: '+money(N('Не делали изъятие')):'')}${inc?tile('Приход',money(inc)):''}${ex?tile('Расход',money(ex)):''}${cashT}</div>`;
+    const tiles=`<div class="hb-tiles">${tile('Выручка всего',money(rv),'','main')}${tile('Наличные',money(cash))}${tile('Переданная сумма по Айко',money(pass),'наличные − курьерам из кассы')}${tile('Курьерам',money(ct),N('Не делали изъятие')?'не из кассы: '+money(N('Не делали изъятие')):'')}${inc?tile('Приход',money(inc)):''}${ex?tile('Расход',money(ex)):''}${cashT}</div>`;
     const PT=[['Онлайн','Онлайн'],['Наличные','Наличные'],['Карта','Карта'],['Яндекс/Деливери','Яндекс/Деливери'],['Чиббис','Чиббис'],['Сбермаркет','Сбермаркет']];
     const pay=(PT.filter(([k])=>N(k)).map(([k,l],i)=>`<div class="sv-row"><span>${sw(`var(--s${i+1})`)}${l}</span><b>${money(N(k))}</b><small>${pf(pct(N(k),rv))}</small></div>`).join('')||'<p class="hint">Выручки нет.</p>')+(N('Бонусы iiko (iikocard)')?`<div class="sv-row"><span>Бонусы iiko — скидка</span><b>${money(N('Бонусы iiko (iikocard)'))}</b><small>не в выручке</small></div>`:'');
     const chk=(l,a,b,okText)=>{const d=Math.round((b-a)*100)/100;return `<div class="sv-row"><span>${l}</span><b class="${Math.abs(d)<0.01?'t-up':'t-warn'}">${Math.abs(d)<0.01?'✓ '+okText:(d>0?'+':'')+money(d)}</b></div>`};
@@ -1490,7 +1490,7 @@ body.boss .hist-head h2{font-size:26px}
     if(R.cn)L.push(`  Не делали изъятие: ${rub(R.cn)}`);
     const ex=s.exp.filter(e=>num(e.sum));if(ex.length){L.push('',`Прочие расходы: ${rub(R.ex)}`);ex.forEach(e=>L.push(`  ${ruDate(e.date)} ${e.art||'—'}: ${rub(num(e.sum))}${e.w?' (вычтено)':''}`))}
     const inc=s.inc.filter(e=>num(e.sum));if(inc.length){L.push('',`Приход: ${rub(R.inc)}`);inc.forEach(e=>L.push(`  ${ruDate(e.date)} ${e.art||'—'}: ${rub(num(e.sum))}`))}
-    L.push('',`ПЕРЕДАНА СУММА: ${rub(R.pass)}`);
+    L.push('',`Переданная сумма по Айко: ${rub(R.pass)}`);
     return L.join('\n');
   }
   // довозы за смену по причинам: [[причина, кол-во], …]
@@ -1546,7 +1546,7 @@ body.boss .hist-head h2{font-size:26px}
     if(s.bfact)s1.push(['Безнал факт (по сверкам)',n(s.bfact)]);
     if(s.ord&&ORD.some(id=>s.ord[id])){const o=s.ord;s1.push([],['Самовывоз (заказов / ₽)',`${num(o.q_pn)} / ${num(o.q_ps)}`],['Доставка (заказов / ₽)',`${num(o.q_dn)} / ${num(o.q_ds)}`],['Общее (заказов / ₽)',`${num(o.q_pn)+num(o.q_dn)} / ${num(o.q_ps)+num(o.q_ds)}`])}
     [['q_own','Нашими курьерами, заказов'],['q_yandex','Яндексом, заказов']].forEach(([k,label])=>{if(s.ord&&s.ord[k]!==''&&s.ord[k]!=null)s1.push([label,num(s.ord[k])])});
-    s1.push([],[],['РАСХОДЫ:',R.ct],['НЕ ДЕЛАЛИ ИЗЪЯТИЕ',R.cn||null],[],['ПЕРЕДАНА СУММА',R.pass]);
+    s1.push([],[],['РАСХОДЫ:',R.ct],['НЕ ДЕЛАЛИ ИЗЪЯТИЕ',R.cn||null],[],['Переданная сумма по Айко',R.pass]);
     if(R.exW)s1.push([],['в т.ч. вычтены прочие расходы',R.exW]);
     const w1=XLSX.utils.aoa_to_sheet(s1);w1['!cols']=[{wch:30},{wch:26}];XLSX.utils.book_append_sheet(wb,w1,'Сводка');
     // sheet 2
